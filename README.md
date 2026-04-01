@@ -116,13 +116,13 @@ python scripts/visualize.py --results outputs/<run>/
 
 | What | Where | Quota |
 |------|-------|-------|
-| Code | `/home/wxu/CS503_Project/` | 100 GB (backed up) |
-| Datasets | `/scratch/wxu/CS503_Project/data/` | Large (ephemeral) |
-| Checkpoints | `/scratch/wxu/CS503_Project/checkpoints/` | Large (ephemeral) |
-| Probing data | `/scratch/wxu/CS503_Project/probing_data/` | Large (ephemeral) |
-| Best models + logs | `/home/wxu/CS503_Project/outputs/` | 100 GB (backed up) |
+| Code | `/home/<username>/CS503_Project/` | 100 GB (backed up) |
+| Datasets | `/scratch/<username>/CS503_Project/data/` | Large (ephemeral) |
+| Checkpoints | `/scratch/<username>/CS503_Project/checkpoints/` | Large (ephemeral) |
+| Probing data | `/scratch/<username>/CS503_Project/probing_data/` | Large (ephemeral) |
+| Best models + logs | `/home/<username>/CS503_Project/outputs/` | 100 GB (backed up) |
 
 ## W&B
 
-- **Entity**: `alun-xu-epfl`
+- **Entity**: `<your-wandb-username>`
 - **Project**: `agentic-cognitive-map`

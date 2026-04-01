@@ -67,6 +67,6 @@ probing:
 # ---- Logging ----
 log_wandb: true
 wandb_project: agentic-cognitive-map
-wandb_entity: alun-xu-epfl
+wandb_entity: null  # Set to your W&B username or team name
 wandb_run_name: auto
 seed: 42

@@ -3,7 +3,7 @@
 # Run from local machine
 set -euo pipefail
 
-USERNAME="wxu"
+USERNAME="${SCITAS_USER:?Set SCITAS_USER to your EPFL username (e.g. export SCITAS_USER=jdoe)}"
 REMOTE_HOST="izar.epfl.ch"
 REMOTE_DIR="/home/${USERNAME}/CS503_Project"
 
