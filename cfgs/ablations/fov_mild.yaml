@@ -1,8 +1,0 @@
-# Ablation: mild foveation falloff
-defaults:
-  - ../foveated
-
-run_name: ablation_fov_mild
-foveation:
-  blur_sigma_max: 2.0
-  falloff: linear

@@ -1,8 +1,0 @@
-# Ablation: large memory capacity
-defaults:
-  - ../foveated
-
-run_name: ablation_memory_large
-model:
-  memory:
-    hidden_size: 512

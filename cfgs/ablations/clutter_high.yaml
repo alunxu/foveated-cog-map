@@ -1,9 +1,0 @@
-# Ablation: high clutter density
-defaults:
-  - ../foveated
-
-run_name: ablation_clutter_high
-env:
-  # Use a more cluttered environment variant
-  id: MiniGrid-MultiRoom-N6-v0
-  max_steps: 1000
