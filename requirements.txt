@@ -1,0 +1,27 @@
+# Core
+torch>=2.1.0
+torchvision>=0.16.0
+torchmetrics
+
+# Config & logging
+omegaconf
+hydra-core
+loguru
+wandb
+
+# Utilities
+einops
+mediapy
+tqdm
+matplotlib
+seaborn
+ipykernel
+
+# Data
+datasets
+transformers
+huggingface-hub
+safetensors
+
+# Add project-specific dependencies below
+# e.g. habitat-sim, vizdoom, etc.

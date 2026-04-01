@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cs503-project"
+version = "0.1.0"
+description = "CS503 Visual Intelligence — Course Project"
+requires-python = ">=3.10"
+readme = {file = "README.md", content-type = "text/markdown"}
+dependencies = [
+    "omegaconf",
+    "hydra-core",
+    "loguru",
+    "wandb",
+    "einops",
+    "mediapy",
+    "ipykernel",
+]
+
+[project.urls]
+"Homepage" = "https://vilab.epfl.ch"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+exclude = ["cfgs*", "notebooks*", "docs*", "outputs*"]
