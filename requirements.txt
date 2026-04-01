@@ -1,7 +1,11 @@
 # Core
 torch>=2.1.0
 torchvision>=0.16.0
-torchmetrics
+
+# RL & environments
+gymnasium>=0.29
+minigrid>=2.3
+stable-baselines3>=2.2
 
 # Config & logging
 omegaconf
@@ -9,19 +13,19 @@ hydra-core
 loguru
 wandb
 
-# Utilities
-einops
-mediapy
-tqdm
+# Probing & analysis
+scikit-learn
+scipy
+torchmetrics
+
+# Visualization
 matplotlib
 seaborn
+mediapy
+tqdm
+
+# Jupyter
 ipykernel
 
-# Data
-datasets
-transformers
-huggingface-hub
-safetensors
-
-# Add project-specific dependencies below
-# e.g. habitat-sim, vizdoom, etc.
+# Utilities
+einops

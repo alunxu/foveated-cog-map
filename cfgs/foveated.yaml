@@ -1,0 +1,20 @@
+# ============================================================
+# Foveated agent — core experimental condition
+# Inherits from base.yaml
+# ============================================================
+
+defaults:
+  - base
+
+run_name: foveated_agent
+
+foveation:
+  enabled: true
+  fovea_radius: 8
+  blur_sigma_max: 4.0
+  falloff: quadratic
+  gaze_action: true                # Agent controls gaze direction
+
+model:
+  policy:
+    gaze_hidden: 64                # Gaze direction head enabled

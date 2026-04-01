@@ -1,0 +1,8 @@
+# Ablation: sharp foveation falloff
+defaults:
+  - ../foveated
+
+run_name: ablation_fov_sharp
+foveation:
+  blur_sigma_max: 8.0
+  falloff: exponential

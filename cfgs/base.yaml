@@ -1,0 +1,72 @@
+# ============================================================
+# Base configuration — shared defaults for all agent conditions
+# ============================================================
+
+run_name: auto
+output_dir: ./outputs/auto
+
+# ---- Environment ----
+env:
+  id: MiniGrid-FourRooms-v0       # Or custom nav task
+  render_mode: rgb_array
+  image_size: 64                   # Egocentric observation size
+  max_steps: 500                   # Max steps per episode
+  num_envs: 8                      # Parallel environments
+
+# ---- Foveation (overridden per condition) ----
+foveation:
+  enabled: false
+  fovea_radius: 8                  # Radius of high-res foveal region (pixels)
+  blur_sigma_max: 4.0              # Max Gaussian blur sigma at periphery
+  falloff: quadratic               # linear | quadratic | exponential
+  gaze_action: false               # Whether agent controls gaze direction
+
+# ---- Model ----
+model:
+  encoder:
+    channels: [16, 32, 64]         # CNN channel progression
+    kernel_size: 3
+    activation: relu
+  memory:
+    type: gru                      # gru | lstm
+    hidden_size: 256
+    num_layers: 1
+  policy:
+    action_hidden: 64              # MLP hidden dim for action head
+    gaze_hidden: 64                # MLP hidden dim for gaze head (if used)
+
+# ---- Training (PPO) ----
+training:
+  algorithm: ppo
+  total_timesteps: 2_000_000
+  learning_rate: 0.0003
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  entropy_coef: 0.01
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  n_steps: 128                     # Rollout length per env
+  n_epochs: 4                      # PPO epochs per update
+  batch_size: 256
+  dtype: fp16                      # fp16 on V100, bf16 on A100
+
+# ---- Evaluation ----
+eval:
+  freq: 50_000                     # Evaluate every N timesteps
+  n_episodes: 50                   # Episodes per evaluation
+  save_ckpt_freq: 100_000
+
+# ---- Probing data collection ----
+probing:
+  collect_hidden_states: true      # Save GRU hidden states during rollouts
+  collect_observations: true       # Save raw observations
+  collect_ground_truth: true       # Save occupancy grid, target location, etc.
+  collection_episodes: 500         # Episodes for probing dataset
+
+# ---- Logging ----
+log_wandb: true
+wandb_project: agentic-cognitive-map
+wandb_entity: alun-xu-epfl
+wandb_run_name: auto
+seed: 42

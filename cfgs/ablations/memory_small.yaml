@@ -1,0 +1,8 @@
+# Ablation: small memory capacity
+defaults:
+  - ../foveated
+
+run_name: ablation_memory_small
+model:
+  memory:
+    hidden_size: 64

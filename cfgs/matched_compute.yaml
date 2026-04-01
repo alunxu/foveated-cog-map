@@ -1,0 +1,17 @@
+# ============================================================
+# Matched-compute agent — information budget control
+# Uniform low-res input with same total information as foveated agent
+# ============================================================
+
+defaults:
+  - base
+
+run_name: matched_compute_agent
+
+foveation:
+  enabled: false
+  gaze_action: false
+
+env:
+  image_size: 32                   # Lower resolution to match info budget
+  # The total pixel information ≈ foveated agent's average

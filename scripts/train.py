@@ -1,202 +1,155 @@
 """
-CS503 Project — Main Training Script
+CS503 Project — Train Navigation Agent
 
 Usage:
-    python scripts/train.py --config cfgs/example.yaml
-    torchrun --nproc_per_node=2 scripts/train.py --config cfgs/example.yaml
+    python scripts/train.py --config cfgs/foveated.yaml
+    python scripts/train.py --config cfgs/uniform.yaml
+    python scripts/train.py --config cfgs/matched_compute.yaml
+
+For cluster:
+    sbatch submit_job.sh cfgs/foveated.yaml <WANDB_KEY> 1
 """
 
 import argparse
-import os
 import sys
 import time
 from pathlib import Path
 
 import torch
-import torch.distributed as dist
+import numpy as np
 from loguru import logger
 from omegaconf import OmegaConf
 
-# Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.envs.nav_env import NavigationEnv
+from src.envs.wrappers import FoveatedWrapper, UniformWrapper, MatchedComputeWrapper
+from src.models import FoveatedNavigationAgent
+from src.training.rollout import RolloutBuffer
+
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="CS503 Project Training")
-    parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
-    parser.add_argument(
-        "--overrides",
-        nargs="*",
-        default=[],
-        help="Config overrides in key=value format (e.g. lr=0.001 batch_size=64)",
-    )
+    parser = argparse.ArgumentParser(description="Train navigation agent")
+    parser.add_argument("--config", type=str, required=True, help="Path to YAML config")
+    parser.add_argument("--overrides", nargs="*", default=[], help="Config overrides (key=value)")
     return parser.parse_args()
 
 
-def setup_distributed():
-    """Initialize distributed training if available."""
-    if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
-        rank = int(os.environ["RANK"])
-        world_size = int(os.environ["WORLD_SIZE"])
-        local_rank = int(os.environ.get("LOCAL_RANK", 0))
+def load_config(config_path: str, overrides: list[str] = None) -> OmegaConf:
+    """Load config with optional base inheritance."""
+    cfg = OmegaConf.load(config_path)
 
-        dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
-        torch.cuda.set_device(local_rank)
+    # Handle 'defaults' inheritance
+    if "defaults" in cfg:
+        base_path = Path(config_path).parent
+        for default in cfg.defaults:
+            base_cfg = OmegaConf.load(base_path / f"{default}.yaml")
+            cfg = OmegaConf.merge(base_cfg, cfg)
+        del cfg["defaults"]
 
-        logger.info(f"Distributed training: rank {rank}/{world_size}, local_rank {local_rank}")
-        return rank, world_size, local_rank
+    if overrides:
+        override_cfg = OmegaConf.from_dotlist(overrides)
+        cfg = OmegaConf.merge(cfg, override_cfg)
+
+    return cfg
+
+
+def make_env(cfg):
+    """Create environment with appropriate wrapper based on config."""
+    env = NavigationEnv(
+        env_id=cfg.env.id,
+        image_size=cfg.env.image_size,
+        max_steps=cfg.env.max_steps,
+        seed=cfg.get("seed", None),
+    )
+
+    if cfg.foveation.enabled:
+        env = FoveatedWrapper(
+            env,
+            fovea_radius=cfg.foveation.fovea_radius,
+            blur_sigma_max=cfg.foveation.blur_sigma_max,
+            falloff=cfg.foveation.falloff,
+        )
+    elif cfg.env.get("image_size", 64) < 64:
+        env = MatchedComputeWrapper(env, target_size=cfg.env.image_size)
     else:
-        logger.info("Single-GPU training")
-        if torch.cuda.is_available():
-            torch.cuda.set_device(0)
-        return 0, 1, 0
+        env = UniformWrapper(env)
 
-
-def setup_wandb(cfg, rank):
-    """Initialize W&B logging (rank 0 only)."""
-    if cfg.get("log_wandb", False) and rank == 0:
-        try:
-            import wandb
-
-            run_name = cfg.get("wandb_run_name", "auto")
-            if run_name == "auto":
-                run_name = cfg.get("run_name", f"run_{int(time.time())}")
-
-            wandb.init(
-                project=cfg.get("wandb_project", "CS503_Project"),
-                entity=cfg.get("wandb_entity", None),
-                name=run_name,
-                config=OmegaConf.to_container(cfg, resolve=True),
-            )
-            logger.info(f"W&B initialized: {wandb.run.url}")
-            return wandb
-        except Exception as e:
-            logger.warning(f"Failed to initialize W&B: {e}")
-    return None
-
-
-def build_model(cfg):
-    """Instantiate model from config.
-    
-    Replace this with your actual model construction.
-    """
-    model_cfg = cfg.get("model_config", {})
-    
-    # TODO: Replace with your model instantiation
-    # Example using Hydra-style instantiation:
-    # from hydra.utils import instantiate
-    # model = instantiate(model_cfg)
-    
-    logger.info(f"Model config: {OmegaConf.to_yaml(model_cfg)}")
-    raise NotImplementedError(
-        "Replace build_model() with your actual model construction. "
-        "See src/models/ for where to define your models."
-    )
-
-
-def build_dataloaders(cfg, rank, world_size):
-    """Build train and eval dataloaders.
-    
-    Replace this with your actual data loading.
-    """
-    # TODO: Replace with your dataloader construction
-    # Example:
-    # from src.data import MyDataset
-    # train_dataset = MyDataset(**cfg.train_dataset_config)
-    # ...
-    
-    raise NotImplementedError(
-        "Replace build_dataloaders() with your actual data loading. "
-        "See src/data/ for where to define your datasets."
-    )
-
-
-def train_one_epoch(model, train_loader, optimizer, scheduler, scaler, cfg, epoch, rank, wandb_run):
-    """Train for one epoch."""
-    model.train()
-    total_loss = 0.0
-    num_batches = 0
-
-    for batch_idx, batch in enumerate(train_loader):
-        # TODO: Implement your training step
-        # Example:
-        # images, labels = batch
-        # images = images.cuda(non_blocking=True)
-        # labels = labels.cuda(non_blocking=True)
-        #
-        # with torch.cuda.amp.autocast(dtype=torch.float16):
-        #     output = model(images)
-        #     loss = criterion(output, labels)
-        #
-        # scaler.scale(loss).backward()
-        # scaler.step(optimizer)
-        # scaler.update()
-        # optimizer.zero_grad()
-        
-        pass
-
-    return total_loss / max(num_batches, 1)
-
-
-@torch.no_grad()
-def evaluate(model, eval_loader, cfg, rank):
-    """Evaluate the model."""
-    model.eval()
-    
-    # TODO: Implement your evaluation logic
-    # Return a dict of metrics
-    
-    return {"eval_loss": 0.0}
+    return env
 
 
 def main():
     args = parse_args()
+    cfg = load_config(args.config, args.overrides)
 
-    # Load config
-    cfg = OmegaConf.load(args.config)
-    if args.overrides:
-        override_cfg = OmegaConf.from_dotlist(args.overrides)
-        cfg = OmegaConf.merge(cfg, override_cfg)
+    # Setup
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.manual_seed(cfg.get("seed", 42))
+    np.random.seed(cfg.get("seed", 42))
 
-    # Setup distributed
-    rank, world_size, local_rank = setup_distributed()
+    # Run name
+    run_name = cfg.get("run_name", "auto")
+    if run_name == "auto":
+        run_name = f"{Path(args.config).stem}_{int(time.time())}"
 
-    # Setup output directory
-    output_dir = Path(cfg.get("output_dir", "./outputs/default"))
-    if str(output_dir).endswith("auto"):
-        run_name = cfg.get("run_name", f"run_{int(time.time())}")
-        if run_name == "auto":
-            run_name = f"run_{int(time.time())}"
-        output_dir = output_dir.parent / run_name
-    
-    if rank == 0:
-        output_dir.mkdir(parents=True, exist_ok=True)
-        OmegaConf.save(cfg, output_dir / "config.yaml")
-        logger.info(f"Output directory: {output_dir}")
-
-    # Setup W&B
-    wandb_run = setup_wandb(cfg, rank)
-
-    # Build model, data, optimizer
-    # model = build_model(cfg)
-    # train_loader, eval_loader = build_dataloaders(cfg, rank, world_size)
-    # optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    output_dir = Path(cfg.get("output_dir", "./outputs")) / run_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    OmegaConf.save(cfg, output_dir / "config.yaml")
 
     logger.info("=" * 60)
-    logger.info("  CS503 Project — Training Script")
-    logger.info(f"  Config: {args.config}")
-    logger.info(f"  GPUs: {world_size}")
+    logger.info(f"  Agentic Cognitive Maps — Training")
+    logger.info(f"  Config:     {args.config}")
+    logger.info(f"  Run name:   {run_name}")
+    logger.info(f"  Output:     {output_dir}")
+    logger.info(f"  Device:     {device}")
+    logger.info(f"  Foveated:   {cfg.foveation.enabled}")
+    logger.info(f"  Gaze ctrl:  {cfg.foveation.gaze_action}")
     logger.info("=" * 60)
+
+    # Create environment
+    env = make_env(cfg)
+
+    # Create agent
+    agent = FoveatedNavigationAgent(
+        image_size=cfg.env.image_size,
+        encoder_channels=list(cfg.model.encoder.channels),
+        hidden_size=cfg.model.memory.hidden_size,
+        n_actions=env.action_space.n,
+        gaze_enabled=cfg.foveation.gaze_action,
+    ).to(device)
+
+    n_params = agent.count_parameters()
+    logger.info(f"  Parameters: {n_params:,} ({n_params/1e6:.2f}M)")
+
+    # W&B
+    if cfg.get("log_wandb", False):
+        try:
+            import wandb
+            wandb.init(
+                project=cfg.wandb_project,
+                entity=cfg.wandb_entity,
+                name=run_name,
+                config=OmegaConf.to_container(cfg, resolve=True),
+            )
+        except Exception as e:
+            logger.warning(f"W&B init failed: {e}")
+
+    # TODO: Implement training loop
+    # This is where Member B connects the pieces:
+    # 1. Create PPOTrainer
+    # 2. Create RolloutBuffer
+    # 3. Collect rollouts (with hidden states for probing)
+    # 4. PPO update
+    # 5. Evaluate periodically
+    # 6. Save checkpoints
+
     logger.info("")
-    logger.info("⚠️  This is a scaffold. Implement your model, data, and training loop.")
-    logger.info("   See: src/models/, src/data/, and this file's TODO comments.")
+    logger.info("⚠️  Training loop not yet implemented.")
+    logger.info("   Member B: implement the rollout collection + PPO update loop.")
+    logger.info("   The environment, agent, and buffer are ready.")
 
-    # Cleanup
-    if dist.is_initialized():
-        dist.destroy_process_group()
-    if wandb_run and rank == 0:
-        wandb_run.finish()
+    env.close()
 
 
 if __name__ == "__main__":

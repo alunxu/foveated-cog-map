@@ -1,128 +1,128 @@
-# CS503 Visual Intelligence — Course Project
+# Agentic Cognitive Maps
+## How Foveation Shapes Memory Content in Navigation Agents
+
+**CS503 Visual Intelligence — EPFL, Spring 2026**
+
+> When a visual agent navigates through a foveated sensor, what does it choose to remember? Does its memory over-represent uncertain (peripherally-seen) regions? Does it encode location-dependent confidence — a *belief map* rather than a plain map?
+
+---
 
 ## Project Structure
 
 ```
 Project/
-├── README.md                    # This file
-├── pyproject.toml               # Python package config (editable install)
-├── requirements.txt             # Pinned dependencies
-├── setup_env.sh                 # One-time cluster environment setup
-├── submit_job.sh                # Single-node SLURM batch submission
-├── submit_job_multi_node.sh     # Multi-node SLURM batch submission
-├── sync_to_cluster.sh           # rsync project to SCITAS
-├── sync_from_cluster.sh         # rsync results back from SCITAS
+├── cfgs/                           # Experiment configs
+│   ├── base.yaml                   #   Shared defaults
+│   ├── foveated.yaml               #   Foveated agent (core)
+│   ├── uniform.yaml                #   Uniform-vision baseline
+│   ├── matched_compute.yaml        #   Matched information budget control
+│   └── ablations/                  #   Ablation studies
+│       ├── fov_mild.yaml           #     Mild foveation falloff
+│       ├── fov_sharp.yaml          #     Sharp foveation falloff
+│       ├── memory_small.yaml       #     Small GRU hidden size
+│       ├── memory_large.yaml       #     Large GRU hidden size
+│       └── clutter_high.yaml       #     High environment clutter
 │
-├── cfgs/                        # Experiment configs (YAML)
-│   └── example.yaml             # Example config template
+├── src/                            # Main package
+│   ├── envs/                       #   Member A: environments
+│   │   ├── foveation.py            #     Foveation transform (eccentricity-dependent blur)
+│   │   ├── nav_env.py              #     Navigation environment wrapper
+│   │   └── wrappers.py             #     Gym wrappers (foveated / uniform / matched)
+│   ├── models/                     #   Member B: agent architecture
+│   │   ├── encoder.py              #     CNN visual encoder
+│   │   ├── memory.py               #     GRU recurrent memory
+│   │   └── policy.py               #     Policy head (action + gaze direction)
+│   ├── training/                   #   Member B: RL training
+│   │   ├── ppo.py                  #     PPO algorithm
+│   │   └── rollout.py              #     Rollout buffer (stores hidden states)
+│   ├── probing/                    #   Member C: representational analysis
+│   │   ├── probes.py               #     Linear probe definitions
+│   │   ├── targets.py              #     Ground-truth target computation
+│   │   └── analysis.py             #     Probe training & evaluation
+│   ├── analysis/                   #   Member D: information-theoretic analysis
+│   │   ├── information.py          #     Information gain, detectability maps
+│   │   ├── gaze_memory.py          #     Gaze-memory coupling metrics
+│   │   └── bayesian.py             #     Bayesian ideal observer reference
+│   └── utils/                      #     Shared utilities
+│       ├── config.py               #     Config loading (OmegaConf)
+│       ├── logging.py              #     W&B + local logging
+│       └── checkpointing.py        #     Save / load models
 │
-├── src/                         # Main Python package
-│   ├── __init__.py
-│   ├── data/                    # Dataloaders and data utilities
-│   │   └── __init__.py
-│   ├── models/                  # Model implementations
-│   │   └── __init__.py
-│   ├── losses/                  # Loss functions
-│   │   └── __init__.py
-│   └── utils/                   # Training, evaluation, checkpointing utilities
-│       └── __init__.py
+├── scripts/                        # Entry points
+│   ├── train.py                    #   Train an agent (foveated/uniform/matched)
+│   ├── evaluate.py                 #   Evaluate navigation performance
+│   ├── collect_probing_data.py     #   Run trained agent, collect hidden states + GT
+│   ├── train_probes.py             #   Train linear probes on collected data
+│   ├── analyze_gaze.py             #   Gaze-memory coupling analysis
+│   └── visualize.py                #   Generate figures for the report
 │
-├── scripts/                     # Standalone scripts  
-│   ├── train.py                 # Main training entry point
-│   ├── evaluate.py              # Evaluation / inference script
-│   └── visualize.py             # Visualization and qualitative analysis
+├── notebooks/                      # Jupyter analysis notebooks
+├── tests/                          # Unit tests
+├── outputs/                        # Training outputs (gitignored)
+├── docs/                           # Project webpage (GitHub Pages)
 │
-├── notebooks/                   # Jupyter notebooks for analysis
-│   └── .gitkeep
-│
-├── tests/                       # Unit tests
-│   └── __init__.py
-│
-├── outputs/                     # Training outputs (gitignored)
-│   └── .gitkeep
-│
-└── docs/                        # Project webpage (GitHub Pages)
-    └── index.html               # Final report webpage
+├── setup_env.sh                    # Cluster environment setup
+├── submit_job.sh                   # SLURM batch submission
+├── sync_to_cluster.sh              # Upload code → SCITAS
+└── sync_from_cluster.sh            # Download results ← SCITAS
 ```
 
-## Storage Strategy
+## Agents
 
-### Where things live on SCITAS (Izar)
+| Condition | Input | Gaze control | Purpose |
+|-----------|-------|-------------|---------|
+| **Foveated** | Eccentricity-degraded 64×64 | Yes (action + gaze) | Core agent |
+| **Uniform** | Full-resolution 64×64 | No | Baseline |
+| **Matched-compute** | Uniform low-res 64×64 | No | Controls for info quantity vs. distribution |
 
-| What | Where | Why |
-|------|-------|-----|
-| **Code** | `/home/<username>/CS503_Project/` | Backed up nightly, 100 GB quota, permanent |
-| **Datasets** | `/scratch/<username>/CS503_Project/data/` | Large, ephemeral (>2 week auto-delete) |
-| **Checkpoints** | `/scratch/<username>/CS503_Project/checkpoints/` | Large, ephemeral — download important ones |
-| **Logs / W&B** | `/home/<username>/CS503_Project/outputs/` | Small, keep with code |
-| **Best model** | `/home/<username>/CS503_Project/outputs/best/` | Small enough for Home, or download locally |
+## Hypotheses
 
-### Local machine
-
-| What | Where |
-|------|-------|
-| **Code** | This directory (git-tracked) |
-| **Results / Figures** | `outputs/` (gitignored, rsync from cluster) |
-| **Report assets** | `docs/` (git-tracked for GitHub Pages) |
-
-## Quick Start
-
-### 1. First-time setup on SCITAS
-
-```bash
-# SSH into the cluster
-ssh -X wxu@izar.epfl.ch
-
-# Upload project
-bash sync_to_cluster.sh
-
-# On the cluster, set up the environment
-cd /home/wxu/CS503_Project
-bash setup_env.sh
-```
-
-### 2. Running experiments
-
-```bash
-# Interactive (debugging, short runs)
-srun -t 120 -A cs-503 --qos=cs-503 --gres=gpu:1 --mem=16G --pty bash
-conda activate cs503_project
-python scripts/train.py --config cfgs/example.yaml
-
-# Batch (longer training)
-sbatch submit_job.sh cfgs/example.yaml <WANDB_API_KEY> 1
-```
-
-### 3. Syncing results back
-
-```bash
-# From local machine
-bash sync_from_cluster.sh
-```
-
-## Environment
-
-The project uses a dedicated conda environment (`cs503_project`) separate from the NanoFM homework environment to avoid dependency conflicts.
-
-## W&B Integration
-
-All experiments log to Weights & Biases:
-- **Entity**: `alun-xu-epfl`
-- **Project**: `CS503_Project`
+- **H1**: Foveated agent's memory *over-represents* peripherally-observed (high-uncertainty) regions
+- **H2**: Hidden state encodes *location-dependent confidence* (belief map, not just spatial map)
+- **H3**: Gaze and memory are *jointly adapted* — agent looks where memory is weakest
 
 ## Team
 
-| Name | SCIPER | Role |
-|------|--------|------|
-| Weilun Xu | — | — |
-| (add teammates) | — | — |
+| Member | Role | Package |
+|--------|------|---------|
+| A | Environment + foveation | `src/envs/` |
+| B | RL training pipeline (PPO, architecture) | `src/models/`, `src/training/` |
+| C | Probing and representational analysis | `src/probing/` |
+| D | Information-theoretic analysis + gaze-memory coupling | `src/analysis/` |
 
-## Deadlines
+## Quick Start
 
-| Milestone | Date | Deliverable |
-|-----------|------|-------------|
-| Proposal | TBD | 1–2 page PDF on Moodle |
-| Progress Report | TBD | ≤2 page PDF on Moodle |
-| Midterm Presentation | TBD | 3 min slides |
-| Final Presentation | TBD | 5 min slides |
-| Final Webpage + Code | TBD | GitHub Pages + ZIP on Moodle |
+```bash
+# 1. Setup (cluster or local)
+bash setup_env.sh
+
+# 2. Train foveated agent
+python scripts/train.py --config cfgs/foveated.yaml
+
+# 3. Collect probing data from trained agent
+python scripts/collect_probing_data.py --config cfgs/foveated.yaml --checkpoint outputs/<run>/best.pt
+
+# 4. Train probes on hidden states
+python scripts/train_probes.py --data outputs/<run>/probing_data/
+
+# 5. Analyze gaze-memory coupling
+python scripts/analyze_gaze.py --data outputs/<run>/probing_data/
+
+# 6. Generate figures
+python scripts/visualize.py --results outputs/<run>/
+```
+
+## Storage (SCITAS Izar)
+
+| What | Where | Quota |
+|------|-------|-------|
+| Code | `/home/wxu/CS503_Project/` | 100 GB (backed up) |
+| Datasets | `/scratch/wxu/CS503_Project/data/` | Large (ephemeral) |
+| Checkpoints | `/scratch/wxu/CS503_Project/checkpoints/` | Large (ephemeral) |
+| Probing data | `/scratch/wxu/CS503_Project/probing_data/` | Large (ephemeral) |
+| Best models + logs | `/home/wxu/CS503_Project/outputs/` | 100 GB (backed up) |
+
+## W&B
+
+- **Entity**: `alun-xu-epfl`
+- **Project**: `agentic-cognitive-map`

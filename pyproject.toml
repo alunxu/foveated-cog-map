@@ -3,23 +3,39 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cs503-project"
+name = "agentic-cognitive-map"
 version = "0.1.0"
-description = "CS503 Visual Intelligence — Course Project"
+description = "How Foveation Shapes Memory Content in Navigation Agents"
 requires-python = ">=3.10"
 readme = {file = "README.md", content-type = "text/markdown"}
 dependencies = [
+    # RL & environments
+    "gymnasium>=0.29",
+    "minigrid>=2.3",
+    "stable-baselines3>=2.2",
+    # Deep learning
+    "torch>=2.1",
+    "torchvision>=0.16",
+    "einops",
+    # Config & logging
     "omegaconf",
     "hydra-core",
     "loguru",
     "wandb",
-    "einops",
+    # Probing & analysis
+    "scikit-learn",
+    "scipy",
+    # Visualization
+    "matplotlib",
+    "seaborn",
     "mediapy",
+    # Utilities
+    "tqdm",
     "ipykernel",
 ]
 
 [project.urls]
-"Homepage" = "https://vilab.epfl.ch"
+"Homepage" = "https://github.com/alunxu/agentic-cognitive-map"
 
 [tool.setuptools.packages.find]
 where = ["."]
