@@ -1,42 +1,45 @@
 #!/bin/bash
-#SBATCH --job-name=cs503_project
-#SBATCH --time=04:00:00
+#SBATCH --job-name=cs503_nav
+#SBATCH --time=06:00:00
 #SBATCH --account=cs-503
-#SBATCH --qos=cs-503
+#SBATCH --qos=normal
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --output=outputs/slurm_%j.out
-#SBATCH --error=outputs/slurm_%j.err
+#SBATCH --output=slurm_logs/%j.out
+#SBATCH --error=slurm_logs/%j.err
 
-# Usage: sbatch submit_job.sh <config_file> <wandb_key> [num_gpus]
-# Example: sbatch submit_job.sh cfgs/example.yaml YOUR_WANDB_KEY 1
+# Usage: sbatch submit_job.sh <config_file>
+# Example: sbatch submit_job.sh cfgs/foveated.yaml
+#
+# Optional env vars:
+#   WANDB_API_KEY  — set before sbatch if you want W&B logging
 
-CONFIG_FILE=${1:?  "Error: config file not provided"}
-WANDB_KEY=${2:?    "Error: wandb key not provided"}
-NUM_GPUS=${3:-1}
+CONFIG_FILE=${1:?"Error: config file not provided. Usage: sbatch submit_job.sh cfgs/<condition>.yaml"}
 
 echo "============================================"
-echo "  CS503 Project — SLURM Job"
+echo "  CS503 Project — Navigation Agent Training"
 echo "  Config:   ${CONFIG_FILE}"
-echo "  GPUs:     ${NUM_GPUS}"
 echo "  Node:     $(hostname)"
 echo "  Date:     $(date)"
+echo "  Job ID:   ${SLURM_JOB_ID}"
 echo "============================================"
 
 # Activate environment
 eval "$(conda shell.bash hook)"
 conda activate cs503_project
 
-# Set environment variables
-export WANDB_API_KEY="${WANDB_KEY}"
-export OMP_NUM_THREADS=1
+# Use scratch for outputs (large checkpoints)
+SCRATCH_DIR="/scratch/izar/${USER}/CS503_Project"
+mkdir -p "${SCRATCH_DIR}/outputs"
 
-# Create output directory for this run
-mkdir -p outputs
+# Create slurm log directory if needed
+mkdir -p slurm_logs
 
-# Launch training
-torchrun --nproc_per_node="${NUM_GPUS}" scripts/train.py --config "${CONFIG_FILE}"
+# Training
+python scripts/train.py \
+    --config "${CONFIG_FILE}" \
+    --overrides "output_dir=${SCRATCH_DIR}/outputs"
 
 echo "Job completed at $(date)"

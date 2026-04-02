@@ -1,51 +1,99 @@
 """
-Agent architecture: CNN encoder → GRU memory → policy head.
+Agent architecture: encoder -> GRU memory -> policy head.
 
-This module ties together the encoder, memory, and policy into a
-single agent that can be trained with PPO.
+Supports both visual agents (CNN encoder) and blind agents (vector encoder).
+For visual agents, the pointgoal vector is projected and concatenated with
+CNN features before the GRU.
 """
 
 import torch
 import torch.nn as nn
 
-from src.models.encoder import CNNEncoder
+from src.models.encoder import CNNEncoder, VectorEncoder
 from src.models.memory import RecurrentMemory
 from src.models.policy import NavigationPolicy
 
 
-class FoveatedNavigationAgent(nn.Module):
+class NavigationAgent(nn.Module):
     """Complete navigation agent with recurrent memory.
 
-    Pipeline per timestep:
-        observation (H, W, 3) → CNN encoder → features (D,)
-        features + prev_hidden → GRU → hidden (H,)
-        hidden → policy → action, gaze, value
+    Pipeline per timestep (visual):
+        observation (B, C, H, W) -> CNN -> features (B, D_cnn)
+        pointgoal (B, 4) -> Linear -> goal_feat (B, 32)
+        [features; goal_feat] -> GRU -> hidden (B, H)
+        hidden -> policy -> action, gaze, value
+
+    Pipeline per timestep (blind):
+        pointgoal (B, 4) + prev_action -> VectorEncoder -> features (B, D_vec)
+        features -> GRU -> hidden (B, H)
+        hidden -> policy -> action, gaze, value
 
     Args:
-        image_size: Observation size.
-        encoder_channels: CNN channel list.
+        encoder_type: 'cnn' for visual agents, 'vector' for blind.
+        image_size: Observation size (only for CNN).
+        encoder_channels: CNN channel list (only for CNN).
         hidden_size: GRU hidden dimension.
+        num_memory_layers: Number of GRU layers.
         n_actions: Number of discrete movement actions.
         gaze_enabled: Whether agent controls gaze direction.
+        pointgoal_dim: Dimension of pointgoal vector (0 to disable for visual).
     """
 
     def __init__(
         self,
+        encoder_type: str = "cnn",
         image_size: int = 64,
         encoder_channels: list[int] = (16, 32, 64),
         hidden_size: int = 256,
-        n_actions: int = 7,
+        num_memory_layers: int = 1,
+        n_actions: int = 4,
         gaze_enabled: bool = False,
+        pointgoal_dim: int = 4,
     ):
         super().__init__()
+        self.encoder_type = encoder_type
+        self.hidden_size = hidden_size
+        self.pointgoal_dim = pointgoal_dim
 
-        self.encoder = CNNEncoder(
-            image_size=image_size,
-            channels=encoder_channels,
-        )
+        if encoder_type == "vector":
+            self.encoder = VectorEncoder(
+                input_dim=pointgoal_dim,
+                n_actions=n_actions,
+            )
+            self.visual_projection = None
+            self.goal_projections = None
+            memory_input_dim = self.encoder.feature_dim
+        else:
+            self.encoder = CNNEncoder(
+                image_size=image_size,
+                channels=encoder_channels,
+            )
+            # Compress CNN features before GRU to avoid bottleneck
+            # (raw CNN output is 4096-d, far too large for a 256/512-d GRU)
+            cnn_out_dim = self.encoder.feature_dim
+            compressed_dim = hidden_size  # match GRU width
+            self.visual_projection = nn.Sequential(
+                nn.Linear(cnn_out_dim, compressed_dim),
+                nn.ReLU(),
+            )
+            # Visual agents also receive pointgoal via per-component projections
+            # (same pattern as VectorEncoder — gives pointgoal proper representation)
+            if pointgoal_dim > 0:
+                goal_proj_dim = 32  # per-component projection dim
+                self.goal_projections = nn.ModuleList([
+                    nn.Sequential(nn.Linear(1, goal_proj_dim), nn.ReLU())
+                    for _ in range(pointgoal_dim)
+                ])
+                goal_feat_dim = pointgoal_dim * goal_proj_dim  # 4 * 32 = 128
+                memory_input_dim = compressed_dim + goal_feat_dim
+            else:
+                self.goal_projections = None
+                memory_input_dim = compressed_dim
+
         self.memory = RecurrentMemory(
-            input_dim=self.encoder.feature_dim,
+            input_dim=memory_input_dim,
             hidden_size=hidden_size,
+            num_layers=num_memory_layers,
         )
         self.policy = NavigationPolicy(
             hidden_size=hidden_size,
@@ -53,44 +101,84 @@ class FoveatedNavigationAgent(nn.Module):
             gaze_enabled=gaze_enabled,
         )
 
-        self.hidden_size = hidden_size
+    def _encode(self, obs, pointgoal=None, prev_action=None):
+        """Encode observation into feature vector for the GRU."""
+        if self.encoder_type == "vector":
+            return self.encoder(obs, prev_action)
+        else:
+            features = self.encoder(obs)
+            if self.visual_projection is not None:
+                features = self.visual_projection(features)
+            if self.goal_projections is not None and pointgoal is not None:
+                goal_parts = [
+                    proj(pointgoal[:, i:i+1])
+                    for i, proj in enumerate(self.goal_projections)
+                ]
+                goal_feat = torch.cat(goal_parts, dim=-1)  # (B, 128)
+                features = torch.cat([features, goal_feat], dim=-1)
+            return features
 
-    def forward(self, obs: torch.Tensor, hidden: torch.Tensor = None):
+    def forward(self, obs, hidden=None, pointgoal=None, prev_action=None):
         """Forward pass for a single timestep.
-
-        Args:
-            obs: (B, C, H, W) normalised observation.
-            hidden: (1, B, hidden_size) previous GRU hidden state.
 
         Returns:
             action_dist, gaze_dist, value, new_hidden
         """
-        features = self.encoder(obs)
+        features = self._encode(obs, pointgoal, prev_action)
         memory_out, new_hidden = self.memory(features, hidden)
         action_dist, gaze_dist, value = self.policy(memory_out)
         return action_dist, gaze_dist, value, new_hidden
 
-    def act(self, obs: torch.Tensor, hidden: torch.Tensor = None, deterministic: bool = False):
+    def act(self, obs, hidden=None, pointgoal=None, prev_action=None,
+            deterministic=False):
         """Sample action for environment interaction.
 
         Returns:
             action, gaze, log_prob, value, new_hidden
         """
-        features = self.encoder(obs)
+        features = self._encode(obs, pointgoal, prev_action)
         memory_out, new_hidden = self.memory(features, hidden)
         action, gaze, log_prob, value = self.policy.act(memory_out, deterministic)
         return action, gaze, log_prob, value, new_hidden
 
-    def get_hidden_state(self, obs: torch.Tensor, hidden: torch.Tensor = None):
-        """Get the GRU hidden state (for probing).
+    def evaluate_actions(self, obs, actions, hidden, pointgoal=None,
+                         prev_action=None, gaze_actions=None):
+        """Re-evaluate actions for PPO update.
+
+        Args:
+            obs: (B, ...) observations.
+            actions: (B,) movement actions taken.
+            hidden: (num_layers, B, hidden_size) stored hidden states.
+            pointgoal: (B, 4) or None.
+            prev_action: (B,) or None.
+            gaze_actions: (B, 2) or None.
 
         Returns:
-            hidden_state: (B, hidden_size) — the cognitive map.
-            new_hidden: updated hidden for next step.
+            log_prob, value, entropy
         """
-        features = self.encoder(obs)
-        memory_out, new_hidden = self.memory(features, hidden)
-        return memory_out, new_hidden
+        features = self._encode(obs, pointgoal, prev_action)
+        memory_out, _ = self.memory(features, hidden)
+        action_dist, gaze_dist, value = self.policy(memory_out)
+
+        log_prob = action_dist.log_prob(actions)
+        entropy = action_dist.entropy()
+
+        if gaze_dist is not None and gaze_actions is not None:
+            log_prob = log_prob + gaze_dist.log_prob(gaze_actions).sum(dim=-1)
+            entropy = entropy + gaze_dist.entropy().sum(dim=-1)
+
+        return log_prob, value.squeeze(-1), entropy
+
+    def get_value(self, obs, hidden=None, pointgoal=None, prev_action=None):
+        """Get value estimate only (for GAE bootstrap)."""
+        features = self._encode(obs, pointgoal, prev_action)
+        memory_out, _ = self.memory(features, hidden)
+        _, _, value = self.policy(memory_out)
+        return value.squeeze(-1)
 
     def count_parameters(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+# Keep backward compat alias
+FoveatedNavigationAgent = NavigationAgent

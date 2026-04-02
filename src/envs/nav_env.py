@@ -14,7 +14,7 @@ import numpy as np
 from minigrid.wrappers import RGBImgObsWrapper, ImgObsWrapper
 
 
-class NavigationEnv:
+class NavigationEnv(gym.Env):
     """Wrapper around MiniGrid that provides RGB observations and ground truth.
 
     Args:
@@ -33,33 +33,54 @@ class NavigationEnv:
         render_mode: str = "rgb_array",
         seed: int = None,
     ):
+        super().__init__()
         self.image_size = image_size
         self.env_id = env_id
+        self._seed = seed
+        self._seeded = False  # Track whether RNG has been initialized
 
         # Create base environment
-        self.env = gym.make(env_id, render_mode=render_mode, max_steps=max_steps)
+        self._base_env = gym.make(env_id, render_mode=render_mode, max_steps=max_steps)
 
         # Wrap to get RGB image observations instead of symbolic grid
-        self.env = RGBImgObsWrapper(self.env, tile_size=8)
-        self.env = ImgObsWrapper(self.env)
+        self._base_env = RGBImgObsWrapper(self._base_env, tile_size=8)
+        self._base_env = ImgObsWrapper(self._base_env)
 
-        self.action_space = self.env.action_space
-        self.seed = seed
+        self.action_space = self._base_env.action_space
+        self.observation_space = gym.spaces.Box(
+            low=0, high=255,
+            shape=(self.image_size, self.image_size, 3),
+            dtype=np.uint8,
+        )
 
-    def reset(self) -> tuple[np.ndarray, dict]:
+    @property
+    def unwrapped_env(self):
+        return self._base_env.unwrapped
+
+    def reset(self, *, seed=None, options=None) -> tuple[np.ndarray, dict]:
         """Reset environment.
 
         Returns:
             obs: (H, W, 3) uint8 RGB observation.
             info: dict with ground truth for probing.
+
+        Note: Only the first reset uses the stored seed (to initialize the RNG).
+        Subsequent resets with seed=None let MiniGrid's internal RNG produce
+        diverse layouts, which is critical for generalization.
         """
-        obs, info = self.env.reset(seed=self.seed)
+        if seed is not None:
+            reset_seed = seed
+        elif not self._seeded:
+            reset_seed = self._seed
+        else:
+            reset_seed = None
+        self._seeded = True
+        obs, info = self._base_env.reset(seed=reset_seed, options=options)
         obs = self._resize(obs)
 
-        # Extract ground truth for probing
         info["ground_truth"] = self._extract_ground_truth()
-        info["agent_pos"] = tuple(self.env.unwrapped.agent_pos)
-        info["agent_dir"] = int(self.env.unwrapped.agent_dir)
+        info["agent_pos"] = tuple(self.unwrapped_env.agent_pos)
+        info["agent_dir"] = int(self.unwrapped_env.agent_dir)
 
         return obs, info
 
@@ -72,12 +93,12 @@ class NavigationEnv:
         Returns:
             obs, reward, terminated, truncated, info
         """
-        obs, reward, terminated, truncated, info = self.env.step(action)
+        obs, reward, terminated, truncated, info = self._base_env.step(action)
         obs = self._resize(obs)
 
         info["ground_truth"] = self._extract_ground_truth()
-        info["agent_pos"] = tuple(self.env.unwrapped.agent_pos)
-        info["agent_dir"] = int(self.env.unwrapped.agent_dir)
+        info["agent_pos"] = tuple(self.unwrapped_env.agent_pos)
+        info["agent_dir"] = int(self.unwrapped_env.agent_dir)
 
         return obs, reward, terminated, truncated, info
 
@@ -98,7 +119,7 @@ class NavigationEnv:
             target_pos: (x, y) position of the goal
             grid_size: (h, w) of the environment grid
         """
-        grid = self.env.unwrapped.grid
+        grid = self.unwrapped_env.grid
         width, height = grid.width, grid.height
 
         # Occupancy grid: 1 where wall or obstacle
@@ -121,12 +142,7 @@ class NavigationEnv:
         }
 
     def close(self):
-        self.env.close()
+        self._base_env.close()
 
-    @property
-    def observation_space(self):
-        return gym.spaces.Box(
-            low=0, high=255,
-            shape=(self.image_size, self.image_size, 3),
-            dtype=np.uint8,
-        )
+    def render(self):
+        return self._base_env.render()

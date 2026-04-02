@@ -1,10 +1,7 @@
 """
 PPO trainer for the navigation agent.
 
-Handles the training loop, advantage estimation, and policy updates.
-Stores hidden states alongside rollout data for later probing.
-
-Member B is responsible for this module.
+Handles advantage estimation and policy updates.
 """
 
 import torch
@@ -17,7 +14,7 @@ class PPOTrainer:
     """Proximal Policy Optimization trainer.
 
     Args:
-        agent: FoveatedNavigationAgent instance.
+        agent: NavigationAgent instance.
         lr: Learning rate.
         gamma: Discount factor.
         gae_lambda: GAE lambda.
@@ -84,30 +81,121 @@ class PPOTrainer:
         returns = advantages + values
         return advantages, returns
 
-    def update(self, rollout_buffer: dict) -> dict:
+    def update(self, rollout_data: dict, next_value: torch.Tensor) -> dict:
         """Run PPO update on collected rollout data.
 
         Args:
-            rollout_buffer: dict containing rollout data.
-                Required keys: observations, actions, log_probs, values,
-                rewards, dones, hidden_states.
-                Optional: gaze_actions.
+            rollout_data: dict of tensors from RolloutBuffer.get_as_tensors().
+            next_value: (N,) bootstrapped value for the last step.
 
         Returns:
-            metrics: dict of training metrics for logging.
+            metrics: dict of training metrics.
         """
-        # TODO: Implement PPO update loop
-        # 1. Compute GAE advantages
-        # 2. Flatten rollout data
-        # 3. For n_epochs:
-        #    a. Shuffle and create minibatches
-        #    b. Recompute log_probs and values with current policy
-        #    c. Compute clipped policy loss
-        #    d. Compute value loss
-        #    e. Compute entropy bonus
-        #    f. Backprop and clip gradients
-        
-        raise NotImplementedError(
-            "Implement PPO update. This is Member B's primary responsibility. "
-            "See stable-baselines3 PPO for reference implementation."
-        )
+        rewards = rollout_data["rewards"]      # (T, N)
+        values = rollout_data["values"]        # (T, N)
+        dones = rollout_data["dones"]          # (T, N)
+        old_log_probs = rollout_data["log_probs"]  # (T, N)
+        observations = rollout_data["observations"]  # (T, N, ...)
+        actions = rollout_data["actions"]      # (T, N)
+        prev_actions = rollout_data["prev_actions"]  # (T, N)
+        hidden_states = rollout_data["hidden_states"]  # (T, num_layers, N, H)
+
+        pointgoals = rollout_data.get("pointgoals")  # (T, N, 4) or None
+        gaze_actions = rollout_data.get("gaze_actions")  # (T, N, 2) or None
+
+        T, N = rewards.shape
+
+        # 1. Compute GAE
+        advantages, returns = self.compute_gae(rewards, values, dones, next_value)
+
+        # 2. Flatten (T, N, ...) -> (T*N, ...)
+        def flatten(x):
+            return x.reshape(T * N, *x.shape[2:])
+
+        flat_obs = flatten(observations)
+        flat_actions = flatten(actions)
+        flat_prev_actions = flatten(prev_actions)
+        flat_old_log_probs = flatten(old_log_probs)
+        flat_advantages = flatten(advantages)
+        flat_returns = flatten(returns)
+        # Hidden states: (T, num_layers, N, H) -> need (T*N, num_layers, H)
+        # Permute to (T, N, num_layers, H) then flatten
+        flat_hidden = hidden_states.permute(0, 2, 1, 3).reshape(T * N, hidden_states.shape[1], -1)
+        # -> (num_layers, T*N, H) for GRU
+        flat_hidden = flat_hidden.permute(1, 0, 2).contiguous()
+
+        flat_pointgoals = flatten(pointgoals) if pointgoals is not None else None
+        flat_gaze_actions = flatten(gaze_actions) if gaze_actions is not None else None
+
+        # Normalize advantages
+        flat_advantages = (flat_advantages - flat_advantages.mean()) / (flat_advantages.std() + 1e-8)
+
+        # Preprocess observations for CNN
+        if self.agent.encoder_type == "cnn":
+            flat_obs = flat_obs.float().permute(0, 3, 1, 2) / 255.0
+
+        total_samples = T * N
+        all_metrics = []
+
+        # 3. PPO epochs
+        for epoch in range(self.n_epochs):
+            indices = torch.randperm(total_samples, device=flat_obs.device)
+
+            for start in range(0, total_samples, self.batch_size):
+                end = min(start + self.batch_size, total_samples)
+                mb_idx = indices[start:end]
+
+                mb_obs = flat_obs[mb_idx]
+                mb_actions = flat_actions[mb_idx]
+                mb_prev_actions = flat_prev_actions[mb_idx]
+                mb_old_log_probs = flat_old_log_probs[mb_idx]
+                mb_advantages = flat_advantages[mb_idx]
+                mb_returns = flat_returns[mb_idx]
+                mb_hidden = flat_hidden[:, mb_idx, :]
+                mb_pointgoals = flat_pointgoals[mb_idx] if flat_pointgoals is not None else None
+                mb_gaze = flat_gaze_actions[mb_idx] if flat_gaze_actions is not None else None
+
+                # Re-evaluate actions under current policy
+                new_log_probs, new_values, entropy = self.agent.evaluate_actions(
+                    mb_obs, mb_actions, mb_hidden,
+                    pointgoal=mb_pointgoals,
+                    prev_action=mb_prev_actions,
+                    gaze_actions=mb_gaze,
+                )
+
+                # Policy loss (clipped)
+                ratio = torch.exp(new_log_probs - mb_old_log_probs)
+                surr1 = ratio * mb_advantages
+                surr2 = torch.clamp(ratio, 1.0 - self.clip_range, 1.0 + self.clip_range) * mb_advantages
+                policy_loss = -torch.min(surr1, surr2).mean()
+
+                # Value loss
+                value_loss = nn.functional.mse_loss(new_values, mb_returns)
+
+                # Entropy bonus
+                entropy_loss = -entropy.mean()
+
+                # Total loss
+                loss = policy_loss + self.value_coef * value_loss + self.entropy_coef * entropy_loss
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(self.agent.parameters(), self.max_grad_norm)
+                self.optimizer.step()
+
+                with torch.no_grad():
+                    approx_kl = (mb_old_log_probs - new_log_probs).mean().item()
+
+                all_metrics.append({
+                    "policy_loss": policy_loss.item(),
+                    "value_loss": value_loss.item(),
+                    "entropy": -entropy_loss.item(),
+                    "approx_kl": approx_kl,
+                })
+
+        # Average metrics across all minibatches
+        avg_metrics = {}
+        for key in all_metrics[0]:
+            avg_metrics[key] = np.mean([m[key] for m in all_metrics])
+
+        return avg_metrics

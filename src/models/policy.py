@@ -50,7 +50,7 @@ class NavigationPolicy(nn.Module):
                 nn.ReLU(),
             )
             self.gaze_mean = nn.Linear(gaze_hidden, 2)
-            self.gaze_log_std = nn.Parameter(torch.zeros(2))
+            self.gaze_log_std = nn.Parameter(torch.full((2,), -1.0))  # σ ≈ 0.37
 
         # Critic: value estimate
         self.value_head = nn.Sequential(
@@ -79,7 +79,7 @@ class NavigationPolicy(nn.Module):
         if self.gaze_enabled:
             gaze_features = self.gaze_head(hidden_state)
             gaze_mean = torch.sigmoid(self.gaze_mean(gaze_features))  # [0, 1]
-            gaze_std = self.gaze_log_std.exp().expand_as(gaze_mean)
+            gaze_std = self.gaze_log_std.clamp(-3.0, 0.0).exp().expand_as(gaze_mean)  # σ ∈ [0.05, 1.0]
             gaze_dist = Normal(gaze_mean, gaze_std)
 
         # Value

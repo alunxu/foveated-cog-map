@@ -11,13 +11,24 @@ outputs/
 !outputs/.gitkeep
 wandb/
 
+# SLURM logs
+slurm_logs/
+
+# Probing results
+probing_results/
+
 # Checkpoints
 *.pt
 *.pth
 *.ckpt
 
-# Data (downloaded on cluster, top-level only)
+# Data (downloaded on cluster)
 /data/
+habitat_data/
+
+# Habitat repos (cloned on cluster, not part of our project)
+habitat-sim/
+habitat-lab/
 
 # Jupyter
 .ipynb_checkpoints/

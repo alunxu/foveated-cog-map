@@ -13,5 +13,6 @@ foveation:
   gaze_action: false
 
 env:
-  image_size: 32                   # Lower resolution to match info budget
+  image_size: 32                   # CNN processes 32×32 images
+  matched_compute: true            # Flag: render at 64×64, downsample via wrapper
   # The total pixel information ≈ foveated agent's average

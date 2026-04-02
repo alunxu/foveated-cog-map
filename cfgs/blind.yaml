@@ -1,0 +1,20 @@
+# ============================================================
+# Blind agent — GPS+Compass only, no vision
+# Replicates the core condition from Wijmans et al. (ICLR 2023)
+# ============================================================
+
+defaults:
+  - base
+
+run_name: blind_agent
+
+foveation:
+  enabled: false
+  gaze_action: false
+
+model:
+  encoder:
+    type: vector                     # VectorEncoder instead of CNN
+  memory:
+    hidden_size: 512                 # Larger memory for blind agent
+    num_layers: 1
