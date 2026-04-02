@@ -270,6 +270,48 @@ Observation pipeline (B and C must produce compatible obs):
   Blind:     (B, pointgoal_dim) float32    → VectorEncoder (no visual)
 ```
 
+### Parallel Development & Dependencies
+
+Members B, C, and D work fully in parallel during Weeks 1-2. The only dependency is at integration (Week 3), when C wraps B's visual encoder with foveation:
+
+```
+Week 1─2: Fully parallel development
+─────────────────────────────────────────────────────────────────────
+
+  Member A                Member B               Member C              Member D
+  (Training)              (Visual Encoder)        (Foveation)           (Probing)
+     │                         │                       │                     │
+     │  Works on:              │  Works on:            │  Works on:          │  Works on:
+     │  DD-PPO scripts,        │  ResNet50 +           │  Blur transform +   │  Probe classifiers
+     │  blind agent on         │  RGB-D pipeline       │  gaze action head   │  + visualization
+     │  Gibson                 │                       │                     │
+     │                         │                       │                     │
+     │  Tests with:            │  Tests with:          │  Tests with:        │  Tests with:
+     │  Habitat test scenes    │  Habitat test scenes  │  torch.randn(...)   │  torch.randn(...)
+     │  (free, 89 MB)          │  + pretrained ResNet  │  (any RGB tensor)   │  (fake hidden states)
+     │                         │                       │                     │
+     │  No dependency          │  No dependency        │  No dependency      │  No dependency
+     │                         │                       │                     │
+
+Week 3: Integration (only merge point)
+─────────────────────────────────────────────────────────────────────
+
+                          Member B ──────► Member C
+                          (visual encoder)  (wraps B's encoder
+                                             with foveation)
+                                │
+                                ▼
+                          Merge B + C into main
+                          Run sighted + foveated training
+
+Week 4─5: Training produces checkpoints
+─────────────────────────────────────────────────────────────────────
+
+  Member A                                                    Member D
+  (monitors cluster) ─── produces checkpoints ──────────────► (probes all
+                                                               4 conditions)
+```
+
 ### Development & Testing Independence
 
 Each member can test their component without waiting for others:
@@ -290,8 +332,8 @@ Week 1─2   ██████████████████████�
                                                       C: foveation for Habitat RGB
                                                       D: probing pipeline + mock tests
 
-Week 3     ████████████████████████████████████████  Integration
-                                                      Merge branches → main
+Week 3     ████████████████████████████████████████  Integration (only sync point)
+                                                      Merge B + C (foveation wraps encoder)
                                                       Run sighted + foveated training
 
 Week 4─5   ████████████████████████████████████████  Training runs
