@@ -7,7 +7,7 @@ USERNAME="${SCITAS_USER:?Set SCITAS_USER to your EPFL username (e.g. export SCIT
 REMOTE_HOST="izar.epfl.ch"
 REMOTE_DIR="/home/${USERNAME}/CS503_Project"
 
-LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOCAL_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
 echo "Syncing ${LOCAL_DIR} → ${USERNAME}@${REMOTE_HOST}:${REMOTE_DIR}"
 

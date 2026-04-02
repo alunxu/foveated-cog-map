@@ -16,7 +16,7 @@ if [ "${BATCH}" -eq 1 ]; then
     echo "Batch 1: blind + uniform"
     echo ""
     for cfg in cfgs/blind.yaml cfgs/uniform.yaml; do
-        JOB_ID=$(sbatch --parsable submit_job.sh "${cfg}")
+        JOB_ID=$(sbatch --parsable scripts/cluster/submit_job.sh "${cfg}")
         echo "  ${cfg}  ->  Job ${JOB_ID}"
     done
     echo ""
@@ -25,7 +25,7 @@ elif [ "${BATCH}" -eq 2 ]; then
     echo "Batch 2: foveated + matched_compute"
     echo ""
     for cfg in cfgs/foveated.yaml cfgs/matched_compute.yaml; do
-        JOB_ID=$(sbatch --parsable submit_job.sh "${cfg}")
+        JOB_ID=$(sbatch --parsable scripts/cluster/submit_job.sh "${cfg}")
         echo "  ${cfg}  ->  Job ${JOB_ID}"
     done
 else

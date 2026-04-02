@@ -29,7 +29,7 @@ for entry in "${CONDITIONS[@]}"; do
         continue
     fi
 
-    JOB_ID=$(sbatch --parsable submit_probe.sh "${CKPT}" "${CONFIG}" "${PROBE_DIR}/${RUN_NAME}/" 200)
+    JOB_ID=$(sbatch --parsable scripts/cluster/submit_probe.sh "${CKPT}" "${CONFIG}" "${PROBE_DIR}/${RUN_NAME}/" 200)
     echo "  ${RUN_NAME}  ->  Job ${JOB_ID}"
 done
 
