@@ -156,6 +156,160 @@ sbatch submit_habitat.sh pointnav/ddppo_pointnav_blind_gibson
 - [ ] Matched-compute control condition
 - [ ] Comparative probing: what does foveation change in memory?
 
+## Team Workstreams
+
+The project is split into 4 independent workstreams. Each member develops against **shared interfaces** (checkpoint format, hidden state shape, config schema) so work proceeds in parallel without blocking.
+
+### Architecture Overview
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Habitat Simulator                             │
+│                  (Gibson 492 scenes, PointNav)                       │
+└──────────┬───────────────────┬───────────────────┬───────────────────┘
+           │                   │                   │
+     ┌─────▼─────┐     ┌──────▼──────┐     ┌──────▼──────┐
+     │   Blind    │     │   Uniform   │     │  Foveated   │
+     │ GPS+Comp.  │     │  RGB-D full │     │ RGB-D blur  │
+     │  only      │     │  resolution │     │ + gaze ctrl │
+     └─────┬──────┘     └──────┬──────┘     └──────┬──────┘
+           │                   │                   │
+           └───────────────────┼───────────────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │   DD-PPO Training   │
+                    │  (3-layer LSTM-512) │
+                    └──────────┬──────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │   Linear Probing    │
+                    │  on frozen hidden   │
+                    │  states             │
+                    └──────────┬──────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              ▼                ▼                 ▼
+        ┌──────────┐   ┌──────────┐   ┌───────────────┐
+        │Occupancy │   │ Position │   │   Collision    │
+        │   Map    │   │Prediction│   │  Detection     │
+        │  Decoder │   │          │   │                │
+        └──────────┘   └──────────┘   └───────────────┘
+```
+
+### Workstream Assignments
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│  ┌─────────────────┐  ┌─────────────────┐                              │
+│  │   MEMBER A       │  │   MEMBER B       │                             │
+│  │   Training &     │  │   Visual         │                             │
+│  │   Infrastructure │  │   Encoder        │                             │
+│  │                  │  │                  │                              │
+│  │  • DD-PPO loop   │  │  • ResNet visual │                             │
+│  │  • SLURM scripts │  │    encoder       │                             │
+│  │  • Blind agent   │  │  • RGB-D obs     │                             │
+│  │    training      │  │    pipeline      │                             │
+│  │  • Checkpoint    │  │  • Uniform agent │                             │
+│  │    management    │  │    on Gibson     │                             │
+│  │  • Cluster ops   │  │  • Matched-      │                             │
+│  │                  │  │    compute agent │                             │
+│  └─────────────────┘  └─────────────────┘                              │
+│                                                                         │
+│  ┌─────────────────┐  ┌─────────────────┐                              │
+│  │   MEMBER C       │  │   MEMBER D       │                             │
+│  │   Foveation      │  │   Probing &      │                             │
+│  │   Module         │  │   Analysis       │                             │
+│  │                  │  │                  │                              │
+│  │  • Foveation     │  │  • Hidden state  │                             │
+│  │    transform for │  │    extraction    │                             │
+│  │    Habitat RGB   │  │  • Occupancy,    │                             │
+│  │  • Gaze action   │  │    position,     │                             │
+│  │    head + policy │  │    collision     │                             │
+│  │  • Gaze-aware    │  │    probes        │                             │
+│  │    memory arch.  │  │  • Visualization │                             │
+│  │  • Foveated      │  │    + statistics  │                             │
+│  │    agent train   │  │  • Paper figures │                             │
+│  └─────────────────┘  └─────────────────┘                              │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### File Ownership
+
+Each member owns a set of files to avoid merge conflicts:
+
+| Member | Owns | Branch |
+|--------|------|--------|
+| **A** | `submit_habitat.sh`, `habitat_configs/`, cluster scripts | `feat/training-infra` |
+| **B** | Visual encoder integration in `habitat-baselines/` policy | `feat/visual-encoder` |
+| **C** | `src/envs/foveation.py`, Habitat foveation wrapper, gaze head | `feat/foveation` |
+| **D** | `scripts/probe.py`, `scripts/visualize.py`, `analysis/` | `feat/probing` |
+
+### Shared Interfaces (Contracts)
+
+All members develop against these shared formats — no need to wait for each other:
+
+```
+Checkpoint format (produced by A/B/C, consumed by D):
+  {
+      "state_dict":  model.state_dict(),
+      "config":      { ... },       # full training config
+      "timesteps":   int,           # total env steps
+  }
+
+Hidden state shape (produced during rollout, consumed by probing):
+  hidden_states:  (N, num_layers × hidden_size)   # e.g., (50000, 1536) for 3-layer LSTM-512
+  agent_pos:      (N, 3)                           # x, y, z world coords
+  occupancy:      (N, H, W)                        # top-down binary map
+  collision:      (N,)                             # bool per step
+
+Observation pipeline (B and C must produce compatible obs):
+  Uniform:   (B, 256, 256, 3) uint8 RGB   → ResNet50 encoder
+  Foveated:  (B, 256, 256, 3) uint8 RGB   → foveation_transform() → ResNet50 encoder
+  Blind:     (B, pointgoal_dim) float32    → VectorEncoder (no visual)
+```
+
+### Development & Testing Independence
+
+Each member can test their component without waiting for others:
+
+| Member | Can test with | Without needing |
+|--------|--------------|-----------------|
+| **A** | Habitat test scenes (89 MB, free) | B, C, D |
+| **B** | Habitat test scenes + pretrained ResNet weights | A, C, D |
+| **C** | Any RGB tensor (even random noise for foveation transform) | A, B, D |
+| **D** | Synthetic hidden states (`torch.randn(N, 1536)`) | A, B, C |
+
+### Timeline
+
+```
+Week 1─2   ████████████████████████████████████████  All 4 develop in parallel
+                                                      A: blind training on Gibson
+                                                      B: visual encoder integration
+                                                      C: foveation for Habitat RGB
+                                                      D: probing pipeline + mock tests
+
+Week 3     ████████████████████████████████████████  Integration
+                                                      Merge branches → main
+                                                      Run sighted + foveated training
+
+Week 4─5   ████████████████████████████████████████  Training runs
+                                                      A monitors cluster jobs
+                                                      D starts probing blind agent
+
+Week 5─6   ████████████████████████████████████████  Probing & analysis
+                                                      D probes all 4 conditions
+                                                      All: compare memory content
+
+Week 7─8   ████████████████████████████████████████  Paper writing
+                                                      All contribute sections
+
+Week 9─10  ████████████████████████████████████████  Revision + submission
+```
+
+---
+
 ## References
 
 - Wijmans et al., "Emergence of Maps in the Memories of Blind Navigation Agents," ICLR 2023. [Paper](https://arxiv.org/abs/2301.13261) | [Code](https://github.com/erikwijmans/emergence-of-maps)
