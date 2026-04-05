@@ -21,8 +21,11 @@ habitat:
       main_agent:
         sim_sensors:
           rgb_sensor:
-            height: 128
-            width: 128
+            height: 256
+            width: 256
+          depth_sensor:
+            height: 256
+            width: 256
 
 habitat_baselines:
   verbose: False

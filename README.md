@@ -407,49 +407,152 @@ probe_data = {
 
 ---
 
-## 7. Quick Start
+## 7. Setup Guide (Start Here If You're New)
 
-### MiniGrid (local, for development)
+### 7.1 SCITAS Cluster Access
+
+1. **Get a SCITAS account**: https://scitas.epfl.ch/ (requires EPFL credentials)
+2. **SSH in**: `ssh <username>@izar.epfl.ch`
+3. **Key directories**:
+
+| What | Path | Quota | Notes |
+|------|------|-------|-------|
+| Home (code) | `/home/<user>/` | 100 GB, backed up | Git repo lives here |
+| Scratch (data) | `/scratch/izar/<user>/` | Large, shared | **Files >2 weeks auto-deleted** |
+| Our code | `/home/<user>/CS503_Project/` | — | Clone from GitHub |
+| Datasets | `/scratch/izar/<user>/habitat_data/` | ~30 GB | Gibson + MP3D scenes |
+| Checkpoints | `/scratch/izar/<user>/habitat_checkpoints/` | Growing | Training outputs |
+
+4. **Job submission**: Uses SLURM. `cs-503` QoS allows **max 2 concurrent jobs** on GPU partition.
 
 ```bash
-# Setup
+sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_blind_gibson  # submit
+squeue -u $USER                                                                  # check status
+scancel <job_id>                                                                 # cancel
+```
+
+### 7.2 Clone the Repo
+
+```bash
+# On the cluster
+cd ~
+git clone https://github.com/alunxu/agentic-cognitive-map.git CS503_Project
+cd CS503_Project
+```
+
+### 7.3 Environment Setup
+
+**Two conda environments**: one for MiniGrid (local dev), one for Habitat (cluster training).
+
+#### MiniGrid environment (local or cluster, CPU-only OK)
+```bash
 bash scripts/cluster/setup_env.sh
 conda activate cs503_project
-
-# Train one condition
-python scripts/train.py --config cfgs/blind.yaml
-
-# Run probing
-python scripts/probe.py --checkpoint outputs/blind_agent/checkpoint_final.pt \
-    --config cfgs/blind.yaml --n_episodes 200 --output probing_results/blind/
 ```
 
-### Habitat (SCITAS cluster)
+#### Habitat environment (cluster only, needs GPU nodes)
+```bash
+conda create -n habitat python=3.9 cmake=3.22 -y
+conda activate habitat
+
+# PyTorch (must match cluster CUDA driver — 12.1 on Izar)
+pip install torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cu121
+
+# Habitat simulator (headless, no display needed)
+conda install habitat-sim=0.3.3 withbullet headless -c conda-forge -c aihabitat
+
+# Habitat lab + baselines (from source for DD-PPO)
+cd ~
+git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
+cd habitat-lab
+pip install -e habitat-lab
+pip install -e habitat-baselines
+
+# IMPORTANT: Patch for blind policy (RunningMeanAndVar(0) assertion error)
+# In habitat-baselines/rl/ddppo/policy/resnet_policy.py, change:
+#   if normalize_visual_inputs:
+# to:
+#   if normalize_visual_inputs and self._n_input_channels > 0:
+
+# Symlink data directory (avoids Hydra {split} parsing issues)
+ln -s /scratch/izar/$USER/habitat_data ~/habitat-lab/data
+```
+
+### 7.4 Dataset Download
+
+**Only one person needs to do this** — data is shared on scratch.
+
+#### Gibson (492 scenes, 13 GB) — already downloaded
+```bash
+# Gibson scenes live at:
+/scratch/izar/wxu/habitat_data/scene_datasets/gibson/  # 492 .glb files
+
+# PointNav episodes (free, no license needed):
+wget https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip
+unzip pointnav_gibson_v1.zip -d /scratch/izar/$USER/habitat_data/datasets/
+```
+
+#### Matterport3D (~15 GB) — access granted
+```bash
+# 1. Download script (already on cluster at ~/download_mp.py)
+wget -O ~/download_mp.py https://kaldir.vc.cit.tum.de/matterport/download_mp.py
+
+# 2. Download Habitat-compatible MP3D scenes
+python3 ~/download_mp.py -o /scratch/izar/$USER/mp3d_raw --task_data habitat
+
+# 3. Unzip and move .glb files to Habitat data dir
+mkdir -p /scratch/izar/$USER/habitat_data/scene_datasets/mp3d/
+unzip /scratch/izar/$USER/mp3d_raw/v1/tasks/mp3d_habitat.zip -d /scratch/izar/$USER/habitat_data/scene_datasets/mp3d/
+
+# 4. Download PointNav episodes for MP3D
+wget https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip
+unzip pointnav_mp3d_v1.zip -d /scratch/izar/$USER/habitat_data/datasets/
+```
+
+#### If you're using another team member's data
+```bash
+# Symlink to wxu's data (no need to re-download)
+ln -s /scratch/izar/wxu/habitat_data /scratch/izar/$USER/habitat_data
+```
+
+### 7.5 Copy Configs to Habitat
+
+Our custom Habitat configs must be placed where habitat-baselines can find them:
 
 ```bash
-# One-time environment setup
-conda create -n habitat python=3.9 cmake=3.22 -y && conda activate habitat
-pip install torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cu121
-conda install habitat-sim=0.3.3 withbullet headless -c conda-forge -c aihabitat
-cd ~/habitat-lab && pip install -e habitat-lab && pip install -e habitat-baselines
-
-# Train (2 V100 GPUs per job, cs-503 QoS allows max 2 concurrent jobs)
-sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_blind_gibson
-sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_uniform_gibson
-# After above finish:
-sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
-sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_matched_gibson
+# Copy all Gibson configs
+cp ~/CS503_Project/habitat_configs/ddppo_pointnav_*_gibson.yaml \
+   ~/habitat-lab/habitat-baselines/habitat_baselines/config/pointnav/
 ```
 
-### Cluster Storage
+### 7.6 Training Commands
 
-| What | Path | Notes |
-|------|------|-------|
-| Code | `/home/<user>/CS503_Project/` | 100 GB, backed up |
-| Datasets | `/scratch/izar/<user>/habitat_data/` | Gibson scenes live here |
-| Checkpoints | `/scratch/izar/<user>/habitat_checkpoints/` | Training outputs |
+```bash
+cd ~/CS503_Project
 
-**Important**: `/scratch/izar/` files older than 2 weeks are auto-deleted. Copy important checkpoints to `/home/`.
+# Submit training (2 V100 GPUs, up to 72h wall time)
+sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_blind_gibson
+sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_uniform_gibson
+# cs-503 allows max 2 jobs — submit more after these finish:
+sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
+sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_matched_gibson
+
+# Monitor progress
+squeue -u $USER                        # job status
+tail -f slurm_logs/<job_id>.err        # live training logs
+ls /scratch/izar/$USER/habitat_checkpoints/<run_name>/  # checkpoints
+```
+
+### 7.7 Common Issues & Fixes
+
+| Issue | Fix |
+|-------|-----|
+| `RunningMeanAndVar(0)` assertion | Patch `resnet_policy.py` (see 7.3 above) |
+| `{split}` in Hydra CLI | Use symlink `~/habitat-lab/data → /scratch/izar/$USER/habitat_data` |
+| CUDA driver mismatch | Use PyTorch 2.1.0+cu121 (matches Izar's CUDA 12.1) |
+| Job stuck on `(Resources)` | Cluster busy; check `sinfo -p gpu` for free nodes |
+| 4-GPU jobs never start | Only 2 nodes have 4 GPUs (often drained). Use 2 GPUs instead |
+| `ConnectionResetError` in env init | Reduce `num_environments` in config (6→4) |
 
 ---
 

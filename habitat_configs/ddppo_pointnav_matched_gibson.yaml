@@ -22,6 +22,9 @@ habitat:
           rgb_sensor:
             height: 64
             width: 64
+          depth_sensor:
+            height: 64
+            width: 64
 
 habitat_baselines:
   verbose: False
