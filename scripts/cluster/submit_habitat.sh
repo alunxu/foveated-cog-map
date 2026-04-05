@@ -4,10 +4,10 @@
 #SBATCH --account=cs-503
 #SBATCH --qos=cs-503
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=4
-#SBATCH --gres=gpu:4
+#SBATCH --ntasks-per-node=2
+#SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=10
-#SBATCH --mem=60G
+#SBATCH --mem=90G
 #SBATCH --output=slurm_logs/%j.out
 #SBATCH --error=slurm_logs/%j.err
 
@@ -24,7 +24,9 @@ echo "============================================"
 echo "  Habitat DD-PPO Training"
 echo "  Config:   ${CONFIG_NAME}"
 echo "  Node:     $(hostname)"
-echo "  GPUs:     ${SLURM_NTASKS_PER_NODE}"
+echo "  Nodes:    ${SLURM_NNODES}"
+echo "  GPUs/node: ${SLURM_NTASKS_PER_NODE}"
+echo "  Total GPUs: $((SLURM_NNODES * SLURM_NTASKS_PER_NODE))"
 echo "  Date:     $(date)"
 echo "  Job ID:   ${SLURM_JOB_ID}"
 echo "============================================"
@@ -36,6 +38,9 @@ export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
 export HYDRA_FULL_ERROR=1
 
+# Project root (for custom policies like FoveatedPointNavResNetPolicy)
+export PYTHONPATH="/home/${USER}/CS503_Project:${PYTHONPATH}"
+
 DATA_DIR="/scratch/izar/${USER}/habitat_data"
 CKPT_DIR="/scratch/izar/${USER}/habitat_checkpoints"
 RUN_NAME=$(basename "${CONFIG_NAME}" | sed 's/ddppo_pointnav_//')
@@ -43,7 +48,8 @@ mkdir -p "${CKPT_DIR}/${RUN_NAME}"
 
 cd /home/${USER}/habitat-lab
 
-srun python -u -m habitat_baselines.run \
+# Use custom entry point to register our policies (foveated, etc.)
+srun python -u /home/${USER}/CS503_Project/scripts/cluster/run_habitat.py \
     --config-name="${CONFIG_NAME}" \
     habitat_baselines.evaluate=False \
     habitat.dataset.scenes_dir="${DATA_DIR}/scene_datasets" \

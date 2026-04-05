@@ -1,10 +1,12 @@
 # @package _global_
 #
-# DD-PPO Blind Agent on Gibson — replicates Wijmans et al. (ICLR 2023)
-# GPS+Compass only, no visual encoder, 3-layer LSTM-512
+# DD-PPO Foveated Vision Agent on Gibson
+# RGB (128x128) with learned foveation + GPS+Compass
+# Agent learns WHERE to look via gaze decoder on LSTM hidden state
+# Foveation applied before ResNet encoder: sharp at gaze, blurred periphery
 #
-# Full training (2 GPUs):
-#   sbatch submit_habitat.sh pointnav/ddppo_pointnav_blind_gibson
+# Training (2 GPUs):
+#   sbatch submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
 
 defaults:
   - /benchmark/nav/pointnav: pointnav_gibson
@@ -14,6 +16,13 @@ defaults:
 habitat:
   environment:
     max_episode_steps: 500
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            height: 128
+            width: 128
 
 habitat_baselines:
   verbose: False
@@ -21,20 +30,26 @@ habitat_baselines:
   torch_gpu_id: 0
   tensorboard_dir: "tb"
   video_dir: "video_dir"
-  eval_ckpt_path_dir: "data/checkpoints/blind_gibson"
-  num_environments: 8               # 8 per worker × 2 workers = 16 total
-  checkpoint_folder: "data/checkpoints/blind_gibson"
+  eval_ckpt_path_dir: "data/checkpoints/foveated_gibson"
+  num_environments: 6
+  checkpoint_folder: "data/checkpoints/foveated_gibson"
   num_updates: -1
-  total_num_steps: 5.0e8       # 500M steps (start smaller, scale up if needed)
+  total_num_steps: 5.0e8
   log_interval: 10
   num_checkpoints: 50
   force_torch_single_threaded: True
-  force_blind_policy: True
+  force_blind_policy: False
 
   rl:
     policy:
       main_agent:
-        name: "PointNavResNetPolicy"
+        name: "FoveatedPointNavResNetPolicy"
+        action_distribution_type: "categorical"
+        # Foveation parameters
+        fovea_radius: 16
+        blur_sigma_max: 6.0
+        falloff: "quadratic"
+        gaze_hidden: 64
 
     ppo:
       clip_param: 0.2
@@ -45,7 +60,7 @@ habitat_baselines:
       lr: 2.5e-4
       eps: 1.0e-5
       max_grad_norm: 0.2
-      num_steps: 256
+      num_steps: 128
       use_gae: True
       gamma: 0.99
       tau: 0.95
