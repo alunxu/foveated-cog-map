@@ -231,36 +231,100 @@ Project/
 
 ---
 
-## 5. Possible Methods & Alternatives
+## 5. Methods Landscape: Alternatives & Extensions
 
-Throughout the project, there are several design choices where we picked one approach but could explore alternatives:
+Each design choice in our pipeline has alternatives grounded in recent literature. This section maps the space of methods we could trial, organized by component.
 
-### Visual Encoder
-- **Current**: ResNet18 (lightweight, fits 2-GPU budget)
-- **Alternative**: ResNet50 (Wijmans used this; more capacity but slower/more memory)
-- **Alternative**: ViT (Vision Transformer) — would change the nature of visual processing entirely
+### 5.1 Foveation Model
 
-### Foveation Model
-- **Current**: Multi-scale Gaussian blur with quadratic falloff, learned gaze
-- **Alternative**: Log-polar transform (warps image like biological retina)
-- **Alternative**: Attention-based masking (zero out periphery instead of blurring)
-- **Alternative**: Stochastic gaze (sample gaze from a distribution with entropy bonus — we currently use deterministic gaze)
+| Method | Description | Reference | Pros | Cons |
+|--------|------------|-----------|------|------|
+| **Gaussian blur (ours)** | Multi-scale blur, sigma increases with eccentricity | Standard approach | Simple, differentiable, fast | Not biologically faithful |
+| **Log-polar transform** | Warp image into log-polar coordinates centered on gaze | "Foveated Retinotopy Improves Classification" (2024, arXiv:2402.15480) | More biological, gives scale/rotation invariance for free | Requires resampling; distorts spatial layout |
+| **ECG (Exponential Cartesian Geometry)** | Image pyramid: full-res center crop, progressively coarser surrounding rings | "Seeing More with Less" (2024, seeingmorewithless.github.io) | Outperforms log-polar on classification; simple to implement | Less biologically grounded than log-polar |
+| **FoveaTer** | Foveated tokenization in Vision Transformer: high-res patches near gaze, coarse elsewhere | "FoveaTer: Foveated Transformer for Image Classification" (2022) | Native ViT integration; attention-based | Requires switching from ResNet to ViT |
+| **Two-stream (ventral+dorsal)** | Separate "what" (foveal) and "where" (peripheral) processing streams | "Towards Two-Stream Foveation-based Active Vision Learning" (arXiv) | Neuroscience-grounded; separates identity from spatial info | More complex architecture; harder to compare fairly |
+| **Retino-cortical model** | Midget cells (fovea, high acuity) + parasol cells (periphery, motion) | "Biologically Inspired Deep Learning for Foveal-Peripheral Vision" (2021, Frontiers Comp Neuro) | 10x speedup, 2.5x memory reduction, only 0.39% accuracy drop | Complex to implement; may not add signal for navigation |
 
-### Gaze Control
-- **Current**: Deterministic from LSTM hidden (MLP decoder with sigmoid)
-- **Alternative**: Stochastic with separate PPO loss (add gaze log-prob to action log-prob)
-- **Alternative**: Saliency-based (pre-computed saliency map, no learned gaze)
-- **Alternative**: Random gaze (ablation — does learned gaze matter?)
+**Recommendation**: Start with Gaussian blur (done). If results are promising, try ECG as the easiest upgrade, then log-polar for the paper.
 
-### Probing Method
-- **Current**: Linear probes (logistic regression / ridge regression)
-- **Alternative**: MLP probes (more capacity, but harder to interpret as "linear readout")
-- **Alternative**: CKA (Centered Kernel Alignment) to compare representation similarity across conditions
-- **Alternative**: Representational dissimilarity matrices (RDM) for fine-grained comparison
+### 5.2 Gaze Control
 
-### Training Algorithm
-- **Current**: DD-PPO (distributed PPO)
-- **Alternative**: IMPALA, R2D2 (off-policy methods — potentially more sample efficient)
+| Method | Description | Reference | Pros | Cons |
+|--------|------------|-----------|------|------|
+| **Deterministic MLP (ours)** | Decode gaze from previous LSTM hidden via MLP + sigmoid | Our implementation | Simple, no action space changes, differentiable | No exploration; gaze may get stuck |
+| **Stochastic + entropy bonus** | Sample gaze from Normal distribution, add log-prob to PPO loss | Standard RL approach (cf. `src/models/policy.py`) | Encourages gaze exploration | Requires action space extension; more variance |
+| **Return-guided contrastive** | Self-supervised contrastive signal from returns guides where to look | "Gaze on the Prize" (2025, arXiv:2510.08442) | Principled task-relevant gaze objective | Adds contrastive loss complexity |
+| **Information-gain maximizing** | Saccade targets selected by maximizing expected information gain | "Joint Learning of Saccades by Active Efficient Coding" (2017, Front Neurorobot) | Bayesian-optimal gaze; connects to H3 analysis | Requires maintaining explicit belief state |
+| **Privileged-sensor training** | Train gaze with access to full-res images; deploy with foveated only | "Real-World RL of Active Perception" (2025, NeurIPS, arXiv:2512.01188) | Better gaze signal during training | Train/deploy mismatch; may not transfer |
+| **Fixed-center (ablation)** | Gaze always at image center | Ablation baseline | Isolates foveation from gaze learning | No active vision |
+| **Random gaze (ablation)** | Gaze uniformly random each step | Ablation baseline | Isolates learned gaze from random foveation | No task-relevant attention |
+
+**Recommendation**: Start with deterministic MLP (done). Ablate with fixed-center and random gaze. If deterministic gaze stays centered, switch to stochastic + entropy bonus.
+
+### 5.3 Visual Encoder
+
+| Method | Description | Reference | Pros | Cons |
+|--------|------------|-----------|------|------|
+| **ResNet18 (ours)** | Standard CNN backbone | Habitat-baselines default | Lightweight, fits 2 GPUs | Less capacity than ResNet50 |
+| **ResNet50** | Larger CNN backbone (Wijmans used this) | Wijmans et al. (ICLR 2020) | Matches original DD-PPO paper | Slower, more memory |
+| **ViT (Vision Transformer)** | Patch-based self-attention | Dosovitskiy et al. (ICLR 2021) | Attention maps as interpretable gaze proxy | Much larger; different representation structure |
+| **Foveated ViT** | ViT with variable patch sizes (larger in periphery) | "Look, Focus, Act" (2025, arXiv:2507.15833) | Natural foveation via patch granularity | Novel architecture, less tested |
+
+### 5.4 Memory Architecture
+
+| Method | Description | Reference | Pros | Cons |
+|--------|------------|-----------|------|------|
+| **LSTM 3x512 (ours)** | Standard recurrent memory | Wijmans et al. (ICLR 2023) | Matches Wijmans; fair comparison across conditions | No spatial inductive bias |
+| **SRU (Spatially-Enhanced RNN)** | RNN with spatial registration of egocentric observations | Yang et al. (2025, IJRR, arXiv:2506.05997) | Explicit spatial structure; designed for long-range nav | Harder to compare with Wijmans baseline |
+| **DNC (Differentiable Neural Computer)** | External read/write memory with attention addressing | Graves et al. (2016, Nature) | Explicit memory slots = interpretable cognitive map | Complex; may not scale to DD-PPO |
+| **Decision Transformer** | RL as sequence modeling; attention over past states | Chen et al. (2021, NeurIPS) | Attention patterns reveal which past states matter | Offline RL paradigm; different training setup |
+| **Topological GNN memory** | Graph-structured memory: nodes = visited locations | "Cognitive Navigation via TMFT" (2024, IEEE/CAA) | Most natural cognitive map substrate | Graph construction requires explicit localization |
+| **Multi-timescale memory** | Fast episodic + slow semantic memory (hippocampal model) | "Memory-Augmented Transformers" survey (2025, arXiv:2508.10824) | Parallels hippocampal fast/slow consolidation | Architectural complexity; unclear probing targets |
+
+**Recommendation**: Keep LSTM for the main experiments (fair comparison with Wijmans). If extending for a paper, try SRU as a principled spatial upgrade.
+
+### 5.5 Probing & Representation Analysis
+
+| Method | What It Measures | Reference | When to Use |
+|--------|-----------------|-----------|-------------|
+| **Linear probes (ours)** | Linearly decodable spatial info | Alain & Bengio (2017, ICLR Workshop) | Core analysis — always do this |
+| **MDL probing** | Minimum description length of labels given representations | Voita & Titov (2020, EMNLP) [code](https://github.com/lena-voita/description-length-probing) | Measures *ease of access* to info, not just presence |
+| **CKA** | Representation similarity across conditions/layers | Kornblith et al. (2019, ICML, arXiv:1905.00414) | Compare which LSTM layers are similar across blind/uniform/foveated |
+| **RSA** | Representational dissimilarity matrices | Kriegeskorte et al. (2008, Front Syst Neuro) | Compare LSTM geometry against theoretical spatial geometry |
+| **SVCCA** | Canonical correlation after SVD denoising | Raghu et al. (2017, NeurIPS) | Track how representations converge during training |
+| **Nonlinear probes** | Multi-layer MLP probes at varying complexity | "Probing Classifiers: Promises, Shortcomings" (2022, Comp Ling, MIT Press) | Reveals nonlinearly encoded spatial info that linear probes miss |
+| **MINE** | Mutual information via neural estimation | Belghazi et al. (2018, ICML, arXiv:1801.04062) | Quantify bits of spatial info in hidden states per condition |
+| **IB analysis** | Information plane (I(X;T) vs I(T;Y)) tracking | Shwartz-Ziv & Tishby (2017, arXiv:1503.02406) | Compare compression-prediction trade-offs across conditions |
+
+**Recommendation**: Linear probes (core) + CKA (cross-condition comparison) + MDL probing (ease of access). Add MINE if information-theoretic framing is central to the paper.
+
+### 5.6 Neuroscience-Inspired Probes
+
+Beyond generic spatial probing, we can test for specific neuroscience-predicted cell types:
+
+| Probe Target | What to Look For | Reference | How to Test |
+|-------------|-----------------|-----------|------------|
+| **Place cells** | Individual LSTM units with localized spatial firing fields | Banino et al. (2018, Nature) "Vector-Based Navigation Using Grid-Like Representations" | Plot each unit's activation as a function of agent position; look for peaked spatial tuning |
+| **Grid cells** | Units with periodic hexagonal spatial firing patterns | Banino et al. (2018, Nature); [code](https://github.com/google-deepmind/grid-cells) | Compute gridness score via spatial autocorrelation |
+| **Border cells** | Units that fire near walls/boundaries | "RL as a Framework for Insect Navigation" (2024, Frontiers Comp Neuro) | Correlate unit activation with distance-to-nearest-wall |
+| **Head direction cells** | Units encoding the agent's heading | "Learning Place Cells and Remapping" (2024, eLife) | Correlate unit activation with agent heading angle |
+| **Successor representations** | Units encoding expected future state occupancy | "Neural Network Based Successor Representations" (2022, Scientific Reports) | Probe for SR matrix rather than current position; reveals predictive cognitive map |
+
+**Key prediction**: Foveated agents may develop stronger border/obstacle cells (peripherally detected) and weaker place cells (position uncertainty due to foveation), compared to uniform-vision agents.
+
+### 5.7 Information-Theoretic Extensions
+
+| Analysis | Description | Reference | What It Reveals |
+|----------|------------|-----------|-----------------|
+| **MI(hidden; position)** | Mutual information between LSTM state and spatial variables | MINE (Belghazi et al., 2018) | Bits of spatial info per condition |
+| **Information Bottleneck** | Track compression-prediction trade-off during training | Shwartz-Ziv & Tishby (2017) | Whether foveated agents compress differently |
+| **Disentanglement metrics** | DCI, MIG, SAP scores on learned representations | "Disentangled Representation Learning" (2024, IEEE TPAMI) | Whether spatial factors are cleanly separated in memory |
+| **Information gain of gaze** | Reduction in spatial uncertainty per fixation | Radulescu et al. (2022); Zhou & Eckstein (2022) | Whether learned gaze approximates Bayesian-optimal |
+
+### 5.8 Key Gap: No Foveated Vision in Habitat/Gibson
+
+Our literature search found **no published papers** combining foveated vision with Habitat or Gibson for PointGoal navigation. This is a genuine novelty of our project. The closest works study foveation for visual search (Pourrahimi & Bashivan, 2025) or robotic manipulation (Look, Focus, Act, 2025), but not embodied spatial navigation with memory probing.
 
 ---
 
