@@ -677,16 +677,7 @@ ls /scratch/izar/$USER/habitat_checkpoints/<run_name>/  # checkpoints
 
 ---
 
-## 11. Conference Extension Path
-
-The course project delivers a clean empirical study with probing results and hypothesis tests. For a venue like NeurIPS/ECCV/ICLR:
-
-- **Method contribution**: If confidence-annotated memory (H2) proves beneficial, design a training objective that explicitly encourages it, and show it improves navigation under sensor degradation or domain shift.
-- **Analysis contribution**: Scale to the full Habitat benchmark, test with Transformer memory vs. LSTM, and submit to an analysis-friendly venue (NeurIPS Datasets & Benchmarks, ECCV analysis track).
-
----
-
-## 12. References
+## 11. References
 
 **Core:**
 - Wijmans et al., "Emergence of Maps in the Memories of Blind Navigation Agents," ICLR 2023. [Paper](https://arxiv.org/abs/2301.13261) | [Code](https://github.com/erikwijmans/emergence-of-maps)
