@@ -202,13 +202,17 @@ class FoveatedWijmansNet(WijmansPointNavNet):
                     nn.ReLU(True),
                 )
 
-        # Gaze decoder: hidden state → 2-D gaze position in [0, 1]
-        self.gaze_decoder = nn.Sequential(
-            nn.Linear(hidden_size, gaze_hidden),
-            nn.ReLU(),
-            nn.Linear(gaze_hidden, 2),
-            nn.Sigmoid(),
-        )
+        # NOTE: gaze_decoder is currently disabled because it has shape
+        # mismatch issues between act() and evaluate_actions(). We use a
+        # fixed center gaze for now (the "fixed-center" ablation). When
+        # learned gaze is added back, the decoder should also output gaze
+        # for each timestep stored in the rollout buffer.
+        # self.gaze_decoder = nn.Sequential(
+        #     nn.Linear(hidden_size, gaze_hidden),
+        #     nn.ReLU(),
+        #     nn.Linear(gaze_hidden, 2),
+        #     nn.Sigmoid(),
+        # )
 
     def forward(
         self,
@@ -221,22 +225,29 @@ class FoveatedWijmansNet(WijmansPointNavNet):
         x = []
         aux_loss_state: Dict[str, torch.Tensor] = {}
 
-        # ---- Decode gaze from the previous LSTM hidden state ----
-        # rnn_hidden_states: (num_layers * 2, B, hidden_size) for LSTM
-        # We use the second-to-last entry, which is the hidden state of the
-        # last LSTM layer (the entry after it is the cell state).
-        if rnn_hidden_states.dim() == 3:
-            prev_hidden = rnn_hidden_states[-2]
-        else:
-            prev_hidden = rnn_hidden_states
-
-        gaze = self.gaze_decoder(prev_hidden.detach())
-        # On episode reset (mask = 0), default the gaze to image center (0.5).
-        gaze = gaze * masks.unsqueeze(-1) + 0.5 * (1 - masks.unsqueeze(-1))
-        aux_loss_state["gaze"] = gaze
-
-        # ---- Visual features (with foveation) ----
+        # ---- Visual features (with foveation at fixed center gaze) ----
+        # NOTE: Learned gaze is currently disabled because it has a shape
+        # mismatch between act() (per-env, B=num_envs) and evaluate_actions()
+        # (batched-over-time, B*T). For now we use a fixed center gaze
+        # (the "fixed-center" ablation from our proposal). This still gives
+        # the foveated input pattern (sharp center, blurry periphery) and
+        # leaves the sensor stack identical to the other conditions.
+        # Adding a learned gaze that works in both modes requires storing the
+        # gaze in the rollout buffer; that is a planned follow-up.
         if not self.is_blind:
+            # Get the batch dimension from the first visual key.
+            first_visual_key = next(
+                k for k, v in observations.items() if v.dim() == 4
+            )
+            batch_size = observations[first_visual_key].shape[0]
+            gaze = torch.full(
+                (batch_size, 2),
+                0.5,
+                device=observations[first_visual_key].device,
+                dtype=torch.float32,
+            )
+            aux_loss_state["gaze"] = gaze
+
             visual_feats = self.visual_encoder(observations, gaze=gaze)
             visual_feats = self.visual_fc(visual_feats)
             aux_loss_state["perception_embed"] = visual_feats
@@ -386,11 +397,11 @@ class FoveatedWijmansPolicy(NetPolicy):
             agent_name = config.habitat.simulator.agents_order[0]
 
         policy_cfg = config.habitat_baselines.rl.policy[agent_name]
-        fovea_radius = getattr(policy_cfg, "fovea_radius", 16)
-        blur_sigma_max = getattr(policy_cfg, "blur_sigma_max", 6.0)
-        falloff = getattr(policy_cfg, "falloff", "quadratic")
-        gaze_hidden = getattr(policy_cfg, "gaze_hidden", 64)
 
+        # Foveation hyperparameters are hardcoded in __init__ defaults rather
+        # than read from the policy config, because Hydra's structured config
+        # validation rejects unknown fields on PolicyConfig. Edit the
+        # FoveatedWijmansPolicy.__init__ defaults to tune them.
         return cls(
             observation_space=filtered_obs,
             action_space=action_space,
@@ -403,8 +414,4 @@ class FoveatedWijmansPolicy(NetPolicy):
             policy_config=policy_cfg,
             aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
             fuse_keys=None,
-            fovea_radius=fovea_radius,
-            blur_sigma_max=blur_sigma_max,
-            falloff=falloff,
-            gaze_hidden=gaze_hidden,
         )

@@ -92,10 +92,14 @@ class TorchFoveationTransform(nn.Module):
         kernel_1d = self._kernels[level]
         padding = self._paddings[level]
 
-        # Separable 2D convolution (depthwise)
-        kh = kernel_1d.view(1, 1, -1, 1).expand(C, 1, -1, 1)
-        kw = kernel_1d.view(1, 1, 1, -1).expand(C, 1, -1, 1)
+        # Separable 2D convolution (depthwise).
+        # Vertical kernel  : shape (C, 1, K, 1)
+        # Horizontal kernel: shape (C, 1, 1, K)
+        K = kernel_1d.shape[0]
+        kh = kernel_1d.view(1, 1, K, 1).expand(C, 1, K, 1).contiguous()
+        kw = kernel_1d.view(1, 1, 1, K).expand(C, 1, 1, K).contiguous()
 
+        # F.pad uses (left, right, top, bottom) ordering for the spatial dims.
         out = F.pad(x, [0, 0, padding, padding], mode="reflect")
         out = F.conv2d(out, kh, groups=C)
         out = F.pad(out, [padding, padding, 0, 0], mode="reflect")
