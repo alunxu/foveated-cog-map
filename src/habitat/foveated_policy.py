@@ -180,12 +180,21 @@ class FoveatedWijmansNet(WijmansPointNavNet):
                     }
                 )
 
+            # NOTE: we disable normalize_visual_inputs (RunningMeanAndVar) for
+            # the foveated encoder. The Habitat-baselines RunningMeanAndVar
+            # module mutates a buffer (self._count) in place during forward,
+            # which conflicts with autograd when there is an additional
+            # gradient-producing path through the gaze decoder. Replacing it
+            # with an identity module (the default when normalize_visual_inputs
+            # is False) avoids the in-place version conflict. The standard
+            # sighted agents are unaffected by this bug because they have only
+            # one gradient path through the visual encoder.
             self.visual_encoder = FoveatedResNetEncoder(
                 use_obs_space,
                 baseplanes=resnet_baseplanes,
                 ngroups=resnet_baseplanes // 2,
                 make_backbone=getattr(resnet, backbone),
-                normalize_visual_inputs=normalize_visual_inputs,
+                normalize_visual_inputs=False,
                 fovea_radius=fovea_radius,
                 blur_sigma_max=blur_sigma_max,
                 falloff=falloff,
