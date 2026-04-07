@@ -46,3 +46,6 @@ Thumbs.db
 # Environment
 .env
 *.log
+
+# Reference papers (not redistributable)
+docs/EMERGENCE*OF*MAPS*.pdf

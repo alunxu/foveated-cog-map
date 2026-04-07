@@ -543,7 +543,39 @@ tail -f slurm_logs/<job_id>.err        # live training logs
 ls /scratch/izar/$USER/habitat_checkpoints/<run_name>/  # checkpoints
 ```
 
-### 7.7 Common Issues & Fixes
+### 7.7 Recording Agent Videos (for Evaluation & Figures)
+
+Habitat can save first-person RGB videos of trained agents navigating, which are invaluable for:
+- **Qualitative analysis**: see what the agent actually looks at, how it plans turns, where it gets stuck
+- **Figures for the paper**: side-by-side comparison of what each of the 4 agents sees on the same episode is the most compelling visual we can produce
+- **Debugging the foveated agent**: visualize gaze position and blur pattern frame by frame
+
+#### How to enable
+
+When running evaluation (not training), set these flags on the habitat-baselines command line:
+
+```bash
+python -u -m habitat_baselines.run \
+    --config-name=pointnav/ddppo_pointnav_uniform_gibson \
+    habitat_baselines.evaluate=True \
+    habitat_baselines.eval_ckpt_path_dir=/scratch/izar/$USER/habitat_checkpoints/uniform_gibson \
+    habitat_baselines.video_dir=/scratch/izar/$USER/videos/uniform_gibson \
+    'habitat_baselines.eval.video_option=[disk]' \
+    habitat_baselines.num_environments=1 \
+    habitat_baselines.test_episode_count=10
+```
+
+This produces `.mp4` files in `video_dir`, one per evaluated episode, showing the agent's first-person RGB view plus a top-down map with the agent's trajectory.
+
+#### For the foveated agent
+
+The foveated view (post-blur) is what the policy actually sees, but `habitat_baselines.video_option` records the raw sensor output before our foveation transform. To record the *foveated* view, we'll need a small hook in `src/habitat/foveated_policy.py` that dumps the post-foveation tensor to disk during evaluation. This is a Member D task — straightforward (5-10 lines of code) but worth noting in advance.
+
+#### Side-by-side comparison videos
+
+To render "what all 4 agents see on the same episode," use a fixed random seed so all four agents evaluate on the same PointNav episodes. Then stack the 4 videos horizontally with `ffmpeg -i blind.mp4 -i uniform.mp4 -i foveated.mp4 -i matched.mp4 -filter_complex hstack=inputs=4 comparison.mp4`.
+
+### 7.8 Common Issues & Fixes
 
 | Issue | Fix |
 |-------|-----|

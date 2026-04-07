@@ -48,7 +48,10 @@ mkdir -p "${CKPT_DIR}/${RUN_NAME}"
 
 cd /home/${USER}/habitat-lab
 
-# Use custom entry point to register our policies (foveated, etc.)
+# Custom entry point that imports src.habitat first to register custom
+# sensors (GoalInStartFrameSensor, CloseToGoalSensor) and policies
+# (WijmansPointNavPolicy, FoveatedWijmansPolicy) before invoking
+# habitat_baselines.run.main().
 srun python -u /home/${USER}/CS503_Project/scripts/cluster/run_habitat.py \
     --config-name="${CONFIG_NAME}" \
     habitat_baselines.evaluate=False \

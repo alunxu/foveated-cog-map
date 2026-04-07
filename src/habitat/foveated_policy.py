@@ -1,13 +1,20 @@
 """
 Foveated PointNav policy for Habitat DD-PPO.
 
-Extends PointNavResNetPolicy with learnable gaze control:
-- Gaze direction is decoded from the PREVIOUS LSTM hidden state
-- Foveation is applied to RGB observations BEFORE the ResNet encoder
-- This means the agent "decides where to look" based on memory, then processes
-  the foveated view through the visual pipeline
-- Gaze is deterministic given hidden state (no separate action/entropy needed)
-- Gradients flow: navigation loss → LSTM → gaze decoder → foveation → visual features
+Combines the Wijmans-faithful sensor stack (g, GPS, compass, close-to-goal
+indicator) with foveated visual perception and a learned gaze controller.
+
+Key design:
+  - The agent receives the same Wijmans sensors as the blind / uniform /
+    matched conditions, so the only varied factor across the four conditions
+    is the structure of the visual input.
+  - Foveation is applied to RGB observations BEFORE the ResNet encoder.
+  - Gaze direction is decoded from the PREVIOUS LSTM hidden state by a small
+    MLP, so the agent "decides where to look" based on its memory, then
+    processes the foveated view.
+  - Gaze is deterministic given the hidden state (no separate action / entropy
+    bonus). Gradients flow end-to-end through the foveation transform:
+    navigation loss → LSTM → gaze decoder → foveation → visual features.
 
 Member C is responsible for this module.
 """
@@ -18,33 +25,40 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 import numpy as np
 import torch
 from gym import spaces
-from torch import nn as nn
+from torch import nn
 
-from habitat.tasks.nav.nav import ImageGoalSensor
+from habitat.tasks.nav.nav import (
+    EpisodicCompassSensor,
+    EpisodicGPSSensor,
+)
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import resnet
-from habitat_baselines.rl.ddppo.policy.resnet_policy import (
-    PointNavResNetNet,
-    PointNavResNetPolicy,
-    ResNetEncoder,
-)
-from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
-    RunningMeanAndVar,
-)
+from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
 from habitat_baselines.rl.ppo import NetPolicy
-from habitat_baselines.utils.common import get_num_actions
 
 from src.habitat.torch_foveation import TorchFoveationTransform
+from src.habitat.wijmans_policy import WijmansPointNavNet
+from src.habitat.wijmans_sensors import (
+    GoalInStartFrameSensor,
+    CloseToGoalSensor,
+)
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
+# ---------------------------------------------------------------------------
+# Foveated visual encoder
+# ---------------------------------------------------------------------------
+
+
 class FoveatedResNetEncoder(ResNetEncoder):
     """ResNet encoder with foveation applied before the backbone.
 
-    Wraps the standard ResNetEncoder to apply spatially-varying blur
-    controlled by a gaze position before feeding to the CNN.
+    Wraps the standard ResNetEncoder by applying a spatially-varying Gaussian
+    blur (controlled by a gaze position) to the input image. The output shape
+    is identical to the parent ResNetEncoder, so downstream layers
+    (visual_fc, etc.) need no changes.
     """
 
     def __init__(
@@ -69,13 +83,12 @@ class FoveatedResNetEncoder(ResNetEncoder):
         )
 
         if not self.is_blind:
-            # Get the image spatial size from observation space
             first_key = self.visual_keys[0]
             img_h = observation_space.spaces[first_key].shape[0]
-            # Foveation operates on the half-size image (after avg_pool2d)
+            # Foveation operates after the avg_pool2d that halves the input.
             self.foveation = TorchFoveationTransform(
                 image_size=img_h // 2,
-                fovea_radius=fovea_radius // 2,  # scale with downsampling
+                fovea_radius=max(fovea_radius // 2, 1),
                 blur_sigma_max=blur_sigma_max,
                 falloff=falloff,
             )
@@ -86,22 +99,21 @@ class FoveatedResNetEncoder(ResNetEncoder):
         self,
         observations: Dict[str, torch.Tensor],
         gaze: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
+    ) -> Optional[torch.Tensor]:
         if self.is_blind:
             return None
 
         cnn_input = []
         for k in self.visual_keys:
-            obs_k = observations[k]
-            obs_k = obs_k.permute(0, 3, 1, 2)  # (B, C, H, W)
+            obs_k = observations[k].permute(0, 3, 1, 2)
             if self.key_needs_rescaling[k] is not None:
                 obs_k = obs_k.float() * self.key_needs_rescaling[k]
             cnn_input.append(obs_k)
 
         x = torch.cat(cnn_input, dim=1)
-        x = torch.nn.functional.avg_pool2d(x, 2)  # standard habitat half-size
+        x = torch.nn.functional.avg_pool2d(x, 2)
 
-        # Apply foveation BEFORE running_mean_and_var and backbone
+        # Apply foveation BEFORE the running mean/var and backbone.
         if self.foveation is not None and gaze is not None:
             x = self.foveation(x, gaze)
 
@@ -111,11 +123,18 @@ class FoveatedResNetEncoder(ResNetEncoder):
         return x
 
 
-class FoveatedPointNavResNetNet(PointNavResNetNet):
-    """PointNav network with foveated vision.
+# ---------------------------------------------------------------------------
+# Net: foveated extension of the Wijmans-faithful net
+# ---------------------------------------------------------------------------
 
-    Key design: gaze is decoded from the PREVIOUS step's LSTM hidden,
-    then used to foveate the current observation before visual encoding.
+
+class FoveatedWijmansNet(WijmansPointNavNet):
+    """Wijmans-faithful PointNav net with foveated vision and learned gaze.
+
+    Inherits the Wijmans sensor stack from ``WijmansPointNavNet`` and:
+      - swaps the standard ResNet encoder for ``FoveatedResNetEncoder``
+      - adds a small MLP that decodes a 2-D gaze position from the previous
+        LSTM hidden state, used to drive the foveation transform
     """
 
     def __init__(
@@ -128,7 +147,6 @@ class FoveatedPointNavResNetNet(PointNavResNetNet):
         backbone: str,
         resnet_baseplanes: int,
         normalize_visual_inputs: bool,
-        fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
         fovea_radius: int = 16,
@@ -136,7 +154,6 @@ class FoveatedPointNavResNetNet(PointNavResNetNet):
         falloff: str = "quadratic",
         gaze_hidden: int = 64,
     ):
-        # Initialize parent (this creates self.visual_encoder as standard ResNetEncoder)
         super().__init__(
             observation_space=observation_space,
             action_space=action_space,
@@ -146,22 +163,20 @@ class FoveatedPointNavResNetNet(PointNavResNetNet):
             backbone=backbone,
             resnet_baseplanes=resnet_baseplanes,
             normalize_visual_inputs=normalize_visual_inputs,
-            fuse_keys=fuse_keys,
             force_blind_policy=force_blind_policy,
             discrete_actions=discrete_actions,
         )
 
-        # Replace the visual encoder with foveated version
+        # Replace the standard visual encoder with the foveated one.
         if not self.is_blind:
             if force_blind_policy:
                 use_obs_space = spaces.Dict({})
             else:
                 use_obs_space = spaces.Dict(
                     {
-                        k: observation_space.spaces[k]
-                        for k in observation_space.spaces
-                        if len(observation_space.spaces[k].shape) == 3
-                        and k != ImageGoalSensor.cls_uuid
+                        k: v
+                        for k, v in observation_space.spaces.items()
+                        if len(v.shape) == 3
                     }
                 )
 
@@ -176,22 +191,23 @@ class FoveatedPointNavResNetNet(PointNavResNetNet):
                 falloff=falloff,
             )
 
-            # Re-create visual_fc since output shape might differ
+            # Re-create visual_fc to match the (possibly different) output shape.
             if not self.visual_encoder.is_blind:
                 self.visual_fc = nn.Sequential(
                     nn.Flatten(),
                     nn.Linear(
-                        np.prod(self.visual_encoder.output_shape), hidden_size
+                        int(np.prod(self.visual_encoder.output_shape)),
+                        hidden_size,
                     ),
                     nn.ReLU(True),
                 )
 
-        # Gaze decoder: hidden state → gaze position (2D, normalized [0,1])
+        # Gaze decoder: hidden state → 2-D gaze position in [0, 1]
         self.gaze_decoder = nn.Sequential(
             nn.Linear(hidden_size, gaze_hidden),
             nn.ReLU(),
             nn.Linear(gaze_hidden, 2),
-            nn.Sigmoid(),  # output in [0, 1]
+            nn.Sigmoid(),
         )
 
     def forward(
@@ -203,138 +219,75 @@ class FoveatedPointNavResNetNet(PointNavResNetNet):
         rnn_build_seq_info: Optional[Dict[str, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, torch.Tensor]]:
         x = []
-        aux_loss_state = {}
+        aux_loss_state: Dict[str, torch.Tensor] = {}
 
-        # Decode gaze from PREVIOUS hidden state
-        # rnn_hidden_states: (num_layers, B, hidden_size) for LSTM: (num_layers*2, B, hidden_size)
-        # Use the last layer's hidden state
+        # ---- Decode gaze from the previous LSTM hidden state ----
+        # rnn_hidden_states: (num_layers * 2, B, hidden_size) for LSTM
+        # We use the second-to-last entry, which is the hidden state of the
+        # last LSTM layer (the entry after it is the cell state).
         if rnn_hidden_states.dim() == 3:
-            # Take the last layer's h (not c for LSTM)
-            prev_hidden = rnn_hidden_states[-2]  # second-to-last for LSTM (h of last layer)
+            prev_hidden = rnn_hidden_states[-2]
         else:
             prev_hidden = rnn_hidden_states
 
-        gaze = self.gaze_decoder(prev_hidden.detach().clone())
-        # On episode reset (mask=0), default gaze to center
+        gaze = self.gaze_decoder(prev_hidden.detach())
+        # On episode reset (mask = 0), default the gaze to image center (0.5).
         gaze = gaze * masks.unsqueeze(-1) + 0.5 * (1 - masks.unsqueeze(-1))
         aux_loss_state["gaze"] = gaze
 
+        # ---- Visual features (with foveation) ----
         if not self.is_blind:
-            if (
-                PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                in observations
-            ):
-                visual_feats = observations[
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                ]
-            else:
-                # Pass gaze to foveated encoder
-                visual_feats = self.visual_encoder(observations, gaze=gaze)
-
+            visual_feats = self.visual_encoder(observations, gaze=gaze)
             visual_feats = self.visual_fc(visual_feats)
             aux_loss_state["perception_embed"] = visual_feats
             x.append(visual_feats)
 
-        # Process non-visual inputs (same as parent)
-        if len(self._fuse_keys_1d) != 0:
-            fuse_states = torch.cat(
-                [observations[k] for k in self._fuse_keys_1d], dim=-1
-            )
-            x.append(fuse_states.float())
-
-        # Goal sensor processing (copied from parent to avoid calling super().forward())
-        from habitat.tasks.nav.nav import (
-            EpisodicCompassSensor,
-            EpisodicGPSSensor,
-            HeadingSensor,
-            IntegratedPointGoalGPSAndCompassSensor,
-            PointGoalSensor,
-            ProximitySensor,
-            ObjectGoalSensor,
-            ImageGoalSensor,
-        )
-        from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
-
-        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
-            goal_observations = observations[
-                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            ]
-            if goal_observations.shape[1] == 2:
-                goal_observations = torch.stack(
-                    [
-                        goal_observations[:, 0],
-                        torch.cos(-goal_observations[:, 1]),
-                        torch.sin(-goal_observations[:, 1]),
-                    ],
-                    -1,
+        # ---- Wijmans sensor block (same as parent) ----
+        if self.g_embedding is not None:
+            x.append(
+                self.g_embedding(
+                    observations[GoalInStartFrameSensor.cls_uuid].float()
                 )
-            else:
-                assert goal_observations.shape[1] == 3
-                vertical_angle_sin = torch.sin(goal_observations[:, 2])
-                goal_observations = torch.stack(
-                    [
-                        goal_observations[:, 0],
-                        torch.cos(-goal_observations[:, 1]) * vertical_angle_sin,
-                        torch.sin(-goal_observations[:, 1]) * vertical_angle_sin,
-                        torch.cos(goal_observations[:, 2]),
-                    ],
-                    -1,
+            )
+
+        if self.gps_embedding is not None:
+            x.append(
+                self.gps_embedding(
+                    observations[EpisodicGPSSensor.cls_uuid].float()
                 )
-            x.append(self.tgt_embeding(goal_observations))
-
-        if PointGoalSensor.cls_uuid in observations:
-            goal_observations = observations[PointGoalSensor.cls_uuid]
-            x.append(self.pointgoal_embedding(goal_observations))
-
-        if ProximitySensor.cls_uuid in observations:
-            sensor_observations = observations[ProximitySensor.cls_uuid]
-            x.append(self.proximity_embedding(sensor_observations))
-
-        if HeadingSensor.cls_uuid in observations:
-            sensor_observations = observations[HeadingSensor.cls_uuid]
-            sensor_observations = torch.stack(
-                [torch.cos(sensor_observations[0]), torch.sin(sensor_observations[0])],
-                -1,
             )
-            x.append(self.heading_embedding(sensor_observations))
 
-        if hasattr(self, "obj_categories_embedding") and ObjectGoalSensor.cls_uuid in observations:
-            object_goal = observations[ObjectGoalSensor.cls_uuid].long()
-            x.append(self.obj_categories_embedding(object_goal).squeeze(dim=1))
+        if self.compass_embedding is not None:
+            compass_raw = observations[EpisodicCompassSensor.cls_uuid]
+            compass_cs = torch.stack(
+                [torch.cos(compass_raw), torch.sin(compass_raw)],
+                dim=-1,
+            ).squeeze(dim=-2)
+            x.append(self.compass_embedding(compass_cs.float()))
 
-        if EpisodicCompassSensor.cls_uuid in observations:
-            compass_observations = torch.stack(
-                [
-                    torch.cos(observations[EpisodicCompassSensor.cls_uuid]),
-                    torch.sin(observations[EpisodicCompassSensor.cls_uuid]),
-                ],
-                -1,
+        if self.close_embedding is not None:
+            x.append(
+                self.close_embedding(
+                    observations[CloseToGoalSensor.cls_uuid].float()
+                )
             )
-            x.append(self.compass_embedding(compass_observations.squeeze(dim=1)))
 
-        if EpisodicGPSSensor.cls_uuid in observations:
-            x.append(self.gps_embedding(observations[EpisodicGPSSensor.cls_uuid]))
-
-        for uuid in [ImageGoalSensor.cls_uuid, InstanceImageGoalSensor.cls_uuid]:
-            if uuid in observations:
-                goal_image = observations[uuid]
-                goal_visual_encoder = getattr(self, f"{uuid}_encoder")
-                goal_visual_output = goal_visual_encoder({"rgb": goal_image})
-                goal_visual_fc = getattr(self, f"{uuid}_fc")
-                x.append(goal_visual_fc(goal_visual_output))
-
-        # Previous action embedding
+        # ---- Previous-action embedding ----
         if self.discrete_actions:
-            prev_actions = prev_actions.squeeze(-1)
-            start_token = torch.zeros_like(prev_actions)
-            prev_actions = self.prev_action_embedding(
-                torch.where(masks.view(-1), prev_actions + 1, start_token)
+            prev_actions_squeezed = prev_actions.squeeze(-1)
+            start_token = torch.zeros_like(prev_actions_squeezed)
+            prev_action_embed = self.prev_action_embedding(
+                torch.where(
+                    masks.view(-1), prev_actions_squeezed + 1, start_token
+                )
             )
         else:
-            prev_actions = self.prev_action_embedding(masks * prev_actions.float())
+            prev_action_embed = self.prev_action_embedding(
+                masks * prev_actions.float()
+            )
+        x.append(prev_action_embed)
 
-        x.append(prev_actions)
-
+        # ---- Concatenate and pass through the LSTM ----
         out = torch.cat(x, dim=1)
         out, rnn_hidden_states = self.state_encoder(
             out, rnn_hidden_states, masks, rnn_build_seq_info
@@ -344,17 +297,22 @@ class FoveatedPointNavResNetNet(PointNavResNetNet):
         return out, rnn_hidden_states, aux_loss_state
 
 
-@baseline_registry.register_policy(name="FoveatedPointNavResNetPolicy")
-class FoveatedPointNavResNetPolicy(NetPolicy):
-    """PointNav policy with foveated vision and learnable gaze control."""
+# ---------------------------------------------------------------------------
+# Policy wrapper
+# ---------------------------------------------------------------------------
+
+
+@baseline_registry.register_policy(name="FoveatedWijmansPolicy")
+class FoveatedWijmansPolicy(NetPolicy):
+    """Wijmans-faithful PointNav policy with foveated vision and learned gaze."""
 
     def __init__(
         self,
         observation_space: spaces.Dict,
         action_space,
         hidden_size: int = 512,
-        num_recurrent_layers: int = 1,
-        rnn_type: str = "GRU",
+        num_recurrent_layers: int = 3,
+        rnn_type: str = "LSTM",
         resnet_baseplanes: int = 32,
         backbone: str = "resnet18",
         normalize_visual_inputs: bool = False,
@@ -376,7 +334,7 @@ class FoveatedPointNavResNetPolicy(NetPolicy):
             discrete_actions = True
 
         super().__init__(
-            FoveatedPointNavResNetNet(
+            FoveatedWijmansNet(
                 observation_space=observation_space,
                 action_space=action_space,
                 hidden_size=hidden_size,
@@ -385,7 +343,6 @@ class FoveatedPointNavResNetPolicy(NetPolicy):
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
-                fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
                 fovea_radius=fovea_radius,
@@ -406,7 +363,6 @@ class FoveatedPointNavResNetPolicy(NetPolicy):
         action_space,
         **kwargs,
     ):
-        # Filter out eval cameras
         ignore_names = [
             sensor.uuid
             for sensor in config.habitat_baselines.eval.extra_sim_sensors.values()
@@ -421,18 +377,14 @@ class FoveatedPointNavResNetPolicy(NetPolicy):
             )
         )
 
-        agent_name = None
-        if "agent_name" in kwargs:
-            agent_name = kwargs["agent_name"]
+        agent_name = kwargs.get("agent_name")
         if agent_name is None:
             if len(config.habitat.simulator.agents_order) > 1:
                 raise ValueError(
                     "If there is more than an agent, you need to specify the agent name"
                 )
-            else:
-                agent_name = config.habitat.simulator.agents_order[0]
+            agent_name = config.habitat.simulator.agents_order[0]
 
-        # Read foveation params from policy config (with defaults)
         policy_cfg = config.habitat_baselines.rl.policy[agent_name]
         fovea_radius = getattr(policy_cfg, "fovea_radius", 16)
         blur_sigma_max = getattr(policy_cfg, "blur_sigma_max", 6.0)
