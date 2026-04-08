@@ -3,9 +3,13 @@
 # Wijmans-faithful MATCHED-COMPUTE PointGoal navigator on Gibson.
 #
 # Same Wijmans sensor stack and reward shaping as the blind/uniform configs,
-# but RGB is rendered at 64x64 — a uniform low-resolution control with
-# roughly the same total pixel budget as the foveated agent's effective
-# information content.
+# but RGB is rendered at 48x48 — a uniform low-resolution control chosen to
+# match (and slightly exceed, by design) the total perceptual pixel budget
+# of the foveated agent. See docs/foveation_design.md §2.3 for the
+# budget calculation:
+#   sharp fovea (π·16²) + periphery / σ²  ≈ 1 816 effective pixels
+#   √1816 ≈ 43, rounded up to 48 to give matched-compute a deliberate
+#   ~1.27× advantage so a foveated > matched result is unambiguous.
 #
 # Training set: Gibson-0+ (411 scenes) via the train_extra_large split.
 # See ddppo_pointnav_blind_gibson.yaml for the dataset rationale.
@@ -37,11 +41,11 @@ habitat:
       main_agent:
         sim_sensors:
           rgb_sensor:
-            height: 64
-            width: 64
+            height: 48
+            width: 48
           depth_sensor:
-            height: 64
-            width: 64
+            height: 48
+            width: 48
   dataset:
     # Wijmans 2023 A.1: train on 411 Gibson + 72 MP3D scenes. We use the
     # pre-built Gibson-0+ (411) and MP3D train (61 available) merged via

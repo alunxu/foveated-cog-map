@@ -70,7 +70,7 @@ class FoveatedResNetEncoder(ResNetEncoder):
         make_backbone=None,
         normalize_visual_inputs: bool = False,
         fovea_radius: int = 16,
-        blur_sigma_max: float = 6.0,
+        blur_sigma_max: float = 8.0,  # PoC default, see docs/foveation_design.md §2.1
         falloff: str = "quadratic",
     ):
         super().__init__(
@@ -150,7 +150,7 @@ class FoveatedWijmansNet(WijmansPointNavNet):
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
         fovea_radius: int = 16,
-        blur_sigma_max: float = 6.0,
+        blur_sigma_max: float = 8.0,  # PoC default, see docs/foveation_design.md §2.1
         falloff: str = "quadratic",
         gaze_hidden: int = 64,
     ):
@@ -341,7 +341,7 @@ class FoveatedWijmansPolicy(NetPolicy):
         aux_loss_config: Optional["DictConfig"] = None,
         fuse_keys: Optional[List[str]] = None,
         fovea_radius: int = 16,
-        blur_sigma_max: float = 6.0,
+        blur_sigma_max: float = 8.0,  # PoC default, see docs/foveation_design.md §2.1
         falloff: str = "quadratic",
         gaze_hidden: int = 64,
         **kwargs,

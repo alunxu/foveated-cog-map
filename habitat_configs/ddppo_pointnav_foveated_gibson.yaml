@@ -77,7 +77,8 @@ habitat_baselines:
         name: "FoveatedWijmansPolicy"
         action_distribution_type: "categorical"
         # Foveation hyperparameters are hardcoded in src/habitat/foveated_policy.py
-        # (fovea_radius=16, blur_sigma_max=6.0, falloff=quadratic, gaze_hidden=64)
+        # per the PoC decisions in docs/foveation_design.md §2.1:
+        #   fovea_radius=16, blur_sigma_max=8.0, falloff=quadratic
         # Hydra's structured config validation rejects unknown fields here.
 
     ppo:
