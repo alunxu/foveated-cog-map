@@ -23,6 +23,9 @@
 defaults:
   - /benchmark/nav/pointnav: pointnav_gibson
   - /habitat_baselines: habitat_baselines_rl_config_base
+  # top_down_map is needed for video rendering during eval. It's cheap
+  # (grid bookkeeping) so leaving it on for training is fine.
+  - /habitat/task/measurements@habitat.task.measurements.top_down_map: top_down_map
   # Override the default lab sensor stack: drop pointgoal_with_gps_compass,
   # add gps + compass + the two Wijmans-specific sensors.
   - override /habitat/task/lab_sensors:

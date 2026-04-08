@@ -1,0 +1,37 @@
+diff --git a/habitat-lab/habitat/utils/visualizations/utils.py b/habitat-lab/habitat/utils/visualizations/utils.py
+index 2b0db0342..1d6e13aad 100644
+--- a/habitat-lab/habitat/utils/visualizations/utils.py
++++ b/habitat-lab/habitat/utils/visualizations/utils.py
+@@ -141,7 +141,20 @@ def images_to_video(
+         images_iter: List[np.ndarray] = images
+     else:
+         images_iter = tqdm.tqdm(images)  # type: ignore[assignment]
++    import numpy as _np
++    target_shape = None
+     for im in images_iter:
++        if target_shape is None:
++            target_shape = im.shape
++        elif im.shape != target_shape:
++            # Pad or crop to match first frame (top_down_map width varies)
++            th, tw = target_shape[0], target_shape[1]
++            ih, iw = im.shape[0], im.shape[1]
++            if ih != th or iw != tw:
++                new_im = _np.zeros(target_shape, dtype=im.dtype)
++                ch, cw = min(ih, th), min(iw, tw)
++                new_im[:ch, :cw] = im[:ch, :cw]
++                im = new_im
+         writer.append_data(im)
+     writer.close()
+ 
+@@ -367,7 +380,10 @@ def overlay_frame(frame, info, additional=None):
+         if isinstance(v, str):
+             lines.append(f"{k}: {v}")
+         else:
+-            lines.append(f"{k}: {v:.2f}")
++            try:
++                lines.append(f"{k}: {v:.2f}")
++            except (TypeError, ValueError):
++                pass  # skip non-scalar metrics (e.g. top_down_map arrays)
+     if additional is not None:
+         lines.extend(additional)
+ 

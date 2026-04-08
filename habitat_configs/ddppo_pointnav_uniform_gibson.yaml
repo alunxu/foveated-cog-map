@@ -14,6 +14,7 @@
 defaults:
   - /benchmark/nav/pointnav: pointnav_gibson
   - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat/task/measurements@habitat.task.measurements.top_down_map: top_down_map
   - override /habitat/task/lab_sensors:
       - gps_sensor
       - compass_sensor
