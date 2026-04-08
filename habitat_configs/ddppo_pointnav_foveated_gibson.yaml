@@ -13,6 +13,9 @@
 # inside the visual encoder, plus a learned gaze head from the LSTM hidden
 # state. See src/habitat/foveated_policy.py.
 #
+# Training set: Gibson-0+ (411 scenes) via the train_extra_large split.
+# See ddppo_pointnav_blind_gibson.yaml for the dataset rationale.
+#
 # Submit:
 #   sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
 
@@ -45,6 +48,12 @@ habitat:
           depth_sensor:
             height: 256
             width: 256
+  dataset:
+    # Wijmans 2023 A.1: train on 411 Gibson + 72 MP3D scenes. We use the
+    # pre-built Gibson-0+ (411) and MP3D train (61 available) merged via
+    # symlinks at data/datasets/pointnav/mp3d_gibson/v1/train/. 472 total.
+    data_path: data/datasets/pointnav/mp3d_gibson/v1/{split}/{split}.json.gz
+    split: train
 
 habitat_baselines:
   verbose: False

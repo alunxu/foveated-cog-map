@@ -1,0 +1,42 @@
+# @package _global_
+#
+# Evaluate any trained Gibson agent on the Matterport3D PointNav TEST split.
+#
+# This matches the evaluation protocol of Wijmans et al. "Emergence of Maps"
+# (ICLR 2023), Appendix A.1:
+#
+#     "We evaluate the agent in the 18 scenes from the Matterport3D test set.
+#      We use the episodes from Savva et al. (2019), which consist of 56
+#      episodes per scene (1008 in total)."
+#
+# It is a Hydra override package rather than a standalone config — layer it
+# on top of any training config at the command line. Example:
+#
+#     python -u -m habitat_baselines.run \
+#         --config-name=pointnav/ddppo_pointnav_blind_gibson \
+#         +pointnav/mp3d_test_eval_override \
+#         habitat_baselines.eval_ckpt_path_dir=/scratch/izar/$USER/habitat_checkpoints/blind_gibson
+#
+# This points the dataset at the MP3D test split, switches the trainer into
+# evaluation mode, and caps concurrency at 1 environment so that probing
+# data collection produces a clean, ordered per-step record.
+#
+# Requires the MP3D PointNav episodes at:
+#     $HABITAT_DATA/datasets/pointnav/mp3d/v1/test/test.json.gz
+# (download via pointnav_mp3d_v1.zip — see README §7.4).
+# And the MP3D scene .glb files at:
+#     $HABITAT_DATA/scene_datasets/mp3d/<scene>/<scene>.glb
+
+habitat:
+  dataset:
+    type: PointNav-v1
+    data_path: data/datasets/pointnav/mp3d/v1/{split}/{split}.json.gz
+    scenes_dir: data/scene_datasets/
+    split: test
+
+habitat_baselines:
+  evaluate: True
+  num_environments: 1               # one-at-a-time for deterministic probing
+  test_episode_count: 1008          # 18 scenes × 56 episodes = 1008 (Wijmans A.1)
+  eval:
+    split: test

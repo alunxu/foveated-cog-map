@@ -157,12 +157,25 @@ A simple 19x19 procedural grid world with 4 rooms connected by doorways. Used fo
 
 ### 3.2 Habitat + Gibson (Main Results)
 
-Habitat is a high-performance 3D simulation platform. Gibson provides 492 real-world 3D-scanned buildings for photorealistic navigation.
+Habitat is a high-performance 3D simulation platform. Gibson provides ~490 real-world 3D-scanned buildings for photorealistic navigation. **Train on Gibson-0+ (411 scenes), evaluate on Matterport3D test (18 scenes, 1008 episodes)** — matching Wijmans et al. 2023 Appendix A.1.
 
-- **Observation**: First-person RGB camera (128x128 for uniform/foveated, 64x64 for matched)
+- **Observation**: First-person RGB camera (256x256 for uniform/foveated, 64x64 for matched)
 - **Training**: ~5-7 days per condition on 2 V100 GPUs (500M steps)
 - **Purpose**: The real experimental testbed. High-fidelity vision makes the foveation comparison meaningful
-- **Task episodes**: Pre-computed PointNav episodes from Facebook/Meta (385 MB)
+- **Training episodes**: `pointnav_gibson_0_plus_v1.zip` from FB (320 MB, 411 scenes × 10k eps)
+- **Evaluation episodes**: Matterport3D test split from `pointnav_mp3d_v1.zip` (18 scenes, 56 eps each)
+
+#### Gibson scene-count naming (easy to get confused)
+
+Every Gibson scene has a quality rating 0–5 assigned by Stanford. "Gibson-N+" means "all scenes with quality ≥ N", nested subsets of the same ~572-scene dataset:
+
+| Filter | Scenes | Pre-built episodes? | Used where |
+|---|---|---|---|
+| Gibson-4+ | 72 train + 14 val | `pointnav_gibson_v1.zip` | Standard Habitat benchmark; the emergence-of-maps public code release |
+| **Gibson-0+** | **411 train** | **`pointnav_gibson_0_plus_v1.zip`** | **Our training set** — largest public option |
+| Gibson-2+ | 572 train (per Wijmans 2020 paper text) | ❌ not distributed | Would need to be regenerated from raw `.glb` files |
+
+We use Gibson-0+ because it's the largest publicly pre-built Gibson PointNav episode set — 5.7× more scene diversity than the default, with no episode-generation pipeline required. See `habitat_configs/gibson_0plus_scenes.txt` for the authoritative 411-scene list.
 
 ### 3.3 Dataset Access
 
@@ -482,14 +495,22 @@ ln -s /scratch/izar/$USER/habitat_data ~/habitat-lab/data
 
 **Only one person needs to do this** — data is shared on scratch.
 
-#### Gibson (492 scenes, 13 GB) — already downloaded
+#### Gibson scenes (~490 .glb files, 13 GB) — already downloaded
 ```bash
-# Gibson scenes live at:
-/scratch/izar/wxu/habitat_data/scene_datasets/gibson/  # 492 .glb files
+# Gibson .glb files live at:
+/scratch/izar/wxu/habitat_data/scene_datasets/gibson/
+```
 
-# PointNav episodes (free, no license needed):
-wget https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip
-unzip pointnav_gibson_v1.zip -d /scratch/izar/$USER/habitat_data/datasets/
+#### Gibson-0+ PointNav episodes (411 train scenes, 320 MB) — required
+```bash
+# One-shot download + verification + .glb cross-check:
+bash scripts/cluster/download_gibson_0plus.sh
+
+# That script:
+#   1. downloads pointnav_gibson_0_plus_v1.zip
+#   2. extracts to $HABITAT_DATA/datasets/pointnav/gibson/v1/train_extra_large/
+#   3. cross-checks all 411 scene names against the .glb files on disk
+#      (any scene whose .glb is missing will crash training)
 ```
 
 #### Matterport3D (~15 GB) — access granted
@@ -601,14 +622,16 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 
 **Key insight**: MiniGrid validates that blind agents build spatial maps, but its tiny egocentric view makes vision comparisons meaningless. Habitat (with full first-person RGB) is essential for the foveation study.
 
-### Phase 2: Habitat Gibson (In Progress)
+### Phase 2: Habitat Gibson (Restarting on Gibson-0+)
 
 | Agent | Status | Notes |
 |-------|--------|-------|
-| **Blind** | Training (96% success at 215M/500M steps) | On track to replicate Wijmans |
-| Uniform | Config ready, queued | Waiting for blind to finish |
-| Foveated | Config + custom policy ready | Needs uniform encoder validated first |
-| Matched-Compute | Config ready, queued | Waiting for GPU slot |
+| **Blind** | Restarting on Gibson-0+ (411 scenes) | Previous run reached 96% @ 215M/500M on 72-scene Gibson-4+; discarded after the dataset migration so all 4 conditions train on the same 411-scene pool |
+| Uniform | Config ready, queued after blind | Same Gibson-0+ train set |
+| Foveated | Config + custom policy ready | Same Gibson-0+ train set |
+| Matched-Compute | Config ready, queued | Same Gibson-0+ train set |
+
+**Dataset migration (2026-04-08).** All Habitat configs now train on Gibson-0+ (411 scenes via `train_extra_large` split) and evaluate on Matterport3D test (18 scenes, 1008 episodes), matching Wijmans 2023 Appendix A.1. See §3.2 for the Gibson-0/2/4+ naming clarification. Before the first retrain, run `bash scripts/cluster/download_gibson_0plus.sh` once on the cluster.
 
 ---
 
@@ -616,10 +639,14 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 
 ### Phase 2A: Finish Habitat Blind Training
 - [x] Set up Habitat + Gibson on SCITAS
-- [x] Download Gibson dataset (492 scenes, 13 GB)
+- [x] Download Gibson scene .glb files (~490 scenes, 13 GB)
 - [x] Create DD-PPO config for blind agent
-- [x] Submit blind agent training (job 2823083, 2 GPUs)
-- [ ] **Wait for blind training to finish (~April 8)**
+- [x] ~~Submit blind agent training (job 2823083, 2 GPUs) on Gibson-4+~~ *Discarded 2026-04-08 after Gibson-0+ migration*
+- [x] Migrate all 5 Habitat configs to Gibson-0+ train (411 scenes) + MP3D test eval
+- [x] Run `scripts/cluster/download_gibson_0plus.sh` on cluster — verified 411/411 Gibson + 18/18 MP3D
+- [x] Normalize nested MP3D layout (`mp3d/mp3d/*` → `mp3d/*`)
+- [ ] Re-submit blind training on Gibson-0+ (411 scenes)
+- [ ] Verify final blind metrics match Wijmans (target: >95% success, >0.9 SPL)
 - [ ] Verify final metrics match Wijmans (target: >95% success, >0.9 SPL)
 - [ ] Save final checkpoint to `/home/` for safety
 

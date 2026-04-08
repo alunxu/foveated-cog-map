@@ -11,6 +11,12 @@
 #   - Architecture: 3-layer LSTM-512, prev-action embedding, each sensor → 32-d
 #     (handled by WijmansPointNavPolicy in src/habitat/wijmans_policy.py)
 #
+# Training set: Gibson-0+ (411 scenes, `train_extra_large` split from
+# pointnav_gibson_0_plus_v1.zip). This is the largest publicly pre-built
+# Gibson PointNav episode set — 5.7× more scene diversity than the 72-scene
+# Gibson-4+ default. Run scripts/cluster/download_gibson_0plus.sh once on
+# the cluster to install it before training.
+#
 # Submit:
 #   sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_blind_gibson
 
@@ -35,6 +41,12 @@ habitat:
     measurements:
       success:
         success_distance: 0.2      # Wijmans (matches Habitat default)
+  dataset:
+    # Wijmans 2023 A.1: train on 411 Gibson + 72 MP3D scenes. We use the
+    # pre-built Gibson-0+ (411) and MP3D train (61 available) merged via
+    # symlinks at data/datasets/pointnav/mp3d_gibson/v1/train/. 472 total.
+    data_path: data/datasets/pointnav/mp3d_gibson/v1/{split}/{split}.json.gz
+    split: train
 
 habitat_baselines:
   verbose: False
