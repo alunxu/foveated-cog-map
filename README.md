@@ -157,13 +157,13 @@ A simple 19x19 procedural grid world with 4 rooms connected by doorways. Used fo
 
 ### 3.2 Habitat + Gibson (Main Results)
 
-Habitat is a high-performance 3D simulation platform. Gibson provides ~490 real-world 3D-scanned buildings for photorealistic navigation. **Train on Gibson-0+ (411 scenes), evaluate on Matterport3D test (18 scenes, 1008 episodes)** — matching Wijmans et al. 2023 Appendix A.1.
+Habitat is a high-performance 3D simulation platform. Gibson provides ~490 real-world 3D-scanned buildings for photorealistic navigation. **Train on a merged Gibson-0+ (411) ∪ MP3D-train (61) = 472-scene pool, evaluate on Matterport3D test (18 scenes, 1008 episodes)** — matching Wijmans et al. 2023 Appendix A.1 ("train on 411 Gibson + 72 MP3D scenes").
 
 - **Observation**: First-person RGB camera (256x256 for uniform/foveated, 64x64 for matched)
 - **Training**: ~5-7 days per condition on 2 V100 GPUs (500M steps)
 - **Purpose**: The real experimental testbed. High-fidelity vision makes the foveation comparison meaningful
-- **Training episodes**: `pointnav_gibson_0_plus_v1.zip` from FB (320 MB, 411 scenes × 10k eps)
-- **Evaluation episodes**: Matterport3D test split from `pointnav_mp3d_v1.zip` (18 scenes, 56 eps each)
+- **Training episodes**: Gibson-0+ (`pointnav_gibson_0_plus_v1.zip`, 320 MB, 411 scenes) **merged with** MP3D train (`pointnav_mp3d_v1.zip` → `train/`, 61 scenes available) via symlinks under `data/datasets/pointnav/mp3d_gibson/v1/train/`. Configs point at `data_path: data/datasets/pointnav/mp3d_gibson/v1/{split}/{split}.json.gz`.
+- **Evaluation episodes**: Matterport3D test split (18 scenes, 56 eps each) — held out entirely from training
 
 #### Gibson scene-count naming (easy to get confused)
 
@@ -183,7 +183,8 @@ We use Gibson-0+ because it's the largest publicly pre-built Gibson PointNav epi
 |---------|------|---------------|
 | **Gibson scenes (trainval)** | 13 GB | Apply at [gibsonenv.stanford.edu](http://gibsonenv.stanford.edu/database/) — approval usually within 24h |
 | **Matterport3D** | ~15 GB | Apply at [niessner.github.io/Matterport](https://niessner.github.io/Matterport/) — may take days |
-| **PointNav episodes (Gibson v1)** | 385 MB | [Direct download](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) (no license needed) |
+| **PointNav episodes (Gibson-0+)** | 320 MB | `bash scripts/cluster/download_gibson_0plus.sh` (no license needed) — 411 train scenes |
+| **PointNav episodes (MP3D train + test)** | 385 MB | [pointnav_mp3d_v1.zip](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip) — provides 61-scene train split (merged with Gibson) and 18-scene test split (held out for eval) |
 | **Habitat test scenes** | 89 MB | `python -m habitat_sim.utils.datasets_download --uids habitat_test_scenes` (free) |
 
 **Only one team member needs to download Gibson/MP3D.** The data lives on the shared cluster scratch space.
@@ -525,14 +526,59 @@ python3 ~/download_mp.py -o /scratch/izar/$USER/mp3d_raw --task_data habitat
 mkdir -p /scratch/izar/$USER/habitat_data/scene_datasets/mp3d/
 unzip /scratch/izar/$USER/mp3d_raw/v1/tasks/mp3d_habitat.zip -d /scratch/izar/$USER/habitat_data/scene_datasets/mp3d/
 
-# 4. Download PointNav episodes for MP3D
+# 4. Download PointNav episodes for MP3D (train + val + test splits)
 wget https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip
 unzip pointnav_mp3d_v1.zip -d /scratch/izar/$USER/habitat_data/datasets/
 ```
 
+#### Merged Gibson + MP3D training pool (required) — Wijmans A.1
+
+Our configs train on `data/datasets/pointnav/mp3d_gibson/v1/train/`, a merged pool
+built by symlinking episode files from both datasets into one virtual split.
+
+```bash
+# Assumes Gibson-0+ and MP3D PointNav episodes above are already in place.
+MERGED=/scratch/izar/$USER/habitat_data/datasets/pointnav/mp3d_gibson/v1/train
+mkdir -p "$MERGED/content"
+
+# 1. Gibson-0+ train_extra_large → content/ (one json.gz per scene)
+ln -sfn /scratch/izar/$USER/habitat_data/datasets/pointnav/gibson/v1/train_extra_large/content/*.json.gz "$MERGED/content/"
+
+# 2. MP3D train → content/ (scenes whose .glb actually exists on disk)
+ln -sfn /scratch/izar/$USER/habitat_data/datasets/pointnav/mp3d/v1/train/content/*.json.gz "$MERGED/content/"
+
+# 3. Top-level split file (any non-empty json.gz works; habitat-lab only
+#    scans content/ at load time)
+ln -sfn /scratch/izar/$USER/habitat_data/datasets/pointnav/gibson/v1/train_extra_large/train_extra_large.json.gz "$MERGED/train.json.gz"
+
+# 4. Dummy val split (habitat-baselines eval defaults to val and won't
+#    accept split=train for the eval path). We symlink val -> train.
+VAL=/scratch/izar/$USER/habitat_data/datasets/pointnav/mp3d_gibson/v1/val
+mkdir -p "$VAL"
+ln -sfn ../train/content "$VAL/content"
+ln -sfn ../train/train.json.gz "$VAL/val.json.gz"
+```
+
+After this, `ls $MERGED/content/ | wc -l` should show 472 (411 Gibson + 61 MP3D).
+
+#### habitat-lab eval-video patch — required for rendering trajectory MP4s
+
+Two upstream `habitat-lab` bugs prevent `eval.video_option=[disk]` from
+producing a file on our scene pool. Both are fixed in
+`patches/habitat_lab_eval_video.patch`:
+
+```bash
+cd ~/habitat-lab
+git apply ~/CS503_Project/patches/habitat_lab_eval_video.patch
+```
+
+Fix summary:
+1. `overlay_frame` tried to `.2f`-format the `top_down_map` numpy array and crashed — now skips non-scalar metrics.
+2. `images_to_video` rejected frames whose width changed as the top-down-map tile grew — now zero-pads every frame to the first frame's shape.
+
 #### If you're using another team member's data
 ```bash
-# Symlink to wxu's data (no need to re-download)
+# Symlink to wxu's data (no need to re-download; merged pool already built)
 ln -s /scratch/izar/wxu/habitat_data /scratch/izar/$USER/habitat_data
 ```
 
@@ -554,15 +600,21 @@ cd ~/CS503_Project
 # Submit training (2 V100 GPUs, up to 72h wall time)
 sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_blind_gibson
 sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_uniform_gibson
-# cs-503 allows max 2 jobs — submit more after these finish:
-sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
-sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_matched_gibson
+# The cs-503 QOS caps you at 2 concurrent jobs. To launch foveated + matched
+# in parallel to the first two, switch to the normal QOS (longer queue but
+# no concurrent-job cap):
+sbatch --qos=normal scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
+sbatch --qos=normal scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_matched_gibson
 
 # Monitor progress
 squeue -u $USER                        # job status
 tail -f slurm_logs/<job_id>.err        # live training logs
 ls /scratch/izar/$USER/habitat_checkpoints/<run_name>/  # checkpoints
 ```
+
+See [`docs/foveation_design.md`](docs/foveation_design.md) for the frozen
+PoC hyperparameters (fovea_radius=16, blur_sigma_max=8.0, fixed center
+gaze, matched-compute 48×48) and the rationale behind each choice.
 
 ### 7.7 Recording Agent Videos (for Evaluation & Figures)
 
@@ -571,22 +623,32 @@ Habitat can save first-person RGB videos of trained agents navigating, which are
 - **Figures for the paper**: side-by-side comparison of what each of the 4 agents sees on the same episode is the most compelling visual we can produce
 - **Debugging the foveated agent**: visualize gaze position and blur pattern frame by frame
 
-#### How to enable
+#### How to enable — use the helper script
 
-When running evaluation (not training), set these flags on the habitat-baselines command line:
+`scripts/cluster/submit_habitat_eval.sh` wraps all the gotchas
+(`load_resume_state_config=False` to respect CLI overrides,
+`num_environments=1`, `eval.video_option=[disk]`, the right config key
+path, the val→train split handling) into a one-liner. Training state
+is never touched.
 
 ```bash
-python -u -m habitat_baselines.run \
-    --config-name=pointnav/ddppo_pointnav_uniform_gibson \
-    habitat_baselines.evaluate=True \
-    habitat_baselines.eval_ckpt_path_dir=/scratch/izar/$USER/habitat_checkpoints/uniform_gibson \
-    habitat_baselines.video_dir=/scratch/izar/$USER/videos/uniform_gibson \
-    'habitat_baselines.eval.video_option=[disk]' \
-    habitat_baselines.num_environments=1 \
-    habitat_baselines.test_episode_count=10
+cd ~/CS503_Project
+# sbatch <config_name> <ckpt_path> [num_episodes]
+sbatch scripts/cluster/submit_habitat_eval.sh \
+    pointnav/ddppo_pointnav_uniform_gibson \
+    /scratch/izar/$USER/habitat_checkpoints/uniform_gibson/ckpt.4.pth \
+    5
+
+# Videos end up in /scratch/izar/$USER/eval_videos/<run_name>/
+# Filenames embed every metric:
+#   episode=57311_1-ckpt=4-distance_to_goal=0.07-success=1.00-spl=0.95-...mp4
 ```
 
-This produces `.mp4` files in `video_dir`, one per evaluated episode, showing the agent's first-person RGB view plus a top-down map with the agent's trajectory.
+Prerequisite (one-time per habitat-lab install): apply the eval-video
+patch documented in §7.4, otherwise ffmpeg will reject frames and no
+MP4 will be written. Every frame is a composite of first-person RGB on
+the left and the top-down trajectory map on the right, padded to a
+fixed canvas per episode.
 
 #### For the foveated agent
 
@@ -622,16 +684,22 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 
 **Key insight**: MiniGrid validates that blind agents build spatial maps, but its tiny egocentric view makes vision comparisons meaningless. Habitat (with full first-person RGB) is essential for the foveation study.
 
-### Phase 2: Habitat Gibson (Restarting on Gibson-0+)
+### Phase 2: Habitat Gibson + MP3D (4-condition run in flight)
 
-| Agent | Status | Notes |
-|-------|--------|-------|
-| **Blind** | Restarting on Gibson-0+ (411 scenes) | Previous run reached 96% @ 215M/500M on 72-scene Gibson-4+; discarded after the dataset migration so all 4 conditions train on the same 411-scene pool |
-| Uniform | Config ready, queued after blind | Same Gibson-0+ train set |
-| Foveated | Config + custom policy ready | Same Gibson-0+ train set |
-| Matched-Compute | Config ready, queued | Same Gibson-0+ train set |
+Snapshot — 2026-04-09 (~10h40m into blind/uniform training):
 
-**Dataset migration (2026-04-08).** All Habitat configs now train on Gibson-0+ (411 scenes via `train_extra_large` split) and evaluate on Matterport3D test (18 scenes, 1008 episodes), matching Wijmans 2023 Appendix A.1. See §3.2 for the Gibson-0/2/4+ naming clarification. Before the first retrain, run `bash scripts/cluster/download_gibson_0plus.sh` once on the cluster.
+| Agent | Job | State | Window success | Window SPL | Notes |
+|-------|-----|-------|---:|---:|-------|
+| **Blind** | 2826964 | Running, 10h38m | 0.37–0.51 | 0.20–0.29 | Noisy at this stage; on Wijmans's curve. ckpt.3 already has 5 qualitative eval videos (3/5 success) |
+| **Uniform** | 2826965 | Running, 10h38m | **0.73** | **0.43** | Rock-steady; matches Wijmans at this step count. ckpt.4 evaluated (2/5 threshold near-misses) |
+| **Foveated** | 2827419 | Queued (normal QOS) | — | — | PoC hyperparameters frozen in `docs/foveation_design.md`: sigma=8, fixed center gaze |
+| **Matched-Compute** | 2827420 | Queued (normal QOS) | — | — | RGB tightened to 48×48 per the pixel-budget calculation in the design doc |
+
+**Dataset.** All four conditions train on a merged Gibson-0+ (411) ∪ MP3D-train (61) = 472-scene pool and evaluate on Matterport3D test (18 scenes, 1008 episodes), matching Wijmans 2023 Appendix A.1. See §3.2 for the Gibson-0/2/4+ naming clarification and §7.4 for the symlink recipe.
+
+**Eval pipeline shipped (2026-04-09).** `scripts/cluster/submit_habitat_eval.sh` plus the `patches/habitat_lab_eval_video.patch` upstream fixes produce playable MP4s (RGB + top-down trajectory map) with every metric embedded in the filename. Validated end-to-end on both blind ckpt.3 and uniform ckpt.4; 5 episodes each are under `/scratch/izar/wxu/eval_videos/{blind,uniform}_gibson/`.
+
+**Foveation PoC design frozen (2026-04-09).** The four conditions share a single set of frozen hyperparameters documented in [`docs/foveation_design.md`](docs/foveation_design.md). No sweeps in the PoC — one seed per condition, one setting per agent, qualitative story first.
 
 ---
 
