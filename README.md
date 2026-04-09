@@ -25,30 +25,34 @@ We hypothesize that an agent with foveated vision will develop qualitatively dif
 
 ### Four Experimental Conditions
 
-We train four types of navigation agents and compare what their memories encode:
+We train five navigation agents (varying only visual input) and compare what their memories encode:
 
 | Agent | Input | What We Test |
 |-------|-------|-------------|
-| **Blind** | GPS+Compass only (4D vector) | Baseline: do spatial maps emerge without any vision? (replication of Wijmans) |
-| **Uniform** | Full-resolution RGB camera (128x128) | Does adding uniform vision change memory content? |
-| **Foveated** | RGB with eccentricity-dependent blur + learned gaze | Does selective attention reshape what gets remembered? |
-| **Matched-Compute** | Low-resolution RGB (64x64) | Control: is it about WHERE info is (foveation) or HOW MUCH total info? |
+| **Blind** | Non-visual sensor stack only (goal, GPS, compass, close-to-goal) | Baseline: do spatial maps emerge without any vision? (replication of Wijmans) |
+| **Uniform** | 256×256 RGB via ResNet-18 | Does adding uniform vision change memory content? |
+| **Foveated (fixed)** | 256×256 RGB with eccentricity-dependent Gaussian blur (σ_max=8), gaze locked at centre | Does spatial non-uniformity reshape what gets remembered? |
+| **Foveated (learned)** | Same blur, gaze predicted by MLP (~33K params) from LSTM state | Does active gaze amplify the effect? |
+| **Matched-Compute** | 48×48 uniform RGB (2,304 pixels, exceeding foveated budget) | Control: is it about spatial distribution or total info volume? |
 
-The **blind vs. uniform** comparison tells us whether vision changes memory. The **uniform vs. foveated** comparison tells us whether selective attention matters. The **foveated vs. matched-compute** comparison isolates the effect of spatial attention from total information bandwidth.
+The **blind vs. uniform** comparison tells us whether vision changes memory. The **uniform vs. foveated** comparison tells us whether spatial non-uniformity matters. The **foveated vs. matched-compute** comparison isolates spatial distribution from total information volume. The **fixed vs. learned gaze** comparison isolates the contribution of active gaze (H3 test).
 
 ### Hypotheses
 
-**H1 (Uncertainty-driven memory):** A foveated agent's memory over-represents peripherally-observed (high-uncertainty) regions compared to a uniform-vision agent. Memory content tracks *what was poorly seen* rather than *what was clearly seen*, because uncertain regions are where memory adds the most decision-relevant information.
+**H1 (Compensatory memory):** Layout-probe accuracy stratified by observation eccentricity: a passive memory predicts falling accuracy; compensatory memory predicts flat or *rising* accuracy in the periphery. A separate confidence probe (inverse cumulative blur σ) tests whether input quality is recorded at all.
 
-**H2 (Confidence-annotated maps):** The foveated agent's hidden state encodes not just spatial layout but *location-dependent confidence* — a "belief map" rather than a plain map. Linear probes should be able to decode both "what is at location X" and "how well did I see location X" from the hidden state.
+**H2 (Representational divergence):** CKA between foveated and uniform agents: low similarity despite matched task performance indicates qualitatively different spatial codes. Cross-heading position-probe generalization tests whether foveated codes are more appearance-invariant.
 
-**H3 (Gaze-memory coupling):** The foveated agent's gaze strategy and memory content are jointly adapted — the agent looks at regions its memory is uncertain about, and remembers regions it hasn't yet foveated. This coupling should be absent in the uniform-vision agent.
+**H3 (Epistemic gaze):** Correlation of learned gaze coordinates with position-probe error (memory-uncertainty proxy). If the learned-gaze agent shows stronger H1–H2 effects than the fixed-centre variant, fixation is driven by epistemic demands.
 
 Each hypothesis is testable within a semester and produces interesting results whether confirmed or refuted.
 
-### Ecological Motivation
+### Motivation
 
-This connects to ecological vision and active perception. In ecology, different species have different eye designs adapted to their environmental niche. An animal with a narrow fovea and wide peripheral field faces a fundamentally different memory problem than one with uniform vision — it must remember what it *couldn't see well*, not just what it *did see*. Our project tests whether this principle emerges in learned agents.
+Three implications if confirmed:
+- **Belief-state emergence without Bayesian machinery.** If pure RL under foveation induces uncertainty tracking in recurrent memory, task pressure alone can discover belief-state-like representations — without explicit probabilistic objectives or architectural priors.
+- **Abstract spatial codes from degraded input.** Foveation degrades visual detail within each frame, preventing reliance on appearance-based position encoding. If this forces more abstract, appearance-invariant spatial representations, it identifies input degradation as a sufficient condition for representational abstraction — an information-bottleneck effect driven by sensor structure.
+- **Gaze as epistemic action.** If learned gaze targets memory-weak regions, the navigation objective alone suffices for information-gain-maximizing fixation — without auxiliary exploration rewards or hand-designed gaze shaping.
 
 ---
 
@@ -72,13 +76,13 @@ Observation → Encoder → [concatenate with pointgoal] → LSTM (3 layers, 512
                                                     This hidden state is what we probe
 ```
 
-| Component | Blind | Uniform | Foveated | Matched |
+| Component | Blind | Uniform | Foveated (fixed/learned) | Matched |
 |-----------|-------|---------|----------|---------|
-| Visual encoder | None | ResNet18 | ResNet18 + foveation | ResNet18 |
-| Input resolution | N/A | 128x128 | 128x128 (foveated) | 64x64 |
-| Pointgoal encoder | Linear(4→128) | Linear(4→128) | Linear(4→128) | Linear(4→128) |
+| Visual encoder | None | ResNet-18 | ResNet-18 + foveation | ResNet-18 |
+| Input resolution | N/A | 256×256 | 256×256 (foveated, σ_max=8) | 48×48 |
+| Non-visual sensors | goal-in-start-frame, GPS, compass, close-to-goal (each → 32-d) | same | same | same |
 | LSTM | 3 layers, 512-d | 3 layers, 512-d | 3 layers, 512-d | 3 layers, 512-d |
-| Policy head | Categorical | Categorical | Categorical + gaze decoder | Categorical |
+| Policy head | Categorical | Categorical | Categorical (+ gaze MLP for learned) | Categorical |
 
 ### 2.3 Foveation Transform
 
@@ -92,7 +96,7 @@ Given gaze position (gx, gy):
   4. Multi-scale Gaussian blur: interpolate between 5 pre-computed blur levels
 ```
 
-Parameters: `fovea_radius=16px`, `blur_sigma_max=6.0`, `falloff=quadratic`
+Parameters: `fovea_radius=16px`, `blur_sigma_max=8.0`, `falloff=quadratic`
 
 The foveated agent's **gaze position is learned**, not fixed. A small MLP decodes gaze (x, y) from the previous LSTM hidden state:
 
@@ -118,7 +122,8 @@ After training, we **freeze** the agent's weights and collect LSTM hidden states
 | **Occupancy grid** | Binary grid of walls vs. free space | Does memory encode the room layout? | All conditions |
 | **Agent position** | (x, y) coordinates | Does memory encode where the agent is? | All conditions |
 | **Collision prediction** | Will the next step hit a wall? | Are there "collision neurons" in memory? | All conditions |
-| **Perceptual uncertainty** | Per-location observation quality | Does memory encode *how well* each area was seen? | Foveated only (H2) |
+| **Observation confidence** | Inverse cumulative blur σ per location | Does memory encode *how well* each area was seen? | Foveated only (H1) |
+| **CKA cross-condition** | Representation geometry similarity | Do foveated and uniform agents develop divergent spatial codes? | H2 test |
 | **Target location** | Goal position relative to agent | Does memory encode where the goal is? | All conditions |
 
 If a linear probe can decode this information, it means the LSTM has learned a **linear representation** of spatial structure — a cognitive map.
@@ -159,7 +164,7 @@ A simple 19x19 procedural grid world with 4 rooms connected by doorways. Used fo
 
 Habitat is a high-performance 3D simulation platform. Gibson provides ~490 real-world 3D-scanned buildings for photorealistic navigation. **Train on a merged Gibson-0+ (411) ∪ MP3D-train (61) = 472-scene pool, evaluate on Matterport3D test (18 scenes, 1008 episodes)** — matching Wijmans et al. 2023 Appendix A.1 ("train on 411 Gibson + 72 MP3D scenes").
 
-- **Observation**: First-person RGB camera (256x256 for uniform/foveated, 64x64 for matched)
+- **Observation**: First-person RGB camera (256×256 for uniform/foveated, 48×48 for matched)
 - **Training**: ~5-7 days per condition on 2 V100 GPUs (500M steps)
 - **Purpose**: The real experimental testbed. High-fidelity vision makes the foveation comparison meaningful
 - **Training episodes**: Gibson-0+ (`pointnav_gibson_0_plus_v1.zip`, 320 MB, 411 scenes) **merged with** MP3D train (`pointnav_mp3d_v1.zip` → `train/`, 61 scenes available) via symlinks under `data/datasets/pointnav/mp3d_gibson/v1/train/`. Configs point at `data_path: data/datasets/pointnav/mp3d_gibson/v1/{split}/{split}.json.gz`.
@@ -684,22 +689,27 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 
 **Key insight**: MiniGrid validates that blind agents build spatial maps, but its tiny egocentric view makes vision comparisons meaningless. Habitat (with full first-person RGB) is essential for the foveation study.
 
-### Phase 2: Habitat Gibson + MP3D (4-condition run in flight)
+### Phase 2: Habitat Gibson + MP3D (5-condition run in flight)
 
-Snapshot — 2026-04-09 (~10h40m into blind/uniform training):
+Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending):
 
-| Agent | Job | State | Window success | Window SPL | Notes |
-|-------|-----|-------|---:|---:|-------|
-| **Blind** | 2826964 | Running, 10h38m | 0.37–0.51 | 0.20–0.29 | Noisy at this stage; on Wijmans's curve. ckpt.3 already has 5 qualitative eval videos (3/5 success) |
-| **Uniform** | 2826965 | Running, 10h38m | **0.73** | **0.43** | Rock-steady; matches Wijmans at this step count. ckpt.4 evaluated (2/5 threshold near-misses) |
-| **Foveated** | 2827419 | Queued (normal QOS) | — | — | PoC hyperparameters frozen in `docs/foveation_design.md`: sigma=8, fixed center gaze |
-| **Matched-Compute** | 2827420 | Queued (normal QOS) | — | — | RGB tightened to 48×48 per the pixel-budget calculation in the design doc |
+| Agent | Job | Steps | Window Success | Window SPL | Target | Notes |
+|-------|-----|-------|---:|---:|---:|-------|
+| **Blind** | 2826964 | ~113M | 81.1% | 0.49 | 500M | On Wijmans curve, will need resubmission (~112h remaining) |
+| **Uniform** | 2826965 | ~77M | 97.9% | 0.76 | 250M | Near convergence |
+| **Foveated (fixed)** | 2827419 | ~40M | 83.8% | 0.50 | 250M | Strong early performance with σ_max=8 |
+| **Matched-Compute** | 2827420 | ~55M | 80.3% | 0.41 | 250M | Lower SPL expected at 48×48 |
+| **Foveated (learned)** | — | — | — | — | 250M | Pending — to be launched after fixed-gaze validates |
 
-**Dataset.** All four conditions train on a merged Gibson-0+ (411) ∪ MP3D-train (61) = 472-scene pool and evaluate on Matterport3D test (18 scenes, 1008 episodes), matching Wijmans 2023 Appendix A.1. See §3.2 for the Gibson-0/2/4+ naming clarification and §7.4 for the symlink recipe.
+**Dataset.** All conditions train on a merged Gibson-0+ (411) ∪ MP3D-train (61) = 472-scene pool and evaluate on Matterport3D test (18 scenes, 1008 episodes), matching Wijmans 2023 Appendix A.1. See §3.2 for the Gibson-0/2/4+ naming clarification and §7.4 for the symlink recipe.
 
-**Eval pipeline shipped (2026-04-09).** `scripts/cluster/submit_habitat_eval.sh` plus the `patches/habitat_lab_eval_video.patch` upstream fixes produce playable MP4s (RGB + top-down trajectory map) with every metric embedded in the filename. Validated end-to-end on both blind ckpt.3 and uniform ckpt.4; 5 episodes each are under `/scratch/izar/wxu/eval_videos/{blind,uniform}_gibson/`.
+**Eval + probing pipeline test (2026-04-10).** Task eval (20 episodes) and probing pipeline (100 episodes) submitted for blind ckpt.10 and uniform ckpt.14 to validate the full pipeline end-to-end. Jobs queued pending GPU availability.
 
-**Foveation PoC design frozen (2026-04-09).** The four conditions share a single set of frozen hyperparameters documented in [`docs/foveation_design.md`](docs/foveation_design.md). No sweeps in the PoC — one seed per condition, one setting per agent, qualitative story first.
+**Eval video pipeline shipped (2026-04-09).** `scripts/cluster/submit_habitat_eval.sh` plus the `patches/habitat_lab_eval_video.patch` upstream fixes produce playable MP4s (RGB + top-down trajectory map) with every metric embedded in the filename.
+
+**Foveation PoC design frozen (2026-04-09).** The five conditions share a single set of frozen hyperparameters documented in [`docs/foveation_design.md`](docs/foveation_design.md). No sweeps in the PoC — one seed per condition, one setting per agent.
+
+**Training will require resubmission.** No job will finish within the 72h SLURM wall limit. DD-PPO resumes automatically from the latest checkpoint, so resubmitting the same `sbatch` command continues training.
 
 ---
 
@@ -751,16 +761,16 @@ Snapshot — 2026-04-09 (~10h40m into blind/uniform training):
   - [ ] Agent position decoder (does it know where it is?)
   - [ ] Collision predictor (are there collision neurons?)
   - [ ] Target location decoder (does it remember where the goal is?)
-- [ ] **H1 test: Uncertainty-driven memory**
-  - [ ] For foveated agent: split probing by eccentricity — is memory more accurate for peripherally-seen vs. foveated regions?
-  - [ ] Compare to uniform agent: does foveated agent over-represent uncertain regions?
-- [ ] **H2 test: Confidence-annotated maps**
-  - [ ] Train probe to decode per-location perceptual uncertainty from hidden state
-  - [ ] Does the agent encode not just "what is there" but "how well did I see it"?
-- [ ] **H3 test: Gaze-memory coupling**
-  - [ ] Compute correlation between gaze direction and memory uncertainty
-  - [ ] Compare to Bayesian ideal observer (information-gain-maximizing gaze)
-  - [ ] Visualize gaze fixation patterns (doorways? obstacles? goal direction?)
+- [ ] **H1 test: Compensatory memory**
+  - [ ] Stratify layout-probe accuracy by observation eccentricity — does accuracy rise in the periphery?
+  - [ ] Train confidence probe (inverse cumulative blur σ) — does the agent record input quality?
+  - [ ] Validate with control tasks (Hewitt & Liang 2019)
+- [ ] **H2 test: Representational divergence**
+  - [ ] CKA between foveated and uniform agents — low similarity despite matched task performance?
+  - [ ] Cross-heading generalization of position probes — more appearance-invariant in foveated?
+- [ ] **H3 test: Epistemic gaze**
+  - [ ] Correlate learned gaze coordinates with position-probe error (memory-uncertainty proxy)
+  - [ ] Compare learned-gaze vs. fixed-centre agent: does active gaze amplify H1–H2 effects?
 - [ ] **Cross-condition comparison**:
   - [ ] Do sighted agents have MORE spatial info than blind? Or different?
   - [ ] Does foveation create SELECTIVE memory (sharp near gaze, fuzzy elsewhere)?

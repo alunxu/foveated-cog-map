@@ -47,5 +47,14 @@ Thumbs.db
 .env
 *.log
 
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
 # Reference papers (not redistributable)
 docs/EMERGENCE*OF*MAPS*.pdf
