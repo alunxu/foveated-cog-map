@@ -38,6 +38,10 @@ echo "============================================"
 eval "$(conda shell.bash hook)"
 conda activate habitat
 
+# llvmlite (pulled by quaternion → numba) needs a newer libstdc++ than
+# some cluster nodes provide in /lib64. Conda's own copy fixes this.
+export LD_LIBRARY_PATH="${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}"
+
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
 export HYDRA_FULL_ERROR=1
