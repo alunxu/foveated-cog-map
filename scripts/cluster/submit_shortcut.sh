@@ -12,9 +12,9 @@
 #SBATCH --error=slurm_logs/%j.err
 
 # Usage:
-#   sbatch submit_habitat_shortcut.sh <config_name> <ckpt_path> [episodes_per_scene] [max_scenes]
+#   sbatch submit_shortcut.sh <config_name> <ckpt_path> [episodes_per_scene] [max_scenes]
 # Example:
-#   sbatch scripts/cluster/submit_habitat_shortcut.sh \
+#   sbatch scripts/cluster/submit_shortcut.sh \
 #     pointnav/ddppo_pointnav_blind_gibson \
 #     /scratch/izar/wxu/habitat_checkpoints/blind_gibson/ckpt.16.pth 10 20
 #
@@ -29,7 +29,7 @@ CKPT_PATH=${2:?"Error: ckpt path required"}
 EPISODES_PER_SCENE=${3:-10}
 MAX_SCENES=${4:-20}
 
-RUN_NAME=$(basename "${CONFIG_NAME}" | sed 's/ddppo_pointnav_//')
+RUN_NAME=$(run_name_from_config "${CONFIG_NAME}")
 OUT_DIR="/scratch/izar/${USER}/shortcut_results"
 OUT_PATH="${OUT_DIR}/${RUN_NAME}.json"
 
@@ -44,20 +44,13 @@ echo "  Job ID:   ${SLURM_JOB_ID}"
 echo "  Date:     $(date)"
 echo "============================================"
 
-eval "$(conda shell.bash hook)"
-conda activate habitat
-
-export LD_LIBRARY_PATH="${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}"
-export GLOG_minloglevel=2
-export MAGNUM_LOG=quiet
-export HYDRA_FULL_ERROR=1
-export PYTHONPATH="/home/${USER}/CS503_Project:${PYTHONPATH}"
+source "$(dirname "$0")/common.sh"
 
 cd /home/${USER}/habitat-lab
 
 echo ""
 echo "=== Running shortcut discovery eval ==="
-python -u /home/${USER}/CS503_Project/scripts/habitat_shortcut_eval.py \
+python -u ${PROJECT_DIR}/scripts/eval_shortcut.py \
     --config-name="${CONFIG_NAME}" \
     --ckpt="${CKPT_PATH}" \
     --episodes-per-scene=${EPISODES_PER_SCENE} \

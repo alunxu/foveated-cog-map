@@ -1,23 +1,12 @@
 """
-Habitat linear probe trainer.
+Legacy linear probe trainer (backward compatibility).
 
-Loads probing data collected by habitat_probe_collect.py and trains
-linear probes to predict agent pose from frozen LSTM hidden states.
-
-Two probe modes:
-  A. **Global probing** — pool data across all scenes, split by episode.
-     Uses GPS (relative displacement from start) and compass as targets.
-     Scene-independent; works with any amount of data.
-  B. **Per-scene probing** — Wijmans et al. methodology. Temporal split
-     within each scene. Requires enough per-scene data (≥50 steps).
-
-Probes:
-  1. Position (x, z) or GPS — Ridge regression → R², MAE in meters
-  2. Heading / compass — Ridge regression → R², angular MAE in degrees
-  3. Combined — Ridge regression → overall R²
+Loads probing data collected by collect_probes.py and trains simple
+linear probes (GPS + compass + per-scene position). For the full
+13-experiment suite, use analyze_probes.py instead.
 
 Usage:
-    python scripts/habitat_probe_train.py \
+    python scripts/analyze_probes_legacy.py \
         --data /scratch/izar/$USER/probing_data/blind_gibson.npz \
         --out  /scratch/izar/$USER/probing_results/blind_gibson.json
 """
@@ -25,17 +14,17 @@ Usage:
 import argparse
 import json
 import os
+import sys
 
 import numpy as np
-from sklearn.decomposition import PCA
-from sklearn.linear_model import Ridge
-from sklearn.metrics import r2_score, mean_absolute_error
-from sklearn.preprocessing import StandardScaler
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from src.utils.probing import fit_probe, prepare_features, angular_mae
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Train linear probes on Habitat agent hidden states")
-    p.add_argument("--data", required=True, help="Path to .npz from habitat_probe_collect.py")
+    p = argparse.ArgumentParser(description="Legacy linear probes on Habitat agent hidden states")
+    p.add_argument("--data", required=True, help="Path to .npz from collect_probes.py")
     p.add_argument("--out", default=None, help="Output .json path")
     p.add_argument("--alpha", type=float, default=10.0, help="Ridge regularization")
     p.add_argument("--pca-dim", type=int, default=32, help="PCA dims (0=skip)")
@@ -43,37 +32,6 @@ def parse_args():
     p.add_argument("--min-steps-scene", type=int, default=50)
     p.add_argument("--seed", type=int, default=42)
     return p.parse_args()
-
-
-def fit_probe(X_tr, X_te, Y_tr, Y_te, alpha):
-    """Generic Ridge probe: fit on train, eval on test."""
-    reg = Ridge(alpha=alpha)
-    reg.fit(X_tr, Y_tr)
-    pred = reg.predict(X_te)
-    r2 = float(np.clip(r2_score(Y_te, pred, multioutput="uniform_average"), -10, 1))
-    mae = float(mean_absolute_error(Y_te, pred))
-    return r2, mae, pred
-
-
-def angular_mae(pred_sincos, true_headings):
-    """Compute angular MAE from predicted sin/cos vs true headings."""
-    pred_angle = np.arctan2(pred_sincos[:, 0], pred_sincos[:, 1])
-    diff = np.abs(np.arctan2(np.sin(pred_angle - true_headings),
-                              np.cos(pred_angle - true_headings)))
-    return float(np.degrees(np.mean(diff)))
-
-
-def prepare_features(H_tr, H_te, pca_dim):
-    """Standardize + optional PCA."""
-    scaler = StandardScaler()
-    H_tr = scaler.fit_transform(H_tr)
-    H_te = scaler.transform(H_te)
-    if pca_dim > 0 and H_tr.shape[1] > pca_dim:
-        n_comp = min(pca_dim, H_tr.shape[0], H_tr.shape[1])
-        pca = PCA(n_components=n_comp)
-        H_tr = pca.fit_transform(H_tr)
-        H_te = pca.transform(H_te)
-    return H_tr, H_te
 
 
 # ─────────────── Global probing (GPS-based, scene-independent) ───────────────

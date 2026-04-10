@@ -1,8 +1,8 @@
 """
 Comprehensive single-condition probing analysis for Habitat navigation agents.
 
-Loads data from habitat_probe_collect.py and runs a full suite of linear
-probing experiments to characterize spatial representations in LSTM hidden states.
+Loads data from collect_probes.py and runs a full suite of linear probing
+experiments to characterize spatial representations in LSTM hidden states.
 
 Experiments:
   Phase 1 — Baseline probes
@@ -18,13 +18,14 @@ Experiments:
     2b. Cross-heading position-probe generalization
     2c. Path-history probe (lag-k decoding) — inspired by SPACE route retracing
     2d. Visited-region probe (spatial working memory) — inspired by SPACE CSWM
+    2e. Occupancy map reconstruction — inspired by SPACE map sketching
 
   Phase 5 — Per-unit analysis
     5a. Per-unit spatial information (rate maps)
     5b. Place-cell count and statistics
 
 Usage:
-    python scripts/habitat_probe_analysis.py \
+    python scripts/analyze_probes.py \
         --data /scratch/izar/$USER/probing_data/blind_gibson.npz \
         --out  /scratch/izar/$USER/probing_results/blind_gibson_full.json
 """
@@ -32,21 +33,24 @@ Usage:
 import argparse
 import json
 import os
+import sys
 
 import numpy as np
-from sklearn.decomposition import PCA
 from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.preprocessing import StandardScaler
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from src.utils.probing import fit_probe, prepare_features, angular_mae, episode_split
+
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Utilities
+#  CLI
 # ═══════════════════════════════════════════════════════════════════════
 
 def parse_args():
     p = argparse.ArgumentParser(description="Comprehensive probing analysis")
-    p.add_argument("--data", required=True, help="Path to .npz from habitat_probe_collect.py")
+    p.add_argument("--data", required=True, help="Path to .npz from collect_probes.py")
     p.add_argument("--out", default=None, help="Output .json path")
     p.add_argument("--alpha", type=float, default=10.0, help="Ridge regularization")
     p.add_argument("--pca-dim", type=int, default=0, help="PCA dims (0=skip, use full hidden state)")
@@ -56,48 +60,6 @@ def parse_args():
     p.add_argument("--skip-rate-maps", action="store_true", help="Skip rate map computation")
     p.add_argument("--rate-map-bins", type=int, default=20, help="Number of bins per axis for rate maps")
     return p.parse_args()
-
-
-def prepare_features(H_tr, H_te, pca_dim):
-    """Standardize + optional PCA."""
-    scaler = StandardScaler()
-    H_tr = scaler.fit_transform(H_tr)
-    H_te = scaler.transform(H_te)
-    if pca_dim > 0 and H_tr.shape[1] > pca_dim:
-        n_comp = min(pca_dim, H_tr.shape[0], H_tr.shape[1])
-        pca = PCA(n_components=n_comp)
-        H_tr = pca.fit_transform(H_tr)
-        H_te = pca.transform(H_te)
-    return H_tr, H_te
-
-
-def fit_probe(X_tr, X_te, Y_tr, Y_te, alpha):
-    """Ridge probe: fit on train, eval on test. Returns (R², MAE, predictions)."""
-    reg = Ridge(alpha=alpha)
-    reg.fit(X_tr, Y_tr)
-    pred = reg.predict(X_te)
-    r2 = float(r2_score(Y_te, pred, multioutput="uniform_average"))
-    mae = float(mean_absolute_error(Y_te, pred))
-    return r2, mae, pred
-
-
-def angular_mae(pred_sincos, true_headings):
-    """Angular MAE from predicted sin/cos vs true headings (radians)."""
-    pred_angle = np.arctan2(pred_sincos[:, 0], pred_sincos[:, 1])
-    diff = np.abs(np.arctan2(np.sin(pred_angle - true_headings),
-                              np.cos(pred_angle - true_headings)))
-    return float(np.degrees(np.mean(diff)))
-
-
-def episode_split(ep_ids, train_frac, seed):
-    """Split data indices by episode. Returns (train_mask, test_mask)."""
-    rng = np.random.RandomState(seed)
-    unique_eps = np.unique(ep_ids)
-    rng.shuffle(unique_eps)
-    split = int(len(unique_eps) * train_frac)
-    train_eps = set(unique_eps[:split].tolist())
-    train_mask = np.array([e in train_eps for e in ep_ids])
-    return train_mask, ~train_mask
 
 
 # ═══════════════════════════════════════════════════════════════════════

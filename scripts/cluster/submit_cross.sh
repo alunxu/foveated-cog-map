@@ -11,7 +11,7 @@
 #SBATCH --error=slurm_logs/%j.err
 
 # Usage:
-#   sbatch submit_habitat_cross.sh
+#   sbatch submit_cross.sh
 #
 # Runs cross-condition CKA and probe-transfer analysis on all available
 # probing data. No GPU required — CPU-only computation.
@@ -26,13 +26,7 @@ echo "  Job:   ${SLURM_JOB_ID}"
 echo "  Date:  $(date)"
 echo "============================================"
 
-eval "$(conda shell.bash hook)"
-conda activate habitat
-
-export PYTHONPATH="/home/${USER}/CS503_Project:${PYTHONPATH}"
-
-PROBE_DIR="/scratch/izar/${USER}/probing_data"
-RESULTS_DIR="/scratch/izar/${USER}/probing_results"
+source "$(dirname "$0")/common.sh"
 OUT_PATH="${RESULTS_DIR}/cross_analysis.json"
 
 # Build data arguments from available .npz files
@@ -55,7 +49,7 @@ fi
 
 echo ""
 echo "=== Running cross-condition analysis ==="
-python -u /home/${USER}/CS503_Project/scripts/habitat_probe_cross.py \
+python -u ${PROJECT_DIR}/scripts/analyze_cross.py \
     --data ${DATA_ARGS} \
     --out "${OUT_PATH}"
 

@@ -12,9 +12,9 @@
 #SBATCH --error=slurm_logs/%j.err
 
 # Usage:
-#   sbatch submit_habitat_eval.sh <config_name> <ckpt_path> [num_episodes]
+#   sbatch submit_eval.sh <config_name> <ckpt_path> [num_episodes]
 # Example:
-#   sbatch scripts/cluster/submit_habitat_eval.sh \
+#   sbatch scripts/cluster/submit_eval.sh \
 #     pointnav/ddppo_pointnav_uniform_gibson \
 #     /scratch/izar/wxu/habitat_checkpoints/uniform_gibson/ckpt.1.pth 5
 #
@@ -35,28 +35,16 @@ echo "  Job ID:   ${SLURM_JOB_ID}"
 echo "  Date:     $(date)"
 echo "============================================"
 
-eval "$(conda shell.bash hook)"
-conda activate habitat
+source "$(dirname "$0")/common.sh"
 
-# llvmlite (pulled by quaternion → numba) needs a newer libstdc++ than
-# some cluster nodes provide in /lib64. Conda's own copy fixes this.
-export LD_LIBRARY_PATH="${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}"
-
-export GLOG_minloglevel=2
-export MAGNUM_LOG=quiet
-export HYDRA_FULL_ERROR=1
-export PYTHONPATH="/home/${USER}/CS503_Project:${PYTHONPATH}"
-
-DATA_DIR="/scratch/izar/${USER}/habitat_data"
-CKPT_DIR="/scratch/izar/${USER}/habitat_checkpoints"
 VIDEO_ROOT="/scratch/izar/${USER}/eval_videos"
-RUN_NAME=$(basename "${CONFIG_NAME}" | sed 's/ddppo_pointnav_//')
+RUN_NAME=$(run_name_from_config "${CONFIG_NAME}")
 VIDEO_DIR="${VIDEO_ROOT}/${RUN_NAME}"
 mkdir -p "${VIDEO_DIR}"
 
 cd /home/${USER}/habitat-lab
 
-srun python -u /home/${USER}/CS503_Project/scripts/cluster/run_habitat.py \
+srun python -u ${PROJECT_DIR}/scripts/cluster/run_habitat.py \
     --config-name="${CONFIG_NAME}" \
     habitat_baselines.evaluate=True \
     habitat_baselines.load_resume_state_config=False \

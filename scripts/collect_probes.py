@@ -1,5 +1,5 @@
 """
-Habitat probing data collector.
+Probing data collector.
 
 Runs eval rollouts on a trained PointNav checkpoint and records
 LSTM hidden states (all layers, h and c) paired with ground-truth
@@ -21,7 +21,7 @@ Output: an .npz file containing:
     local_occupancy (N, G, G)           — [optional] local navigability grid (1=free, 0=wall)
 
 Usage on cluster:
-    python scripts/habitat_probe_collect.py \
+    python scripts/collect_probes.py \
         --config-name pointnav/ddppo_pointnav_blind_gibson \
         --ckpt /scratch/izar/$USER/habitat_checkpoints/blind_gibson/ckpt.9.pth \
         --episodes 500 \
@@ -45,18 +45,9 @@ PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, os.path.abspath(PROJECT_ROOT))
 
 import src.habitat  # noqa: F401 — registers custom policies + sensors
+from src.utils.habitat_env import heading_from_quaternion, load_habitat_config, load_policy
 
 import habitat
-from habitat.config.default_structured_configs import register_hydra_plugin
-from habitat_baselines.config.default_structured_configs import (
-    HabitatBaselinesConfigPlugin,
-)
-from habitat_baselines.utils.common import (
-    batch_obs,
-)
-from hydra import compose, initialize_config_dir
-from hydra.core.global_hydra import GlobalHydra
-from omegaconf import OmegaConf
 
 
 def query_local_occupancy(sim, agent_pos, grid_size=5.0, grid_res=0.25):
@@ -105,74 +96,16 @@ def parse_args():
     return p.parse_args()
 
 
-def heading_from_quaternion(q):
-    """Extract yaw heading (radians) from a habitat np.quaternion.
-
-    Uses the quaternion's components directly to avoid importing the
-    `quaternion` package (which pulls in numba/llvmlite and may not
-    load on all cluster nodes).
-    """
-    # np.quaternion has .w, .x, .y, .z — rotate the forward vector [0,0,-1]
-    # via the quaternion rotation formula: v' = q * v * q_conj
-    # For just the heading (Y-axis rotation), we only need the XZ projection:
-    #   forward_x = 2*(q.x*q.z + q.w*q.y)
-    #   forward_z = 1 - 2*(q.x*q.x + q.y*q.y)  ... but applied to [0,0,-1]
-    w, x, y, z = q.w, q.x, q.y, q.z
-    # Rotated forward vector [0, 0, -1]:
-    fx = -(2.0 * (x * z + w * y))
-    fz = -(1.0 - 2.0 * (x * x + y * y))
-    heading = np.arctan2(fx, fz)
-    return heading
-
-
 def main():
     args = parse_args()
     device = torch.device(args.device)
 
-    # ---- Hydra config composition ----
-    register_hydra_plugin(HabitatBaselinesConfigPlugin)
-    GlobalHydra.instance().clear()
-
-    # habitat-baselines expects config dir = habitat_baselines/config
-    import habitat_baselines
-    config_dir = os.path.join(
-        os.path.dirname(os.path.abspath(habitat_baselines.__file__)),
-        "config",
-    )
-    config_dir = os.path.normpath(config_dir)
-
-    with initialize_config_dir(config_dir=config_dir, version_base=None):
-        config = compose(
-            config_name=args.config_name,
-            overrides=[
-                "habitat_baselines.evaluate=True",
-                "habitat_baselines.load_resume_state_config=False",
-                "habitat_baselines.num_environments=1",
-                f"habitat_baselines.eval_ckpt_path_dir={args.ckpt}",
-                "habitat.dataset.split=train",
-                # Shuffle episodes across scenes (not just within scene groups)
-                "habitat.environment.iterator_options.shuffle=True",
-                "habitat.environment.iterator_options.group_by_scene=False",
-                # Ensure episodes run long enough to collect meaningful trajectories
-                "habitat.environment.max_episode_steps=500",
-            ],
-        )
-
-    # Make the config writable
-    OmegaConf.set_readonly(config, False)
-
-    # Fill in mandatory defaults that the full habitat-baselines pipeline
-    # normally sets but Hydra compose() alone may leave as MISSING.
-    sim_cfg = config.habitat.simulator
-    if OmegaConf.is_missing(sim_cfg, "agents_order"):
-        sim_cfg.agents_order = list(sim_cfg.agents.keys())
-
-    # Point scenes_dir at the cluster data
-    data_dir = os.environ.get(
-        "HABITAT_DATA_DIR",
-        f"/scratch/izar/{os.environ['USER']}/habitat_data",
-    )
-    config.habitat.dataset.scenes_dir = os.path.join(data_dir, "scene_datasets")
+    # ---- Config + Environment + Policy ----
+    config = load_habitat_config(args.config_name, args.ckpt, overrides=[
+        "habitat.dataset.split=train",
+        "habitat.environment.iterator_options.shuffle=True",
+        "habitat.environment.iterator_options.group_by_scene=False",
+    ])
 
     print(f"Config: {args.config_name}")
     print(f"Checkpoint: {args.ckpt}")
@@ -180,61 +113,14 @@ def main():
     print(f"Output: {args.out}")
     print(f"Device: {device}")
 
-    # ---- Create environment ----
     env = habitat.Env(config=config.habitat)
+    _ = env.reset()  # needed to infer observation spaces
 
-    # ---- Build and load policy ----
-    obs_space = env.observation_space
-    action_space = env.action_space
-
-    policy_name = config.habitat_baselines.rl.policy.main_agent.name
-
-    # Determine policy class from the registry
-    import habitat_baselines.rl.ddppo.policy  # noqa: F401 — ensures PointNavResNetPolicy registered
-    from habitat_baselines.common.baseline_registry import baseline_registry
-    policy_cls = baseline_registry.get_policy(policy_name)
-    assert policy_cls is not None, f"Policy '{policy_name}' not found in registry"
-
-    # Build policy
-    agent_config = config.habitat_baselines.rl.policy.main_agent
-    obs_dict = env.reset()
-    # Build a dummy observation batch to infer spaces
-    obs_for_space = {k: np.expand_dims(v, 0) for k, v in obs_dict.items()}
-
-    policy = policy_cls.from_config(
-        config=config,
-        observation_space=obs_space,
-        action_space=action_space,
+    policy, hidden_size, num_recurrent_layers, rnn_is_lstm = load_policy(
+        config, env, args.ckpt, device,
     )
 
-    # Load checkpoint weights
-    ckpt = torch.load(args.ckpt, map_location="cpu")
-    if "state_dict" in ckpt:
-        state_dict = ckpt["state_dict"]
-    else:
-        state_dict = ckpt
-
-    # The checkpoint saves under "actor_critic." prefix
-    policy.load_state_dict(
-        {k.replace("actor_critic.", ""): v for k, v in state_dict.items()
-         if k.startswith("actor_critic.")},
-        strict=False,
-    )
-    policy.to(device)
-    policy.eval()
-
-    # ---- Determine hidden state shape ----
-    hidden_size = config.habitat_baselines.rl.ppo.hidden_size
-    # For LSTM, habitat-baselines' num_recurrent_layers already includes
-    # both h and c (i.e. 3-layer LSTM → num_recurrent_layers = 6).
-    # Do NOT multiply by 2 again.
-    num_recurrent_layers = policy.net.num_recurrent_layers
-    rnn_is_lstm = "LSTM" in config.habitat_baselines.rl.ddppo.rnn_type
-    rnn_states_shape = (num_recurrent_layers, 1, hidden_size)
-
-    print(f"Policy: {policy_name}")
     print(f"Hidden size: {hidden_size}, num_recurrent_layers: {num_recurrent_layers}")
-    print(f"RNN states shape: {rnn_states_shape}")
     print(f"LSTM: {rnn_is_lstm}")
 
     # Number of actual LSTM layers (e.g. 3 for num_recurrent_layers=6)

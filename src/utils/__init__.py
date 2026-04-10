@@ -1,1 +1,1 @@
-# Training, evaluation, and checkpointing utilities
+# Shared utilities for probing, configuration, and geometry.

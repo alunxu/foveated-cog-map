@@ -205,25 +205,33 @@ Project/
 │   └── ddppo_pointnav_matched_gibson.yaml
 │
 ├── src/
-│   └── habitat/
-│       ├── __init__.py                 # Registers custom policies with habitat-baselines
-│       ├── torch_foveation.py          # TorchFoveationTransform (GPU, for Habitat)
-│       └── foveated_policy.py          # FoveatedPointNavResNetPolicy (DD-PPO compatible)
+│   ├── habitat/                        # Habitat DD-PPO integration
+│   │   ├── __init__.py                 # Registers custom policies with habitat-baselines
+│   │   ├── wijmans_policy.py           # Wijmans et al. PointNav policy (blind + sighted)
+│   │   ├── wijmans_sensors.py          # Custom sensors (GoalInStartFrame, CloseToGoal)
+│   │   ├── foveated_policy.py          # Foveated policy (fixed-center gaze)
+│   │   ├── foveated_learned_policy.py  # Foveated policy (learned gaze)
+│   │   └── torch_foveation.py          # GPU-native differentiable foveation transform
+│   └── utils/                          # Shared utilities (no code duplication)
+│       ├── probing.py                  # Ridge probe fitting, feature prep, episode split
+│       └── habitat_env.py              # Config loading, policy loading, geometry helpers
 │
 ├── scripts/
-│   ├── habitat_probe_collect.py        # Collect all LSTM layers + pose (Habitat)
-│   ├── habitat_probe_analysis.py       # Comprehensive single-condition analysis
-│   ├── habitat_probe_cross.py          # Cross-condition CKA + probe transfer
-│   ├── habitat_probe_train.py          # Legacy global GPS/compass probe
-│   ├── habitat_shortcut_eval.py        # Shortcut discovery / cognitive-map behavioral eval
-│   └── cluster/                        # SLURM & cluster management
+│   ├── collect_probes.py               # Collect LSTM hidden states + ground-truth pose
+│   ├── analyze_probes.py               # Comprehensive single-condition probing (13 experiments)
+│   ├── analyze_cross.py                # Cross-condition CKA + probe transfer
+│   ├── analyze_probes_legacy.py        # Legacy GPS/compass probe (backward compat)
+│   ├── eval_shortcut.py                # Shortcut discovery / cognitive-map behavioral eval
+│   └── cluster/                        # SLURM job scripts
+│       ├── common.sh                   # Shared env setup (sourced by all submit_*.sh)
+│       ├── submit_train.sh             # Submit DD-PPO training job
+│       ├── submit_eval.sh              # Submit evaluation + video recording
+│       ├── submit_probe.sh             # Submit probing pipeline (collect → analyze)
+│       ├── submit_cross.sh             # Submit cross-condition CKA analysis
+│       ├── submit_shortcut.sh          # Submit shortcut discovery eval
+│       ├── run_habitat.py              # Custom entry point (registers policies)
 │       ├── setup_env.sh                # Conda environment setup
-│       ├── submit_habitat.sh           # Submit one Habitat DD-PPO job
-│       ├── submit_habitat_eval.sh      # Submit evaluation with video recording
-│       ├── submit_habitat_probe.sh     # Submit probing pipeline for one condition
-│       ├── submit_habitat_cross.sh     # Submit cross-condition CKA analysis
-│       ├── submit_habitat_shortcut.sh  # Submit shortcut discovery eval
-│       ├── run_habitat.py              # Custom entry point (registers foveated policy)
+│       ├── download_gibson_0plus.sh    # Dataset download + validation
 │       ├── sync_to_cluster.sh          # Upload code → SCITAS
 │       └── sync_from_cluster.sh        # Download results ← SCITAS
 │
@@ -427,7 +435,7 @@ probe_data = {
 4. **Job submission**: Uses SLURM. `cs-503` QoS allows **max 2 concurrent jobs** on GPU partition.
 
 ```bash
-sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_blind_gibson  # submit
+sbatch scripts/cluster/submit_train.sh pointnav/ddppo_pointnav_blind_gibson  # submit
 squeue -u $USER                                                                  # check status
 scancel <job_id>                                                                 # cancel
 ```
@@ -577,13 +585,13 @@ cp ~/CS503_Project/habitat_configs/ddppo_pointnav_*_gibson.yaml \
 cd ~/CS503_Project
 
 # Submit training (2 V100 GPUs, up to 72h wall time)
-sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_blind_gibson
-sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_uniform_gibson
+sbatch scripts/cluster/submit_train.sh pointnav/ddppo_pointnav_blind_gibson
+sbatch scripts/cluster/submit_train.sh pointnav/ddppo_pointnav_uniform_gibson
 # The cs-503 QOS caps you at 2 concurrent jobs. To launch foveated + matched
 # in parallel to the first two, switch to the normal QOS (longer queue but
 # no concurrent-job cap):
-sbatch --qos=normal scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
-sbatch --qos=normal scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_matched_gibson
+sbatch --qos=normal scripts/cluster/submit_train.sh pointnav/ddppo_pointnav_foveated_gibson
+sbatch --qos=normal scripts/cluster/submit_train.sh pointnav/ddppo_pointnav_matched_gibson
 
 # Monitor progress
 squeue -u $USER                        # job status
@@ -604,7 +612,7 @@ Habitat can save first-person RGB videos of trained agents navigating, which are
 
 #### How to enable — use the helper script
 
-`scripts/cluster/submit_habitat_eval.sh` wraps all the gotchas
+`scripts/cluster/submit_eval.sh` wraps all the gotchas
 (`load_resume_state_config=False` to respect CLI overrides,
 `num_environments=1`, `eval.video_option=[disk]`, the right config key
 path, the val→train split handling) into a one-liner. Training state
@@ -613,7 +621,7 @@ is never touched.
 ```bash
 cd ~/CS503_Project
 # sbatch <config_name> <ckpt_path> [num_episodes]
-sbatch scripts/cluster/submit_habitat_eval.sh \
+sbatch scripts/cluster/submit_eval.sh \
     pointnav/ddppo_pointnav_uniform_gibson \
     /scratch/izar/$USER/habitat_checkpoints/uniform_gibson/ckpt.4.pth \
     5
@@ -666,11 +674,11 @@ Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending
 
 **Dataset.** All conditions train on a merged Gibson-0+ (411) ∪ MP3D-train (61) = 472-scene pool and evaluate on Matterport3D test (18 scenes, 1008 episodes), matching Wijmans 2023 Appendix A.1. See §3.2 for the Gibson-0/2/4+ naming clarification and §7.4 for the symlink recipe.
 
-**Probing pipeline v2 deployed (2026-04-10).** Comprehensive probing analysis (`habitat_probe_analysis.py`) with 12 experiments across 5 phases: baseline probes (GPS/compass, per-scene position, distance-to-goal, multi-layer comparison, control tasks), H1 tests (accuracy vs. timestep, cross-heading generalization), SPACE-inspired probes (path-history lag-k decoding, visited-region spatial working memory), and per-unit rate maps. Cross-condition CKA and probe transfer via `habitat_probe_cross.py`. Jobs 2828732 (blind ckpt.16) and 2828733 (uniform ckpt.22) submitted with v2 pipeline.
+**Probing pipeline v2 deployed (2026-04-10).** Comprehensive probing analysis (`analyze_probes.py`) with 12 experiments across 5 phases: baseline probes (GPS/compass, per-scene position, distance-to-goal, multi-layer comparison, control tasks), H1 tests (accuracy vs. timestep, cross-heading generalization), SPACE-inspired probes (path-history lag-k decoding, visited-region spatial working memory), and per-unit rate maps. Cross-condition CKA and probe transfer via `analyze_cross.py`. Jobs 2828732 (blind ckpt.16) and 2828733 (uniform ckpt.22) submitted with v2 pipeline.
 
 **Initial probing results (2026-04-10, legacy pipeline, 500 eps).** Blind agent (ckpt.10): GPS R²=0.876, Compass R²=0.604. Uniform agent (ckpt.14): GPS R²=0.453, Compass R²=0.706. Blind agent encodes GPS much more strongly (no vision → heavier reliance on memory for position tracking). Uniform agent encodes heading better (visual landmarks anchor orientation).
 
-**Eval video pipeline shipped (2026-04-09).** `scripts/cluster/submit_habitat_eval.sh` plus the `patches/habitat_lab_eval_video.patch` upstream fixes produce playable MP4s (RGB + top-down trajectory map) with every metric embedded in the filename.
+**Eval video pipeline shipped (2026-04-09).** `scripts/cluster/submit_eval.sh` plus the `patches/habitat_lab_eval_video.patch` upstream fixes produce playable MP4s (RGB + top-down trajectory map) with every metric embedded in the filename.
 
 **Foveation PoC design frozen (2026-04-09).** The five conditions share a single set of frozen hyperparameters documented in [`docs/foveation_design.md`](docs/foveation_design.md). No sweeps in the PoC — one seed per condition, one setting per agent.
 
@@ -691,7 +699,7 @@ Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending
 - [x] Implement GPU foveation transform (`src/habitat/torch_foveation.py`)
 - [x] Implement custom foveated policy (`src/habitat/foveated_policy.py`)
 - [x] Freeze foveation PoC hyperparameters (σ_max=8, fovea_radius=16, fixed center gaze, matched@48×48)
-- [x] Ship eval video pipeline (`submit_habitat_eval.sh` + upstream patch)
+- [x] Ship eval video pipeline (`submit_eval.sh` + upstream patch)
 
 ### Phase 2: Training (In Progress)
 All 4 initial conditions are training on SCITAS (2×V100, 72h wall limit, auto-resume from checkpoints):
@@ -711,7 +719,7 @@ All 4 initial conditions are training on SCITAS (2×V100, 72h wall limit, auto-r
 #### 3A: Pipeline Implementation (Complete)
 - [x] Build probing pipeline v1 (collect LSTM top-h, GPS/compass probe)
 - [x] Run initial probing on blind (ckpt.10) and uniform (ckpt.14), 500 episodes
-- [x] Build comprehensive probing pipeline v2 (`habitat_probe_analysis.py`) — 13 experiments:
+- [x] Build comprehensive probing pipeline v2 (`analyze_probes.py`) — 13 experiments:
   - [x] 1a: Per-scene absolute position probe (Wijmans replication)
   - [x] 1b: Global GPS/compass probe
   - [x] 1c: Distance-to-goal probe
@@ -723,10 +731,10 @@ All 4 initial conditions are training on SCITAS (2×V100, 72h wall limit, auto-r
   - [x] 2d: Visited-region probe (SPACE-inspired)
   - [x] 2e: Occupancy map decoding (local 20×20 navigability grid)
   - [x] 5a: Per-unit rate maps + place-cell identification
-- [x] Build cross-condition analysis (`habitat_probe_cross.py`)
+- [x] Build cross-condition analysis (`analyze_cross.py`)
   - [x] Pairwise linear CKA (per-layer, h and c states)
   - [x] Cross-condition probe transfer
-- [x] Build shortcut discovery behavioral test (`habitat_shortcut_eval.py`)
+- [x] Build shortcut discovery behavioral test (`eval_shortcut.py`)
   - [x] Persistent vs. reset LSTM hidden state across same-scene sequential episodes
   - [x] Early-vs-late map-building gain analysis
 - [x] Create all SLURM submission scripts (probe, cross, shortcut)

@@ -24,7 +24,7 @@ This is a FUNCTIONAL test — unlike probing, which shows what information
 is present, this shows whether that information is actually *used*.
 
 Usage:
-    python scripts/habitat_shortcut_eval.py \
+    python scripts/eval_shortcut.py \
         --config-name pointnav/ddppo_pointnav_blind_gibson \
         --ckpt /scratch/izar/$USER/habitat_checkpoints/blind_gibson/ckpt.16.pth \
         --episodes-per-scene 10 \
@@ -44,15 +44,11 @@ PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, os.path.abspath(PROJECT_ROOT))
 
 import src.habitat  # noqa: F401
+from src.utils.habitat_env import (
+    heading_from_quaternion, compute_spl, load_habitat_config, load_policy,
+)
 
 import habitat
-from habitat.config.default_structured_configs import register_hydra_plugin
-from habitat_baselines.config.default_structured_configs import (
-    HabitatBaselinesConfigPlugin,
-)
-from hydra import compose, initialize_config_dir
-from hydra.core.global_hydra import GlobalHydra
-from omegaconf import OmegaConf
 
 
 def parse_args():
@@ -66,20 +62,6 @@ def parse_args():
     p.add_argument("--out", required=True, help="Output JSON path")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     return p.parse_args()
-
-
-def heading_from_quaternion(q):
-    w, x, y, z = q.w, q.x, q.y, q.z
-    fx = -(2.0 * (x * z + w * y))
-    fz = -(1.0 - 2.0 * (x * x + y * y))
-    return np.arctan2(fx, fz)
-
-
-def compute_spl(success, agent_path_length, geodesic_distance):
-    """Compute SPL for a single episode."""
-    if not success:
-        return 0.0
-    return max(geodesic_distance, 1e-6) / max(agent_path_length, geodesic_distance, 1e-6)
 
 
 def run_episode(env, policy, rnn_hidden, prev_action, not_done_mask, device, rnn_is_lstm, num_recurrent_layers):
@@ -145,72 +127,19 @@ def main():
     args = parse_args()
     device = torch.device(args.device)
 
-    # ---- Config ----
-    register_hydra_plugin(HabitatBaselinesConfigPlugin)
-    GlobalHydra.instance().clear()
+    # ---- Config + Environment + Policy ----
+    config = load_habitat_config(args.config_name, args.ckpt, overrides=[
+        "habitat.dataset.split=train",
+        "habitat.environment.iterator_options.shuffle=False",
+        "habitat.environment.iterator_options.group_by_scene=True",
+    ])
 
-    import habitat_baselines
-    config_dir = os.path.join(
-        os.path.dirname(os.path.abspath(habitat_baselines.__file__)), "config",
-    )
-    config_dir = os.path.normpath(config_dir)
-
-    with initialize_config_dir(config_dir=config_dir, version_base=None):
-        config = compose(
-            config_name=args.config_name,
-            overrides=[
-                "habitat_baselines.evaluate=True",
-                "habitat_baselines.load_resume_state_config=False",
-                "habitat_baselines.num_environments=1",
-                f"habitat_baselines.eval_ckpt_path_dir={args.ckpt}",
-                "habitat.dataset.split=train",
-                "habitat.environment.iterator_options.shuffle=False",
-                "habitat.environment.iterator_options.group_by_scene=True",
-                "habitat.environment.max_episode_steps=500",
-            ],
-        )
-
-    OmegaConf.set_readonly(config, False)
-    sim_cfg = config.habitat.simulator
-    if OmegaConf.is_missing(sim_cfg, "agents_order"):
-        sim_cfg.agents_order = list(sim_cfg.agents.keys())
-
-    data_dir = os.environ.get(
-        "HABITAT_DATA_DIR",
-        f"/scratch/izar/{os.environ['USER']}/habitat_data",
-    )
-    config.habitat.dataset.scenes_dir = os.path.join(data_dir, "scene_datasets")
-
-    # ---- Environment + Policy ----
     env = habitat.Env(config=config.habitat)
+    _ = env.reset()
 
-    import habitat_baselines.rl.ddppo.policy  # noqa
-    from habitat_baselines.common.baseline_registry import baseline_registry
-
-    policy_name = config.habitat_baselines.rl.policy.main_agent.name
-    policy_cls = baseline_registry.get_policy(policy_name)
-    assert policy_cls is not None
-
-    obs_dict = env.reset()
-    policy = policy_cls.from_config(
-        config=config,
-        observation_space=env.observation_space,
-        action_space=env.action_space,
+    policy, hidden_size, num_recurrent_layers, rnn_is_lstm = load_policy(
+        config, env, args.ckpt, device,
     )
-
-    ckpt = torch.load(args.ckpt, map_location="cpu")
-    state_dict = ckpt.get("state_dict", ckpt)
-    policy.load_state_dict(
-        {k.replace("actor_critic.", ""): v for k, v in state_dict.items()
-         if k.startswith("actor_critic.")},
-        strict=False,
-    )
-    policy.to(device)
-    policy.eval()
-
-    hidden_size = config.habitat_baselines.rl.ppo.hidden_size
-    num_recurrent_layers = policy.net.num_recurrent_layers
-    rnn_is_lstm = "LSTM" in config.habitat_baselines.rl.ddppo.rnn_type
 
     print(f"Config: {args.config_name}")
     print(f"Checkpoint: {args.ckpt}")
