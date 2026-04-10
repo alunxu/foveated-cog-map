@@ -680,66 +680,68 @@ Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending
 
 ## 9. Detailed TODO
 
-### Phase 2A: Finish Habitat Blind Training
+### Phase 1: Infrastructure & Training Setup (Complete)
 - [x] Set up Habitat + Gibson on SCITAS
 - [x] Download Gibson scene .glb files (~490 scenes, 13 GB)
-- [x] Create DD-PPO config for blind agent
-- [x] ~~Submit blind agent training (job 2823083, 2 GPUs) on Gibson-4+~~ *Discarded 2026-04-08 after Gibson-0+ migration*
-- [x] Migrate all 5 Habitat configs to Gibson-0+ train (411 scenes) + MP3D test eval
-- [x] Run `scripts/cluster/download_gibson_0plus.sh` on cluster — verified 411/411 Gibson + 18/18 MP3D
+- [x] Create DD-PPO configs for all 4 conditions (blind, uniform, foveated, matched)
+- [x] Migrate all configs to Gibson-0+ train (411 scenes) + MP3D test eval
+- [x] Run `scripts/cluster/download_gibson_0plus.sh` — verified 411/411 Gibson + 18/18 MP3D
 - [x] Normalize nested MP3D layout (`mp3d/mp3d/*` → `mp3d/*`)
-- [ ] Re-submit blind training on Gibson-0+ (411 scenes)
-- [ ] Verify final blind metrics match Wijmans (target: >95% success, >0.9 SPL)
-- [ ] Verify final metrics match Wijmans (target: >95% success, >0.9 SPL)
-- [ ] Save final checkpoint to `/home/` for safety
-
-### Phase 2B: Train Sighted Agents
-- [x] Create uniform vision config (`ddppo_pointnav_uniform_gibson.yaml`)
-- [x] Create matched-compute config (`ddppo_pointnav_matched_gibson.yaml`)
-- [ ] Submit uniform agent training
-  - [ ] Monitor first 50M steps for non-zero success
-  - [ ] If OOM: reduce `num_environments` from 6 to 4
-- [ ] Submit matched-compute agent training
-  - [ ] Verify faster per-step throughput (smaller images)
-- [ ] Wait for both to complete (~5-7 days each)
-
-### Phase 2C: Train Foveated Agent
+- [x] Build merged Gibson-0+ ∪ MP3D training pool (472 scenes)
 - [x] Implement GPU foveation transform (`src/habitat/torch_foveation.py`)
-- [x] Implement custom policy (`src/habitat/foveated_policy.py`)
-- [x] Create foveated config (`ddppo_pointnav_foveated_gibson.yaml`)
-- [x] Create custom entry point (`scripts/cluster/run_habitat.py`)
-- [ ] **Test with fixed center gaze first** (disable gaze learning)
-  - [ ] Verify foveation doesn't crash training
-  - [ ] Compare early success rate with uniform agent
-- [ ] Enable gaze learning and train to 500M steps
-  - [ ] Monitor gaze patterns — does the agent learn to look at useful things?
-  - [ ] Log gaze heatmaps to TensorBoard
-- [ ] If gaze stays random: try stochastic gaze with entropy bonus
+- [x] Implement custom foveated policy (`src/habitat/foveated_policy.py`)
+- [x] Freeze foveation PoC hyperparameters (σ_max=8, fovea_radius=16, fixed center gaze, matched@48×48)
+- [x] Ship eval video pipeline (`submit_habitat_eval.sh` + upstream patch)
 
-### Phase 3: Probing & Analysis
-- [x] Build Habitat probing pipeline v1 (collect LSTM top-h, GPS/compass probe)
+### Phase 2: Training (In Progress)
+All 4 initial conditions are training on SCITAS (2×V100, 72h wall limit, auto-resume from checkpoints):
+
+- [x] Submit blind agent (job 2826964) — ~162M / 500M steps, 78.3% success
+- [x] Submit uniform agent (job 2826965) — ~110M / 250M steps, 92.2% success
+- [x] Submit foveated fixed-gaze agent (job 2827419) — ~63M / 250M steps, 93.0% success
+- [x] Submit matched-compute agent (job 2827420) — ~90M / 250M steps, 87.4% success
+- [ ] Resubmit all 4 conditions as they hit 72h wall limit (DD-PPO auto-resumes)
+- [ ] Verify final blind metrics approach Wijmans (target: >95% success, >0.9 SPL)
+- [ ] Verify all sighted conditions converge (target: >90% success)
+- [ ] Save final checkpoints to `/home/` for safety
+- [ ] Launch learned-gaze foveated agent (5th condition, after fixed-gaze validates)
+
+### Phase 3: Probing & Analysis (In Progress)
+
+#### 3A: Pipeline Implementation (Complete)
+- [x] Build probing pipeline v1 (collect LSTM top-h, GPS/compass probe)
 - [x] Run initial probing on blind (ckpt.10) and uniform (ckpt.14), 500 episodes
-- [x] Build comprehensive probing pipeline v2 (`habitat_probe_analysis.py`)
-  - [x] Collect ALL LSTM layers (h₁/h₂/h₃ + c₁/c₂/c₃) + distance-to-goal + step index
+- [x] Build comprehensive probing pipeline v2 (`habitat_probe_analysis.py`) — 13 experiments:
   - [x] 1a: Per-scene absolute position probe (Wijmans replication)
   - [x] 1b: Global GPS/compass probe
   - [x] 1c: Distance-to-goal probe
-  - [x] 1d: Multi-layer comparison (which layer encodes spatial info?)
+  - [x] 1d: Multi-layer comparison (h₁/h₂/h₃ + c₁/c₂/c₃)
   - [x] 1e-f: Control tasks + Hewitt & Liang selectivity index
   - [x] 2a: Accuracy vs. timestep-in-episode
   - [x] 2b: Cross-heading generalization (allocentric vs. egocentric codes)
-  - [x] 2c: Path-history lag-k decoding (inspired by SPACE route retracing)
-  - [x] 2d: Visited-region probe (inspired by SPACE CSWM)
+  - [x] 2c: Path-history lag-k decoding (SPACE-inspired)
+  - [x] 2d: Visited-region probe (SPACE-inspired)
+  - [x] 2e: Occupancy map decoding (local 20×20 navigability grid)
   - [x] 5a: Per-unit rate maps + place-cell identification
 - [x] Build cross-condition analysis (`habitat_probe_cross.py`)
-  - [x] 3a: Pairwise CKA (per-layer, h and c states)
-  - [x] 3b: Cross-condition probe transfer
-- [ ] Submit v2 probing for blind + uniform (jobs 2828732, 2828733) ← in queue
+  - [x] Pairwise linear CKA (per-layer, h and c states)
+  - [x] Cross-condition probe transfer
+- [x] Build shortcut discovery behavioral test (`habitat_shortcut_eval.py`)
+  - [x] Persistent vs. reset LSTM hidden state across same-scene sequential episodes
+  - [x] Early-vs-late map-building gain analysis
+- [x] Create all SLURM submission scripts (probe, cross, shortcut)
+
+#### 3B: Run Experiments (Pending — blocked on training convergence)
+- [ ] Submit v2 probing for blind + uniform (jobs 2828732, 2828733 in queue)
 - [ ] Run v2 probing on foveated + matched (after sufficient training)
 - [ ] Run cross-condition CKA analysis (all 4 conditions)
+- [ ] Run shortcut discovery eval on all 4 conditions
+
+#### 3C: Hypothesis Testing (Pending — blocked on probing results)
 - [ ] **H1 test: Compensatory memory**
   - [ ] Compare accuracy-vs-timestep curves across conditions
   - [ ] Compare path-history decay rates: blind vs. foveated vs. uniform
+  - [ ] Occupancy decoding: foveated vs. uniform F1 scores
 - [ ] **H2 test: Representational divergence**
   - [ ] Interpret CKA: low foveated↔uniform despite matched task performance?
   - [ ] Cross-heading generalization: foveated more allocentric?
@@ -747,17 +749,22 @@ Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending
 - [ ] **H3 test: Epistemic gaze** (requires learned-gaze agent)
   - [ ] Correlate learned gaze with position-probe error
   - [ ] Compare learned-gaze vs. fixed-centre: does active gaze amplify H1–H2?
-- [ ] **Visualization**:
-  - [ ] Per-unit rate maps (place-cell-like neurons)
-  - [ ] Cross-condition CKA heatmap (layer × layer)
-  - [ ] R² bar charts across all conditions
-  - [ ] Path-history decay curves
+- [ ] **Behavioral cognitive map test**
+  - [ ] Compare persistent vs. reset SPL benefit across conditions
+  - [ ] Interpret: which agent builds the most useful cognitive map?
+
+#### 3D: Visualization (Pending)
+- [ ] Per-unit rate maps (place-cell-like neurons)
+- [ ] Cross-condition CKA heatmap (layer × layer)
+- [ ] R² bar charts across all conditions and probe types
+- [ ] Path-history decay curves
+- [ ] Occupancy decoding qualitative examples
 
 ### Phase 4: Paper Writing
 - [ ] Introduction: spatial memory in navigation, foveation hypothesis
-- [ ] Related work: Wijmans 2023, foveated vision in RL, cognitive maps
-- [ ] Methods: 4 conditions, architecture, foveation transform, probing
-- [ ] Results: Habitat training + probing, cross-condition comparison
+- [ ] Related work: Wijmans 2023, SPACE benchmark, foveated vision in RL, cognitive maps
+- [ ] Methods: 5 conditions, architecture, foveation transform, probing suite, behavioral tests
+- [ ] Results: training curves, probing results, cross-condition comparison, shortcut discovery
 - [ ] Discussion: what foveation changes about memory, implications for embodied AI
 - [ ] Figures: architecture diagram, foveation visualization, probing results, gaze patterns
 
