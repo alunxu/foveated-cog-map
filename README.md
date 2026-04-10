@@ -119,14 +119,22 @@ After training, we **freeze** the agent's weights and collect LSTM hidden states
 
 | Probe | Target | Question | Tests |
 |-------|--------|----------|-------|
-| **Occupancy grid** | Binary grid of walls vs. free space | Does memory encode the room layout? | All conditions |
-| **Agent position** | (x, y) coordinates | Does memory encode where the agent is? | All conditions |
-| **Collision prediction** | Will the next step hit a wall? | Are there "collision neurons" in memory? | All conditions |
-| **Observation confidence** | Inverse cumulative blur σ per location | Does memory encode *how well* each area was seen? | Foveated only (H1) |
+| **GPS / Compass** | Episodic displacement + heading | Can memory reconstruct its own sensor input? | All (sanity check) |
+| **Absolute position** | World (x,z) per scene | Does memory encode where the agent *is*? (Wijmans replication) | All conditions |
+| **Distance-to-goal** | Euclidean dist to goal | Does memory encode task-relevant spatial info? | All conditions |
+| **Multi-layer comparison** | Same targets, per LSTM layer (h₁/h₂/h₃, c₁/c₂/c₃) | Where does spatial info live in the network? | All conditions |
+| **Control task** | Shuffled labels (Hewitt & Liang 2019) | Is probe R² genuine or artifact of expressivity? | All conditions |
+| **Accuracy vs. timestep** | GPS R² stratified by step-in-episode | Does spatial encoding improve over time? | H1 test |
+| **Cross-heading generalization** | Train position probe on heading A, test on opposite | Are codes allocentric (appearance-invariant)? | H2 test |
+| **Path-history (lag-k)** | GPS at t−k decoded from hidden at t | How much trajectory history does memory retain? | H1 (inspired by SPACE route retracing) |
+| **Visited-region** | Binary grid of visited cells | Does memory encode spatial working memory? | All (inspired by SPACE CSWM) |
+| **Per-unit rate maps** | Spatial information per neuron (bits) | Are there place-cell-like neurons? | All (Banino et al.) |
 | **CKA cross-condition** | Representation geometry similarity | Do foveated and uniform agents develop divergent spatial codes? | H2 test |
-| **Target location** | Goal position relative to agent | Does memory encode where the goal is? | All conditions |
+| **Probe transfer** | Train probe on condition A, test on B | Do conditions share a common spatial code? | H2 test |
 
 If a linear probe can decode this information, it means the LSTM has learned a **linear representation** of spatial structure — a cognitive map.
+
+> **Note:** Path-history and visited-region probes are inspired by Ramakrishnan, Wijmans et al. (ICLR 2025) "Does Spatial Cognition Emerge in Frontier Models?", which benchmarks large-scale spatial cognition (route retracing, shortcut discovery, map sketching) and visuospatial working memory in frontier models. Their SPACE benchmark finds that disembodied models fail at spatial cognition — motivating our study of *embodied* agents where spatial representations demonstrably emerge.
 
 ### 2.6 Gaze-Memory Coupling Analysis (H3)
 
@@ -233,7 +241,11 @@ Project/
 │
 ├── scripts/
 │   ├── train.py                        # MiniGrid training entry point
-│   ├── probe.py                        # Linear probing analysis
+│   ├── probe.py                        # Linear probing analysis (MiniGrid)
+│   ├── habitat_probe_collect.py        # Collect all LSTM layers + pose (Habitat)
+│   ├── habitat_probe_analysis.py       # Comprehensive single-condition analysis
+│   ├── habitat_probe_cross.py          # Cross-condition CKA + probe transfer
+│   ├── habitat_probe_train.py          # Legacy global GPS/compass probe
 │   └── cluster/                        # SLURM & cluster management
 │       ├── setup_env.sh                # Conda environment setup
 │       ├── submit_job.sh               # Submit one MiniGrid condition
@@ -693,17 +705,19 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 
 Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending):
 
-| Agent | Job | Steps | Window Success | Window SPL | Target | Notes |
+| Agent | Job | Steps | Success | SPL | Target | Notes |
 |-------|-----|-------|---:|---:|---:|-------|
-| **Blind** | 2826964 | ~113M | 81.1% | 0.49 | 500M | On Wijmans curve, will need resubmission (~112h remaining) |
-| **Uniform** | 2826965 | ~77M | 97.9% | 0.76 | 250M | Near convergence |
-| **Foveated (fixed)** | 2827419 | ~40M | 83.8% | 0.50 | 250M | Strong early performance with σ_max=8 |
-| **Matched-Compute** | 2827420 | ~55M | 80.3% | 0.41 | 250M | Lower SPL expected at 48×48 |
+| **Blind** | 2826964 | ~162M | 78.3% | 0.452 | 500M | 32% done, will need resubmission |
+| **Uniform** | 2826965 | ~110M | 92.2% | 0.756 | 250M | 44% done, strong |
+| **Foveated (fixed)** | 2827419 | ~63M | 93.0% | 0.691 | 250M | 25% done — remarkably strong, beating uniform at fewer steps |
+| **Matched-Compute** | 2827420 | ~90M | 87.4% | 0.527 | 250M | 36% done |
 | **Foveated (learned)** | — | — | — | — | 250M | Pending — to be launched after fixed-gaze validates |
 
 **Dataset.** All conditions train on a merged Gibson-0+ (411) ∪ MP3D-train (61) = 472-scene pool and evaluate on Matterport3D test (18 scenes, 1008 episodes), matching Wijmans 2023 Appendix A.1. See §3.2 for the Gibson-0/2/4+ naming clarification and §7.4 for the symlink recipe.
 
-**Eval + probing pipeline test (2026-04-10).** Task eval (20 episodes) and probing pipeline (100 episodes) submitted for blind ckpt.10 and uniform ckpt.14 to validate the full pipeline end-to-end. Jobs queued pending GPU availability.
+**Probing pipeline v2 deployed (2026-04-10).** Comprehensive probing analysis (`habitat_probe_analysis.py`) with 12 experiments across 5 phases: baseline probes (GPS/compass, per-scene position, distance-to-goal, multi-layer comparison, control tasks), H1 tests (accuracy vs. timestep, cross-heading generalization), SPACE-inspired probes (path-history lag-k decoding, visited-region spatial working memory), and per-unit rate maps. Cross-condition CKA and probe transfer via `habitat_probe_cross.py`. Jobs 2828732 (blind ckpt.16) and 2828733 (uniform ckpt.22) submitted with v2 pipeline.
+
+**Initial probing results (2026-04-10, legacy pipeline, 500 eps).** Blind agent (ckpt.10): GPS R²=0.876, Compass R²=0.604. Uniform agent (ckpt.14): GPS R²=0.453, Compass R²=0.706. Blind agent encodes GPS much more strongly (no vision → heavier reliance on memory for position tracking). Uniform agent encodes heading better (visual landmarks anchor orientation).
 
 **Eval video pipeline shipped (2026-04-09).** `scripts/cluster/submit_habitat_eval.sh` plus the `patches/habitat_lab_eval_video.patch` upstream fixes produce playable MP4s (RGB + top-down trajectory map) with every metric embedded in the filename.
 
@@ -752,38 +766,41 @@ Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending
 - [ ] If gaze stays random: try stochastic gaze with entropy bonus
 
 ### Phase 3: Probing & Analysis
-- [ ] Build Habitat probing pipeline (extract LSTM hidden states during evaluation)
-  - [ ] Run each trained agent on 1000+ evaluation episodes
-  - [ ] Save hidden states + ground-truth spatial info at each step
-  - [ ] For foveated agent: also save gaze history + uncertainty maps
-- [ ] **Standard probes** (all 4 conditions):
-  - [ ] Occupancy grid decoder (is room layout in memory?)
-  - [ ] Agent position decoder (does it know where it is?)
-  - [ ] Collision predictor (are there collision neurons?)
-  - [ ] Target location decoder (does it remember where the goal is?)
+- [x] Build Habitat probing pipeline v1 (collect LSTM top-h, GPS/compass probe)
+- [x] Run initial probing on blind (ckpt.10) and uniform (ckpt.14), 500 episodes
+- [x] Build comprehensive probing pipeline v2 (`habitat_probe_analysis.py`)
+  - [x] Collect ALL LSTM layers (h₁/h₂/h₃ + c₁/c₂/c₃) + distance-to-goal + step index
+  - [x] 1a: Per-scene absolute position probe (Wijmans replication)
+  - [x] 1b: Global GPS/compass probe
+  - [x] 1c: Distance-to-goal probe
+  - [x] 1d: Multi-layer comparison (which layer encodes spatial info?)
+  - [x] 1e-f: Control tasks + Hewitt & Liang selectivity index
+  - [x] 2a: Accuracy vs. timestep-in-episode
+  - [x] 2b: Cross-heading generalization (allocentric vs. egocentric codes)
+  - [x] 2c: Path-history lag-k decoding (inspired by SPACE route retracing)
+  - [x] 2d: Visited-region probe (inspired by SPACE CSWM)
+  - [x] 5a: Per-unit rate maps + place-cell identification
+- [x] Build cross-condition analysis (`habitat_probe_cross.py`)
+  - [x] 3a: Pairwise CKA (per-layer, h and c states)
+  - [x] 3b: Cross-condition probe transfer
+- [ ] Submit v2 probing for blind + uniform (jobs 2828732, 2828733) ← in queue
+- [ ] Run v2 probing on foveated + matched (after sufficient training)
+- [ ] Run cross-condition CKA analysis (all 4 conditions)
 - [ ] **H1 test: Compensatory memory**
-  - [ ] Stratify layout-probe accuracy by observation eccentricity — does accuracy rise in the periphery?
-  - [ ] Train confidence probe (inverse cumulative blur σ) — does the agent record input quality?
-  - [ ] Validate with control tasks (Hewitt & Liang 2019)
+  - [ ] Compare accuracy-vs-timestep curves across conditions
+  - [ ] Compare path-history decay rates: blind vs. foveated vs. uniform
 - [ ] **H2 test: Representational divergence**
-  - [ ] CKA between foveated and uniform agents — low similarity despite matched task performance?
-  - [ ] Cross-heading generalization of position probes — more appearance-invariant in foveated?
-- [ ] **H3 test: Epistemic gaze**
-  - [ ] Correlate learned gaze coordinates with position-probe error (memory-uncertainty proxy)
-  - [ ] Compare learned-gaze vs. fixed-centre agent: does active gaze amplify H1–H2 effects?
-- [ ] **Cross-condition comparison**:
-  - [ ] Do sighted agents have MORE spatial info than blind? Or different?
-  - [ ] Does foveation create SELECTIVE memory (sharp near gaze, fuzzy elsewhere)?
-  - [ ] Matched-compute ablation: is it total info or spatial attention?
-- [ ] **Ablations** (if time permits):
-  - [ ] Vary foveation strength (blur_sigma_max: 2, 4, 6, 8)
-  - [ ] Vary memory capacity (hidden_size: 128, 256, 512)
-  - [ ] Gaze ablation: fixed-center vs. random vs. learned
+  - [ ] Interpret CKA: low foveated↔uniform despite matched task performance?
+  - [ ] Cross-heading generalization: foveated more allocentric?
+  - [ ] Probe transfer: do probes trained on one condition work on another?
+- [ ] **H3 test: Epistemic gaze** (requires learned-gaze agent)
+  - [ ] Correlate learned gaze with position-probe error
+  - [ ] Compare learned-gaze vs. fixed-centre: does active gaze amplify H1–H2?
 - [ ] **Visualization**:
-  - [ ] Decoded occupancy maps overlaid on ground truth
-  - [ ] Gaze trajectory plots for foveated agent
-  - [ ] Uncertainty maps vs. memory accuracy heatmaps
-  - [ ] Comparison bar charts across all 4 conditions
+  - [ ] Per-unit rate maps (place-cell-like neurons)
+  - [ ] Cross-condition CKA heatmap (layer × layer)
+  - [ ] R² bar charts across all conditions
+  - [ ] Path-history decay curves
 
 ### Phase 4: MiniGrid Probing (Appendix)
 - [ ] Run probing on 3 completed MiniGrid checkpoints (blind, uniform, matched)
@@ -807,6 +824,7 @@ Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending
 | **Cognitive maps in RL** | Wijmans et al. (ICLR 2023); Gornet & Thomson (Nature MI 2024) | Show spatial maps emerge in blind/sighted agent memory | We study how *varying perceptual quality* across the visual field shapes memory content |
 | **Foveated RL agents** | Pourrahimi & Bashivan (bioRxiv 2025) | Foveated Transformer on visual search; probe for brain-like features | They study static scene search; we study navigation with spatial memory. They ask "what does it look like?" vs. our "what does it remember?" |
 | **Optimal gaze in RL** | Radulescu et al. (2022); Zhou & Eckstein (2022) | Show RL agents converge to Bayesian-optimal fixation strategies | They don't probe internal memory — we study what the memory encodes, not just where the agent looks |
+| **Spatial cognition benchmark** | Ramakrishnan, Wijmans et al. (ICLR 2025, SPACE) | Show frontier models fail at spatial cognition (route retracing, shortcut discovery, map sketching) | They test disembodied models; we study *embodied* agents where spatial representations emerge. Their tasks inspire our path-history and visited-region probes |
 | **Sensor design & task perf.** | Atanov et al. (ECCV 2024, VILAB) | Show photoreceptor design critically shapes task performance | We extend from "sensor shapes performance" to "sensor shapes memory content" |
 | **Perception-action-memory** | Beker et al. (NeurIPS 2022, PALMER) | Study perception-action loops with memory for planning | We specifically study how foveation constrains what memory encodes |
 
@@ -819,6 +837,7 @@ Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending
 **Core:**
 - Wijmans et al., "Emergence of Maps in the Memories of Blind Navigation Agents," ICLR 2023. [Paper](https://arxiv.org/abs/2301.13261) | [Code](https://github.com/erikwijmans/emergence-of-maps)
 - Wijmans et al., "DD-PPO: Learning Near-Perfect PointGoal Navigators from 2.5 Billion Frames," ICLR 2020. [Paper](https://arxiv.org/abs/1911.00357)
+- Ramakrishnan, Wijmans et al., "Does Spatial Cognition Emerge in Frontier Models?" ICLR 2025. [Paper](https://arxiv.org/abs/2410.06468) | [Code](https://github.com/apple/ml-space-benchmark) — SPACE benchmark; inspires our path-history and visited-region probes
 
 **Environments & Datasets:**
 - Savva et al., "Habitat: A Platform for Embodied AI Research," ICCV 2019. [Paper](https://arxiv.org/abs/1904.01201)

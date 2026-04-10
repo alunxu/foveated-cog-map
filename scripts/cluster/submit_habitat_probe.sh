@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=habitat_probe
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 #SBATCH --account=cs-503
 #SBATCH --qos=normal
 #SBATCH --nodes=1
@@ -16,23 +16,27 @@
 # Example:
 #   sbatch scripts/cluster/submit_habitat_probe.sh \
 #     pointnav/ddppo_pointnav_blind_gibson \
-#     /scratch/izar/wxu/habitat_checkpoints/blind_gibson/ckpt.9.pth 100
+#     /scratch/izar/wxu/habitat_checkpoints/blind_gibson/ckpt.9.pth 500
 #
-# Collects probing data (LSTM hidden states + ground-truth pose), then
-# trains linear probes and prints the result table.
+# Pipeline:
+#   1. Collect probing data (all LSTM layers h+c, ground-truth pose)
+#   2. Run comprehensive single-condition analysis (baseline probes,
+#      control tasks, rate maps, cross-heading generalization)
+#   3. (Optional) Run legacy probe for backward compatibility
 
 CONFIG_NAME=${1:?"Error: config name required (e.g. pointnav/ddppo_pointnav_blind_gibson)"}
 CKPT_PATH=${2:?"Error: ckpt path required"}
-NUM_EPISODES=${3:-100}
+NUM_EPISODES=${3:-500}
 
 RUN_NAME=$(basename "${CONFIG_NAME}" | sed 's/ddppo_pointnav_//')
 PROBE_DIR="/scratch/izar/${USER}/probing_data"
 RESULTS_DIR="/scratch/izar/${USER}/probing_results"
 NPZ_PATH="${PROBE_DIR}/${RUN_NAME}.npz"
-JSON_PATH="${RESULTS_DIR}/${RUN_NAME}.json"
+JSON_PATH="${RESULTS_DIR}/${RUN_NAME}_analysis.json"
+JSON_LEGACY="${RESULTS_DIR}/${RUN_NAME}.json"
 
 echo "============================================"
-echo "  Habitat Probing Pipeline"
+echo "  Habitat Probing Pipeline (v2)"
 echo "  Config:   ${CONFIG_NAME}"
 echo "  Ckpt:     ${CKPT_PATH}"
 echo "  Episodes: ${NUM_EPISODES}"
@@ -57,9 +61,9 @@ DATA_DIR="/scratch/izar/${USER}/habitat_data"
 
 cd /home/${USER}/habitat-lab
 
-# Step 1: Collect probing data
+# Step 1: Collect probing data (all LSTM layers)
 echo ""
-echo "=== Step 1: Collecting probing data ==="
+echo "=== Step 1: Collecting probing data (all layers) ==="
 python -u /home/${USER}/CS503_Project/scripts/habitat_probe_collect.py \
     --config-name="${CONFIG_NAME}" \
     --ckpt="${CKPT_PATH}" \
@@ -71,14 +75,28 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Step 2: Train probes
+# Step 2: Comprehensive analysis
 echo ""
-echo "=== Step 2: Training linear probes ==="
+echo "=== Step 2: Comprehensive probing analysis ==="
+python -u /home/${USER}/CS503_Project/scripts/habitat_probe_analysis.py \
+    --data="${NPZ_PATH}" \
+    --out="${JSON_PATH}" \
+    --pca-dim=0 \
+    --min-steps-scene=15
+
+if [ $? -ne 0 ]; then
+    echo "WARNING: Comprehensive analysis failed, falling back to legacy"
+fi
+
+# Step 3: Legacy probes (backward compat)
+echo ""
+echo "=== Step 3: Legacy probe (backward compat) ==="
 python -u /home/${USER}/CS503_Project/scripts/habitat_probe_train.py \
     --data="${NPZ_PATH}" \
-    --out="${JSON_PATH}"
+    --out="${JSON_LEGACY}"
 
 echo ""
 echo "Probing completed at $(date)"
-echo "Data: ${NPZ_PATH}"
-echo "Results: ${JSON_PATH}"
+echo "Data:     ${NPZ_PATH}"
+echo "Analysis: ${JSON_PATH}"
+echo "Legacy:   ${JSON_LEGACY}"

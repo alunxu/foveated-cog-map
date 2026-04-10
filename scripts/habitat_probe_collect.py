@@ -2,14 +2,20 @@
 Habitat probing data collector.
 
 Runs eval rollouts on a trained PointNav checkpoint and records
-(LSTM hidden state, ground-truth agent pose) tuples at every timestep.
+LSTM hidden states (all layers, h and c) paired with ground-truth
+agent pose at every timestep.
 
 Output: an .npz file containing:
-    hidden_states  (N, hidden_size)     — top-layer LSTM output per step
+    h_layers       (N, num_lstm_layers, hidden_size) — h states for all layers
+    c_layers       (N, num_lstm_layers, hidden_size) — c states for all layers
+    hidden_states  (N, hidden_size)     — top-layer h (backward compat)
     positions      (N, 3)               — absolute (x, y, z) world coords
     headings       (N,)                 — heading angle in radians
     gps            (N, 2)               — episodic GPS sensor readout
     compass        (N,)                 — episodic compass sensor readout
+    distance_to_goal (N,)               — Euclidean distance to goal
+    goal_positions (N, 3)               — goal location in world coords
+    step_in_episode (N,)                — timestep index within episode
     episode_ids    (N,)                 — which episode each step belongs to
     scene_ids      (N,)                 — scene id string index per step
 
@@ -17,7 +23,7 @@ Usage on cluster:
     python scripts/habitat_probe_collect.py \
         --config-name pointnav/ddppo_pointnav_blind_gibson \
         --ckpt /scratch/izar/$USER/habitat_checkpoints/blind_gibson/ckpt.9.pth \
-        --episodes 100 \
+        --episodes 500 \
         --out /scratch/izar/$USER/probing_data/blind_gibson.npz
 
 This script does NOT use the habitat-baselines evaluator. It directly
@@ -194,12 +200,24 @@ def main():
     print(f"RNN states shape: {rnn_states_shape}")
     print(f"LSTM: {rnn_is_lstm}")
 
+    # Number of actual LSTM layers (e.g. 3 for num_recurrent_layers=6)
+    if rnn_is_lstm:
+        n_lstm_layers = num_recurrent_layers // 2
+    else:
+        n_lstm_layers = num_recurrent_layers
+    print(f"Actual LSTM layers: {n_lstm_layers}")
+
     # ---- Collect data ----
-    all_hidden = []
+    all_h_layers = []       # (N, n_lstm_layers, hidden_size)
+    all_c_layers = []       # (N, n_lstm_layers, hidden_size) — LSTM only
+    all_hidden = []         # (N, hidden_size) — top-layer h for backward compat
     all_positions = []
     all_headings = []
     all_gps = []
     all_compass = []
+    all_distance_to_goal = []
+    all_goal_positions = []
+    all_step_in_episode = []
     all_episode_ids = []
     all_scene_ids = []
     scene_id_to_idx = {}
@@ -213,6 +231,9 @@ def main():
         if scene_id not in scene_id_to_idx:
             scene_id_to_idx[scene_id] = len(scene_id_to_idx)
         scene_idx = scene_id_to_idx[scene_id]
+
+        # Goal position from episode definition
+        goal_pos = np.array(episode.goals[0].position, dtype=np.float32)
 
         # Init recurrent hidden states — batch-first: (batch, num_layers, hidden)
         rnn_hidden = torch.zeros(
@@ -237,16 +258,22 @@ def main():
                     deterministic=False,
                 )
 
-            # Capture LSTM hidden state — take the h (not c) of the top layer.
-            # new_rnn_hidden is batch-first: (1, num_layers, hidden).
+            # Extract ALL LSTM layer states.
+            # new_rnn_hidden is batch-first: (1, num_recurrent_layers, hidden).
             # For LSTM with num_recurrent_layers=6 (= 3 actual layers × 2):
-            #   layer indices [0, 2, 4] are h states, [1, 3, 5] are c states.
-            #   Top-layer h is at layer index num_recurrent_layers - 2.
+            #   h indices: [0, 2, 4],  c indices: [1, 3, 5]
             new_rnn_hidden = action_data.rnn_hidden_states
             if rnn_is_lstm:
-                top_h = new_rnn_hidden[0, num_recurrent_layers - 2].cpu().numpy()
+                h_all = new_rnn_hidden[0, 0::2].cpu().numpy()   # (n_lstm_layers, hidden)
+                c_all = new_rnn_hidden[0, 1::2].cpu().numpy()   # (n_lstm_layers, hidden)
+                top_h = h_all[-1]                                # (hidden,)
             else:
-                top_h = new_rnn_hidden[0, -1].cpu().numpy()
+                h_all = new_rnn_hidden[0].cpu().numpy()
+                c_all = np.zeros_like(h_all)
+                top_h = h_all[-1]
+
+            all_h_layers.append(h_all)
+            all_c_layers.append(c_all)
             all_hidden.append(top_h)
 
             # Ground-truth pose from simulator
@@ -256,14 +283,18 @@ def main():
             all_positions.append(pos.copy())
             all_headings.append(heading)
 
-            # Also capture sensor readouts (episodic GPS/compass)
-            gps_key = "gps" if "gps" in obs else None
-            compass_key = "compass" if "compass" in obs else None
-            if gps_key:
-                all_gps.append(obs[gps_key].copy())
-            if compass_key:
-                all_compass.append(obs[compass_key].copy().flatten())
+            # Distance to goal
+            dist = np.linalg.norm(pos - goal_pos)
+            all_distance_to_goal.append(dist)
+            all_goal_positions.append(goal_pos.copy())
 
+            # Episodic sensor readouts
+            if "gps" in obs:
+                all_gps.append(obs["gps"].copy())
+            if "compass" in obs:
+                all_compass.append(obs["compass"].copy().flatten())
+
+            all_step_in_episode.append(step)
             all_episode_ids.append(ep)
             all_scene_ids.append(scene_idx)
 
@@ -288,10 +319,19 @@ def main():
     # ---- Save ----
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
 
+    N = len(all_hidden)
     save_dict = {
-        "hidden_states": np.array(all_hidden, dtype=np.float32),
+        # All-layer hidden states
+        "h_layers": np.array(all_h_layers, dtype=np.float32),          # (N, n_layers, hidden)
+        "c_layers": np.array(all_c_layers, dtype=np.float32),          # (N, n_layers, hidden)
+        "hidden_states": np.array(all_hidden, dtype=np.float32),       # (N, hidden) — compat
+        # Spatial ground truth
         "positions": np.array(all_positions, dtype=np.float32),
         "headings": np.array(all_headings, dtype=np.float32),
+        "distance_to_goal": np.array(all_distance_to_goal, dtype=np.float32),
+        "goal_positions": np.array(all_goal_positions, dtype=np.float32),
+        # Episode metadata
+        "step_in_episode": np.array(all_step_in_episode, dtype=np.int32),
         "episode_ids": np.array(all_episode_ids, dtype=np.int32),
         "scene_ids": np.array(all_scene_ids, dtype=np.int32),
     }
@@ -302,11 +342,11 @@ def main():
 
     np.savez_compressed(args.out, **save_dict)
 
-    N = len(all_hidden)
     print(f"\nSaved {N} steps from {args.episodes} episodes to {args.out}")
-    print(f"  hidden_states: ({N}, {all_hidden[0].shape[0]})")
+    print(f"  h_layers:      ({N}, {n_lstm_layers}, {hidden_size})")
+    print(f"  c_layers:      ({N}, {n_lstm_layers}, {hidden_size})")
+    print(f"  hidden_states: ({N}, {hidden_size})")
     print(f"  positions:     ({N}, 3)")
-    print(f"  headings:      ({N},)")
     print(f"  scenes:        {len(scene_id_to_idx)} unique")
 
     # Save scene_id mapping for reference
