@@ -506,6 +506,70 @@ def probe_2d_visited_region(H, positions, ep_ids, step_in_ep, scene_ids, alpha, 
 
 
 # ═══════════════════════════════════════════════════════════════════════
+#  Phase 2e: Occupancy Map Reconstruction (SPACE map-sketching analogue)
+# ═══════════════════════════════════════════════════════════════════════
+
+def probe_2e_occupancy_decoding(H, local_occupancy, ep_ids, alpha, pca_dim, train_frac, seed):
+    """2e. Occupancy map reconstruction from hidden state.
+
+    Inspired by SPACE's map-sketching task: can a linear probe decode the
+    local navigability layout (walls vs. free space) from the LSTM hidden
+    state? This is the most direct test of whether the hidden state encodes
+    a cognitive map of the environment.
+
+    The occupancy grid is a G×G binary array (1=navigable, 0=obstacle)
+    centered on the agent's position in world coordinates.
+    """
+    train_mask, test_mask = episode_split(ep_ids, train_frac, seed)
+
+    # Flatten occupancy grids: (N, G, G) → (N, G*G)
+    N, G1, G2 = local_occupancy.shape
+    occ_flat = local_occupancy.reshape(N, -1)
+    n_cells = G1 * G2
+
+    H_tr, H_te = prepare_features(H[train_mask], H[test_mask], pca_dim)
+    Y_tr, Y_te = occ_flat[train_mask], occ_flat[test_mask]
+
+    # Ridge regression: hidden → occupancy
+    reg = Ridge(alpha=alpha)
+    reg.fit(H_tr, Y_tr)
+    pred = reg.predict(H_te)
+
+    # R² (how well does the probe reconstruct the layout?)
+    r2 = float(r2_score(Y_te, pred, multioutput="uniform_average"))
+
+    # Binary accuracy (threshold at 0.5)
+    pred_binary = (pred > 0.5).astype(float)
+    accuracy = float(np.mean(pred_binary == Y_te))
+
+    # Per-cell metrics: separate navigable vs. obstacle accuracy
+    nav_mask = Y_te == 1.0
+    obs_mask = Y_te == 0.0
+    nav_acc = float(np.mean(pred_binary[nav_mask] == 1.0)) if nav_mask.sum() > 0 else None
+    obs_acc = float(np.mean(pred_binary[obs_mask] == 0.0)) if obs_mask.sum() > 0 else None
+
+    # F1 score for navigable cells
+    tp = float(np.sum((pred_binary == 1.0) & (Y_te == 1.0)))
+    fp = float(np.sum((pred_binary == 1.0) & (Y_te == 0.0)))
+    fn = float(np.sum((pred_binary == 0.0) & (Y_te == 1.0)))
+    precision = tp / max(tp + fp, 1e-8)
+    recall = tp / max(tp + fn, 1e-8)
+    f1 = 2 * precision * recall / max(precision + recall, 1e-8)
+
+    return {
+        "r2": r2,
+        "binary_accuracy": accuracy,
+        "navigable_accuracy": nav_acc,
+        "obstacle_accuracy": obs_acc,
+        "f1_navigable": float(f1),
+        "n_cells": n_cells,
+        "grid_shape": [int(G1), int(G2)],
+        "n_train": int(train_mask.sum()),
+        "n_test": int(test_mask.sum()),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════
 #  Phase 5: Per-Unit Analysis
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -787,6 +851,24 @@ def main():
                 print(f"  Active-cell acc={res_2d['active_cell_accuracy']:.3f}")
         else:
             print(f"  {res_2d['error']}")
+
+    # 2e. Occupancy map reconstruction
+    local_occ = data["local_occupancy"] if "local_occupancy" in data else None
+    if local_occ is not None:
+        print(f"\n{'─'*60}")
+        print(f"  2e. Occupancy map reconstruction (map-sketching analogue)")
+        print(f"{'─'*60}")
+        res_2e = probe_2e_occupancy_decoding(
+            H, local_occ, ep_ids,
+            args.alpha, args.pca_dim, args.train_frac, args.seed,
+        )
+        results["2e_occupancy_decoding"] = res_2e
+        print(f"  Grid: {res_2e['grid_shape'][0]}×{res_2e['grid_shape'][1]} = "
+              f"{res_2e['n_cells']} cells")
+        print(f"  R²={res_2e['r2']:+.4f}  Accuracy={res_2e['binary_accuracy']:.3f}")
+        print(f"  Navigable acc={res_2e['navigable_accuracy']:.3f}  "
+              f"Obstacle acc={res_2e['obstacle_accuracy']:.3f}")
+        print(f"  F1 (navigable)={res_2e['f1_navigable']:.3f}")
 
     # ── Phase 5: Per-Unit Analysis ─────────────────────────────────────
 

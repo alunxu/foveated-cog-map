@@ -18,6 +18,7 @@ Output: an .npz file containing:
     step_in_episode (N,)                — timestep index within episode
     episode_ids    (N,)                 — which episode each step belongs to
     scene_ids      (N,)                 — scene id string index per step
+    local_occupancy (N, G, G)           — [optional] local navigability grid (1=free, 0=wall)
 
 Usage on cluster:
     python scripts/habitat_probe_collect.py \
@@ -58,6 +59,36 @@ from hydra.core.global_hydra import GlobalHydra
 from omegaconf import OmegaConf
 
 
+def query_local_occupancy(sim, agent_pos, grid_size=5.0, grid_res=0.25):
+    """Query navigability around the agent to build a local occupancy grid.
+
+    Returns a binary 2D array (1=navigable, 0=obstacle) centered on the
+    agent's (x, z) position in world coordinates.
+
+    Args:
+        sim: Habitat simulator instance (has sim.pathfinder)
+        agent_pos: (3,) array — agent position [x, y, z]
+        grid_size: side length of the grid in meters
+        grid_res: resolution in meters per cell
+
+    Returns:
+        occ: (n_cells, n_cells) float32 array, 1=navigable, 0=obstacle
+    """
+    n = int(grid_size / grid_res)
+    half = grid_size / 2.0
+    y = agent_pos[1]  # keep agent's height
+
+    occ = np.zeros((n, n), dtype=np.float32)
+    for ix in range(n):
+        wx = agent_pos[0] - half + (ix + 0.5) * grid_res
+        for iz in range(n):
+            wz = agent_pos[2] - half + (iz + 0.5) * grid_res
+            point = np.array([wx, y, wz])
+            if sim.pathfinder.is_navigable(point):
+                occ[ix, iz] = 1.0
+    return occ
+
+
 def parse_args():
     p = argparse.ArgumentParser(description="Collect probing data from a Habitat agent")
     p.add_argument("--config-name", required=True, help="Hydra config name (e.g. pointnav/ddppo_pointnav_blind_gibson)")
@@ -65,6 +96,12 @@ def parse_args():
     p.add_argument("--episodes", type=int, default=100, help="Number of episodes to collect")
     p.add_argument("--out", required=True, help="Output .npz path")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--collect-occupancy", action="store_true",
+                   help="Collect local occupancy grids (5m×5m, 0.25m res = 20×20)")
+    p.add_argument("--occ-grid-size", type=float, default=5.0,
+                   help="Occupancy grid side length in meters")
+    p.add_argument("--occ-grid-res", type=float, default=0.25,
+                   help="Occupancy grid resolution in meters")
     return p.parse_args()
 
 
@@ -220,6 +257,7 @@ def main():
     all_step_in_episode = []
     all_episode_ids = []
     all_scene_ids = []
+    all_local_occupancy = []  # optional: (N, grid_h, grid_w)
     scene_id_to_idx = {}
 
     for ep in range(args.episodes):
@@ -288,6 +326,15 @@ def main():
             all_distance_to_goal.append(dist)
             all_goal_positions.append(goal_pos.copy())
 
+            # Local occupancy grid (optional — adds ~20ms/step)
+            if args.collect_occupancy:
+                occ = query_local_occupancy(
+                    env.sim, pos,
+                    grid_size=args.occ_grid_size,
+                    grid_res=args.occ_grid_res,
+                )
+                all_local_occupancy.append(occ)
+
             # Episodic sensor readouts
             if "gps" in obs:
                 all_gps.append(obs["gps"].copy())
@@ -339,6 +386,10 @@ def main():
         save_dict["gps"] = np.array(all_gps, dtype=np.float32)
     if all_compass:
         save_dict["compass"] = np.array(all_compass, dtype=np.float32)
+    if all_local_occupancy:
+        save_dict["local_occupancy"] = np.array(all_local_occupancy, dtype=np.float32)
+        save_dict["occ_grid_size"] = np.float32(args.occ_grid_size)
+        save_dict["occ_grid_res"] = np.float32(args.occ_grid_res)
 
     np.savez_compressed(args.out, **save_dict)
 
@@ -347,6 +398,9 @@ def main():
     print(f"  c_layers:      ({N}, {n_lstm_layers}, {hidden_size})")
     print(f"  hidden_states: ({N}, {hidden_size})")
     print(f"  positions:     ({N}, 3)")
+    if all_local_occupancy:
+        gs = int(args.occ_grid_size / args.occ_grid_res)
+        print(f"  occupancy:     ({N}, {gs}, {gs})")
     print(f"  scenes:        {len(scene_id_to_idx)} unique")
 
     # Save scene_id mapping for reference

@@ -68,6 +68,7 @@ python -u /home/${USER}/CS503_Project/scripts/habitat_probe_collect.py \
     --config-name="${CONFIG_NAME}" \
     --ckpt="${CKPT_PATH}" \
     --episodes=${NUM_EPISODES} \
+    --collect-occupancy \
     --out="${NPZ_PATH}"
 
 if [ $? -ne 0 ]; then
