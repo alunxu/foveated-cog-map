@@ -217,11 +217,13 @@ Project/
 │       └── habitat_env.py              # Config loading, policy loading, geometry helpers
 │
 ├── scripts/
-│   ├── collect_probes.py               # Collect LSTM hidden states + ground-truth pose
-│   ├── analyze_probes.py               # Comprehensive single-condition probing (13 experiments)
-│   ├── analyze_cross.py                # Cross-condition CKA + probe transfer
-│   ├── analyze_probes_legacy.py        # Legacy GPS/compass probe (backward compat)
-│   ├── eval_shortcut.py                # Shortcut discovery / cognitive-map behavioral eval
+│   ├── probing/                        # Representation probing scripts
+│   │   ├── collect.py                  # Collect LSTM hidden states + ground-truth pose
+│   │   ├── analyze.py                  # Comprehensive single-condition probing (13 experiments)
+│   │   ├── analyze_cross.py            # Cross-condition CKA + probe transfer
+│   │   └── analyze_legacy.py           # Legacy GPS/compass probe (backward compat)
+│   ├── eval/                           # Behavioral evaluation scripts
+│   │   └── shortcut.py                 # Shortcut discovery / cognitive-map behavioral eval
 │   └── cluster/                        # SLURM job scripts
 │       ├── common.sh                   # Shared env setup (sourced by all submit_*.sh)
 │       ├── submit_train.sh             # Submit DD-PPO training job

@@ -24,7 +24,7 @@ This is a FUNCTIONAL test — unlike probing, which shows what information
 is present, this shows whether that information is actually *used*.
 
 Usage:
-    python scripts/eval_shortcut.py \
+    python scripts/eval/shortcut.py \
         --config-name pointnav/ddppo_pointnav_blind_gibson \
         --ckpt /scratch/izar/$USER/habitat_checkpoints/blind_gibson/ckpt.16.pth \
         --episodes-per-scene 10 \

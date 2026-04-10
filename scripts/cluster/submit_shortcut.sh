@@ -50,7 +50,7 @@ cd /home/${USER}/habitat-lab
 
 echo ""
 echo "=== Running shortcut discovery eval ==="
-python -u ${PROJECT_DIR}/scripts/eval_shortcut.py \
+python -u ${PROJECT_DIR}/scripts/eval/shortcut.py \
     --config-name="${CONFIG_NAME}" \
     --ckpt="${CKPT_PATH}" \
     --episodes-per-scene=${EPISODES_PER_SCENE} \

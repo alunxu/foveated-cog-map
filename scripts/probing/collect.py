@@ -21,7 +21,7 @@ Output: an .npz file containing:
     local_occupancy (N, G, G)           — [optional] local navigability grid (1=free, 0=wall)
 
 Usage on cluster:
-    python scripts/collect_probes.py \
+    python scripts/probing/collect.py \
         --config-name pointnav/ddppo_pointnav_blind_gibson \
         --ckpt /scratch/izar/$USER/habitat_checkpoints/blind_gibson/ckpt.9.pth \
         --episodes 500 \

@@ -25,7 +25,7 @@ Experiments:
     5b. Place-cell count and statistics
 
 Usage:
-    python scripts/analyze_probes.py \
+    python scripts/probing/analyze.py \
         --data /scratch/izar/$USER/probing_data/blind_gibson.npz \
         --out  /scratch/izar/$USER/probing_results/blind_gibson_full.json
 """
@@ -40,7 +40,7 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.preprocessing import StandardScaler
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src.utils.probing import fit_probe, prepare_features, angular_mae, episode_split
 
 

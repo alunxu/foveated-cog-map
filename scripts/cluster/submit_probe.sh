@@ -50,7 +50,7 @@ cd /home/${USER}/habitat-lab
 # Step 1: Collect probing data (all LSTM layers)
 echo ""
 echo "=== Step 1: Collecting probing data (all layers) ==="
-python -u ${PROJECT_DIR}/scripts/collect_probes.py \
+python -u ${PROJECT_DIR}/scripts/probing/collect.py \
     --config-name="${CONFIG_NAME}" \
     --ckpt="${CKPT_PATH}" \
     --episodes=${NUM_EPISODES} \
@@ -65,7 +65,7 @@ fi
 # Step 2: Comprehensive analysis
 echo ""
 echo "=== Step 2: Comprehensive probing analysis ==="
-python -u ${PROJECT_DIR}/scripts/analyze_probes.py \
+python -u ${PROJECT_DIR}/scripts/probing/analyze.py \
     --data="${NPZ_PATH}" \
     --out="${JSON_PATH}" \
     --pca-dim=0 \
@@ -78,7 +78,7 @@ fi
 # Step 3: Legacy probes (backward compat)
 echo ""
 echo "=== Step 3: Legacy probe (backward compat) ==="
-python -u ${PROJECT_DIR}/scripts/analyze_probes_legacy.py \
+python -u ${PROJECT_DIR}/scripts/probing/analyze_legacy.py \
     --data="${NPZ_PATH}" \
     --out="${JSON_LEGACY}"
 

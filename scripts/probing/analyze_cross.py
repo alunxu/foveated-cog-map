@@ -11,7 +11,7 @@ Experiments:
     3c. Comparative summary table
 
 Usage:
-    python scripts/analyze_cross.py \
+    python scripts/probing/analyze_cross.py \
         --data blind=/path/blind.npz uniform=/path/uniform.npz \
               foveated=/path/foveated.npz matched=/path/matched.npz \
         --out /path/cross_analysis.json
@@ -28,7 +28,7 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import StandardScaler
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src.utils.probing import fit_probe, prepare_features
 
 

@@ -6,7 +6,7 @@ linear probes (GPS + compass + per-scene position). For the full
 13-experiment suite, use analyze_probes.py instead.
 
 Usage:
-    python scripts/analyze_probes_legacy.py \
+    python scripts/probing/analyze_legacy.py \
         --data /scratch/izar/$USER/probing_data/blind_gibson.npz \
         --out  /scratch/izar/$USER/probing_results/blind_gibson.json
 """
@@ -18,7 +18,7 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src.utils.probing import fit_probe, prepare_features, angular_mae
 
 

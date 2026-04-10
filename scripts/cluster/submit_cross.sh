@@ -49,7 +49,7 @@ fi
 
 echo ""
 echo "=== Running cross-condition analysis ==="
-python -u ${PROJECT_DIR}/scripts/analyze_cross.py \
+python -u ${PROJECT_DIR}/scripts/probing/analyze_cross.py \
     --data ${DATA_ARGS} \
     --out "${OUT_PATH}"
 
