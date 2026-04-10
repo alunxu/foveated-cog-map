@@ -4,7 +4,6 @@ torchvision>=0.16.0
 
 # RL & environments
 gymnasium>=0.29
-minigrid>=2.3
 stable-baselines3>=2.2
 
 # Config & logging

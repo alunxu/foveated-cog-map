@@ -56,7 +56,7 @@ The cleanest scientific comparison to uniform is one where the only
 thing that changed is the *perceptual bandwidth profile*. Learning a
 gaze controller simultaneously adds a second learning problem (where to
 look) that PPO gets no direct reward signal for, and empirically (our
-own MiniGrid run) the gaze distribution stayed close to uniform-random
+own early run) the gaze distribution stayed close to uniform-random
 for hundreds of millions of steps.
 
 → **Main table uses `FoveatedWijmansPolicy` with gaze hardcoded to

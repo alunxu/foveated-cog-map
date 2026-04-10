@@ -108,7 +108,6 @@ This means the agent **decides where to look based on what it remembers**, then 
 
 ### 2.4 Training Algorithm
 
-- **MiniGrid**: PPO (Proximal Policy Optimization), 2M environment steps
 - **Habitat**: DD-PPO (Decentralized Distributed PPO), 500M environment steps on 2 V100 GPUs
   - DD-PPO runs multiple independent PPO workers that periodically sync gradients
   - Each worker manages multiple parallel environments (8 for blind, 6 for sighted)
@@ -159,16 +158,7 @@ To understand which factors drive our results, we plan the following ablation ex
 
 ## 3. Environments & Datasets
 
-### 3.1 MiniGrid FourRooms (Proof-of-Concept)
-
-A simple 19x19 procedural grid world with 4 rooms connected by doorways. Used for rapid prototyping and pipeline validation.
-
-- **Observation**: 7x7 egocentric grid (limited view — vision is nearly useless here)
-- **Training**: ~2 hours per condition on 1 GPU
-- **Purpose**: Validate the "maps in memory" finding for blind agents; appendix material
-- **Limitation**: Egocentric view is too small for meaningful vision comparisons — Habitat is essential for the main claim
-
-### 3.2 Habitat + Gibson (Main Results)
+### 3.1 Habitat + Gibson
 
 Habitat is a high-performance 3D simulation platform. Gibson provides ~490 real-world 3D-scanned buildings for photorealistic navigation. **Train on a merged Gibson-0+ (411) ∪ MP3D-train (61) = 472-scene pool, evaluate on Matterport3D test (18 scenes, 1008 episodes)** — matching Wijmans et al. 2023 Appendix A.1 ("train on 411 Gibson + 72 MP3D scenes").
 
@@ -208,51 +198,31 @@ We use Gibson-0+ because it's the largest publicly pre-built Gibson PointNav epi
 
 ```
 Project/
-├── cfgs/                               # MiniGrid experiment configs (Phase 1)
-│   ├── base.yaml                       #   Shared defaults
-│   ├── blind.yaml                      #   Blind: VectorEncoder only
-│   ├── uniform.yaml                    #   Uniform: CNN on 64x64
-│   ├── foveated.yaml                   #   Foveated: CNN + gaze control
-│   └── matched_compute.yaml            #   Matched: CNN on 32x32
-│
-├── habitat_configs/                    # Habitat DD-PPO configs (Phase 2)
+├── habitat_configs/                    # Habitat DD-PPO configs
 │   ├── ddppo_pointnav_blind_gibson.yaml
 │   ├── ddppo_pointnav_uniform_gibson.yaml
 │   ├── ddppo_pointnav_foveated_gibson.yaml
 │   └── ddppo_pointnav_matched_gibson.yaml
 │
 ├── src/
-│   ├── envs/
-│   │   ├── foveation.py                # FoveationTransform (numpy, for MiniGrid)
-│   │   ├── nav_env.py                  # MiniGrid navigation environment
-│   │   └── wrappers.py                 # Blind / Uniform / Foveated / Matched wrappers
-│   ├── models/
-│   │   ├── __init__.py                 # NavigationAgent (encoder → GRU → policy)
-│   │   ├── encoder.py                  # CNNEncoder + VectorEncoder
-│   │   ├── memory.py                   # GRU/LSTM recurrent memory
-│   │   └── policy.py                   # Action + gaze policy head
-│   ├── habitat/
-│   │   ├── __init__.py                 # Registers custom policies with habitat-baselines
-│   │   ├── torch_foveation.py          # TorchFoveationTransform (GPU, for Habitat)
-│   │   └── foveated_policy.py          # FoveatedPointNavResNetPolicy (DD-PPO compatible)
-│   └── training/
-│       ├── ppo.py                      # PPO algorithm
-│       └── rollout.py                  # Rollout buffer
+│   └── habitat/
+│       ├── __init__.py                 # Registers custom policies with habitat-baselines
+│       ├── torch_foveation.py          # TorchFoveationTransform (GPU, for Habitat)
+│       └── foveated_policy.py          # FoveatedPointNavResNetPolicy (DD-PPO compatible)
 │
 ├── scripts/
-│   ├── train.py                        # MiniGrid training entry point
-│   ├── probe.py                        # Linear probing analysis (MiniGrid)
 │   ├── habitat_probe_collect.py        # Collect all LSTM layers + pose (Habitat)
 │   ├── habitat_probe_analysis.py       # Comprehensive single-condition analysis
 │   ├── habitat_probe_cross.py          # Cross-condition CKA + probe transfer
 │   ├── habitat_probe_train.py          # Legacy global GPS/compass probe
+│   ├── habitat_shortcut_eval.py        # Shortcut discovery / cognitive-map behavioral eval
 │   └── cluster/                        # SLURM & cluster management
 │       ├── setup_env.sh                # Conda environment setup
-│       ├── submit_job.sh               # Submit one MiniGrid condition
 │       ├── submit_habitat.sh           # Submit one Habitat DD-PPO job
-│       ├── submit_all.sh               # Submit all 4 MiniGrid conditions
-│       ├── submit_probe.sh             # Submit probing for one checkpoint
-│       ├── submit_all_probes.sh        # Submit probing for all conditions
+│       ├── submit_habitat_eval.sh      # Submit evaluation with video recording
+│       ├── submit_habitat_probe.sh     # Submit probing pipeline for one condition
+│       ├── submit_habitat_cross.sh     # Submit cross-condition CKA analysis
+│       ├── submit_habitat_shortcut.sh  # Submit shortcut discovery eval
 │       ├── run_habitat.py              # Custom entry point (registers foveated policy)
 │       ├── sync_to_cluster.sh          # Upload code → SCITAS
 │       └── sync_from_cluster.sh        # Download results ← SCITAS
@@ -473,14 +443,6 @@ cd CS503_Project
 
 ### 7.3 Environment Setup
 
-**Two conda environments**: one for MiniGrid (local dev), one for Habitat (cluster training).
-
-#### MiniGrid environment (local or cluster, CPU-only OK)
-```bash
-bash scripts/cluster/setup_env.sh
-conda activate cs503_project
-```
-
 #### Habitat environment (cluster only, needs GPU nodes)
 ```bash
 conda create -n habitat python=3.9 cmake=3.22 -y
@@ -690,18 +652,7 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 
 ## 8. Current Status & Results
 
-### Phase 1: MiniGrid (Complete)
-
-| Agent | Final Success Rate | SPL | Notes |
-|-------|-------------------|-----|-------|
-| **Blind** | **70%** | 0.194 | Strong replication of Wijmans finding |
-| Uniform | 0% | 0.000 | Expected: 7x7 egocentric view too small for useful vision |
-| Matched-Compute | 10% | 0.047 | Partial learning with real 32x32 downsampling |
-| Foveated | N/A | N/A | Hit wall-time limit at 60%; gaze stayed random (no signal in MiniGrid) |
-
-**Key insight**: MiniGrid validates that blind agents build spatial maps, but its tiny egocentric view makes vision comparisons meaningless. Habitat (with full first-person RGB) is essential for the foveation study.
-
-### Phase 2: Habitat Gibson + MP3D (5-condition run in flight)
+### Habitat Gibson + MP3D (5-condition run in flight)
 
 Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending):
 
@@ -802,16 +753,11 @@ Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending
   - [ ] R² bar charts across all conditions
   - [ ] Path-history decay curves
 
-### Phase 4: MiniGrid Probing (Appendix)
-- [ ] Run probing on 3 completed MiniGrid checkpoints (blind, uniform, matched)
-  - [ ] Submit probing jobs via `submit_all_probes.sh`
-- [ ] Include as supplementary material (validates pipeline, shows blind>sighted in limited-view setting)
-
-### Phase 5: Paper Writing
+### Phase 4: Paper Writing
 - [ ] Introduction: spatial memory in navigation, foveation hypothesis
 - [ ] Related work: Wijmans 2023, foveated vision in RL, cognitive maps
 - [ ] Methods: 4 conditions, architecture, foveation transform, probing
-- [ ] Results: MiniGrid (appendix), Habitat (main), cross-condition comparison
+- [ ] Results: Habitat training + probing, cross-condition comparison
 - [ ] Discussion: what foveation changes about memory, implications for embodied AI
 - [ ] Figures: architecture diagram, foveation visualization, probing results, gaze patterns
 
