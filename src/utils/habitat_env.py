@@ -79,7 +79,7 @@ def load_habitat_config(config_name, ckpt_path, overrides=None):
         "habitat_baselines.load_resume_state_config=False",
         "habitat_baselines.num_environments=1",
         f"habitat_baselines.eval_ckpt_path_dir={ckpt_path}",
-        "habitat.environment.max_episode_steps=500",
+        "habitat.environment.max_episode_steps=2000",
     ]
     if overrides:
         default_overrides.extend(overrides)

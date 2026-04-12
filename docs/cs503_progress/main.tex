@@ -44,7 +44,9 @@
     \item \textbf{Foveated-learned:} Same blur as foveated-fixed, but gaze position predicted by an MLP from the LSTM hidden state (tests H3).
 \end{itemize}
 
-\textbf{Analysis:} Freeze weights $\to$ collect per-step LSTM hidden states $\to$ linear probing (Ridge regression, episode-level splits) for spatial variables $\to$ cross-condition CKA and probe transfer $\to$ behavioral tests $\to$ PCA/t-SNE visualization.
+\textbf{Architecture note:} Wijmans et al.~\cite{wijmans2023emergence} trained only blind agents; they did not train a sighted variant. The DD-PPO sighted agent they reference (from~\cite{wijmans2020ddppo}) uses ResNet-50 with depth input. We use ResNet-18 with RGB to keep the model smaller and because our research question requires training multiple visual conditions; the matched-compute baseline controls for total visual information regardless of encoder size.
+
+\textbf{Analysis:} Freeze weights $\to$ collect per-step LSTM hidden states $\to$ linear probing (Ridge regression, episode-level splits) for spatial variables $\to$ cross-condition CKA and probe transfer $\to$ behavioral tests (shortcut discovery, memory transplant) $\to$ PCA/t-SNE visualization.
 
 % ==========================================================================
 \section{Training Status}

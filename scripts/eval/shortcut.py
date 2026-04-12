@@ -40,7 +40,7 @@ from collections import defaultdict
 import numpy as np
 import torch
 
-PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
+PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, os.path.abspath(PROJECT_ROOT))
 
 import src.habitat  # noqa: F401
@@ -78,7 +78,7 @@ def run_episode(env, policy, rnn_hidden, prev_action, not_done_mask, device, rnn
     prev_pos = start_pos.copy()
     done = False
     steps = 0
-    max_steps = 500
+    max_steps = 2000  # match Habitat config max_episode_steps
 
     while not done and steps < max_steps:
         batch = {k: torch.from_numpy(np.expand_dims(v, 0)).to(device)
@@ -108,8 +108,8 @@ def run_episode(env, policy, rnn_hidden, prev_action, not_done_mask, device, rnn
 
     # Check success: agent called STOP within 0.2m of goal
     final_pos = env.sim.get_agent_state().position
-    dist_to_goal = np.linalg.norm(final_pos - goal_pos)
-    success = (action_int == 0) and (dist_to_goal < 0.2)  # STOP action = 0
+    dist_to_goal = float(np.linalg.norm(final_pos - goal_pos))
+    success = bool((action_int == 0) and (dist_to_goal < 0.2))  # STOP action = 0
 
     spl = compute_spl(success, path_length, geodesic)
 
@@ -131,11 +131,11 @@ def main():
     config = load_habitat_config(args.config_name, args.ckpt, overrides=[
         "habitat.dataset.split=train",
         "habitat.environment.iterator_options.shuffle=False",
-        "habitat.environment.iterator_options.group_by_scene=True",
+        "habitat.environment.max_episode_steps=2000",
     ])
 
     env = habitat.Env(config=config.habitat)
-    _ = env.reset()
+    _ = env.reset()  # needed to infer observation spaces
 
     policy, hidden_size, num_recurrent_layers, rnn_is_lstm = load_policy(
         config, env, args.ckpt, device,
@@ -147,7 +147,6 @@ def main():
     print(f"LSTM: {rnn_is_lstm}, layers: {num_recurrent_layers}, hidden: {hidden_size}")
 
     # ---- Group episodes by scene ----
-    # Collect all available episodes and group by scene_id
     all_episodes = env.episodes
     scene_episodes = defaultdict(list)
     for ep in all_episodes:
@@ -160,6 +159,9 @@ def main():
     print(f"Scenes: {len(scenes)}, episodes/scene: {args.episodes_per_scene}")
 
     # ---- Run evaluation in both conditions ----
+    # For each scene we run the SAME episodes twice (reset vs. persistent).
+    # To control which episode env.reset() loads, we replace the episode
+    # iterator before each call.
     all_results = []
 
     for si, scene_id in enumerate(scenes):
@@ -171,19 +173,18 @@ def main():
         print(f"\n  Scene {si+1}/{len(scenes)}: {scene_name} ({len(eps)} episodes)")
 
         for condition in ["reset", "persistent"]:
+            # Seed the episode iterator with our specific episode list
+            # so env.reset() yields them in the exact order we want.
+            env._episode_iterator = iter(eps)
+
             # Initialize fresh hidden state for each condition
             rnn_hidden = torch.zeros(1, num_recurrent_layers, hidden_size, device=device)
             prev_action = torch.zeros(1, 1, dtype=torch.long, device=device)
             not_done_mask = torch.zeros(1, 1, dtype=torch.bool, device=device)
 
             ep_results = []
-            for ei, ep in enumerate(eps):
-                # Override current episode
-                env._current_episode = ep
-                env._episode_over = False
-
+            for ei in range(len(eps)):
                 if condition == "reset":
-                    # Standard eval: reset hidden state between episodes
                     rnn_hidden = torch.zeros(1, num_recurrent_layers, hidden_size, device=device)
                     prev_action = torch.zeros(1, 1, dtype=torch.long, device=device)
                     not_done_mask = torch.zeros(1, 1, dtype=torch.bool, device=device)
@@ -193,11 +194,19 @@ def main():
                     env, policy, rnn_hidden, prev_action, not_done_mask,
                     device, rnn_is_lstm, num_recurrent_layers,
                 )
+
+                if ei == 0 and condition == "reset":
+                    print(f"    Debug ep0: steps={metrics['steps']}, "
+                          f"dist_to_goal={metrics['dist_to_goal']:.3f}, "
+                          f"success={metrics['success']}, "
+                          f"geodesic={metrics['geodesic']:.3f}, "
+                          f"path_len={metrics['path_length']:.3f}")
+
                 ep_results.append(metrics)
 
             # Aggregate
             successes = [r["success"] for r in ep_results]
-            spls = [r["spl"] for r in ep_results]
+            spls = [float(r["spl"]) for r in ep_results]
 
             all_results.append({
                 "scene": scene_name,
@@ -207,6 +216,8 @@ def main():
                 "mean_spl": float(np.mean(spls)),
                 "per_episode_spl": spls,
                 "per_episode_success": successes,
+                "per_episode_dist_to_goal": [float(r["dist_to_goal"]) for r in ep_results],
+                "per_episode_steps": [r["steps"] for r in ep_results],
             })
 
             tag = "P" if condition == "persistent" else "R"
