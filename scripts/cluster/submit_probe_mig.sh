@@ -2,7 +2,7 @@
 #SBATCH --job-name=cs503_analysis
 #SBATCH --time=03:00:00
 #SBATCH --account=cs-503
-#SBATCH --qos=normal
+#SBATCH --partition=mig24gb
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
@@ -11,18 +11,16 @@
 #SBATCH --output=slurm_logs/%j.out
 #SBATCH --error=slurm_logs/%j.err
 
-# Usage:
-#   sbatch submit_probe.sh <config_name> <ckpt_path> [num_episodes]
-# Example:
-#   sbatch scripts/cluster/submit_probe.sh \
-#     pointnav/ddppo_pointnav_blind_gibson \
-#     /scratch/izar/wxu/habitat_checkpoints/blind_gibson/ckpt.9.pth 500
+# Probing pipeline on Kuma MIG (H100 virtual GPU).
+# Uses mig24gb by default (safe for all conditions).
+# For blind-only, override: sbatch --partition=mig12gb submit_probe_mig.sh ...
 #
-# Pipeline:
-#   1. Collect probing data (all LSTM layers h+c, ground-truth pose)
-#   2. Run comprehensive single-condition analysis (baseline probes,
-#      control tasks, rate maps, cross-heading generalization)
-#   3. (Optional) Run legacy probe for backward compatibility
+# Usage:
+#   sbatch submit_probe_mig.sh <config_name> <ckpt_path> [num_episodes]
+# Example:
+#   sbatch scripts/cluster/submit_probe_mig.sh \
+#     pointnav/ddppo_pointnav_blind_gibson \
+#     /scratch/izar/wxu/habitat_checkpoints/blind_gibson/ckpt.19.pth 500
 
 CONFIG_NAME=${1:?"Error: config name required (e.g. pointnav/ddppo_pointnav_blind_gibson)"}
 CKPT_PATH=${2:?"Error: ckpt path required"}
@@ -38,13 +36,14 @@ JSON_PATH="${RESULTS_DIR}/${RUN_NAME}_analysis.json"
 JSON_LEGACY="${RESULTS_DIR}/${RUN_NAME}.json"
 
 echo "============================================"
-echo "  Habitat Probing Pipeline (v2)"
-echo "  Config:   ${CONFIG_NAME}"
-echo "  Ckpt:     ${CKPT_PATH}"
-echo "  Episodes: ${NUM_EPISODES}"
-echo "  Node:     $(hostname)"
-echo "  Job ID:   ${SLURM_JOB_ID}"
-echo "  Date:     $(date)"
+echo "  Habitat Probing Pipeline (MIG)"
+echo "  Config:    ${CONFIG_NAME}"
+echo "  Ckpt:      ${CKPT_PATH}"
+echo "  Episodes:  ${NUM_EPISODES}"
+echo "  Partition: ${SLURM_JOB_PARTITION}"
+echo "  Node:      $(hostname)"
+echo "  Job ID:    ${SLURM_JOB_ID}"
+echo "  Date:      $(date)"
 echo "============================================"
 
 cd /home/${USER}/habitat-lab

@@ -1,7 +1,7 @@
 #!/bin/bash
 # ─── Shared environment setup for all SLURM jobs ───
 # Source this at the top of every submit_*.sh script:
-#   source "$(dirname "$0")/common.sh"
+#   source "${SLURM_SUBMIT_DIR}/scripts/cluster/common.sh"
 
 eval "$(conda shell.bash hook)"
 conda activate habitat

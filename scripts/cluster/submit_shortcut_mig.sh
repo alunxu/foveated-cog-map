@@ -2,7 +2,7 @@
 #SBATCH --job-name=cs503_eval
 #SBATCH --time=04:00:00
 #SBATCH --account=cs-503
-#SBATCH --qos=normal
+#SBATCH --partition=mig24gb
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
@@ -11,18 +11,14 @@
 #SBATCH --output=slurm_logs/%j.out
 #SBATCH --error=slurm_logs/%j.err
 
-# Usage:
-#   sbatch submit_shortcut.sh <config_name> <ckpt_path> [episodes_per_scene] [max_scenes]
-# Example:
-#   sbatch scripts/cluster/submit_shortcut.sh \
-#     pointnav/ddppo_pointnav_blind_gibson \
-#     /scratch/izar/wxu/habitat_checkpoints/blind_gibson/ckpt.16.pth 10 20
+# Shortcut discovery eval on Kuma MIG (H100 virtual GPU).
 #
-# Shortcut discovery / cognitive-map behavioral evaluation:
-#   Compares navigation with persistent LSTM memory (across episodes in the
-#   same scene) vs. reset memory. If persistent > reset, accumulated spatial
-#   representations functionally help navigation — the behavioral signature
-#   of a cognitive map.
+# Usage:
+#   sbatch submit_shortcut_mig.sh <config_name> <ckpt_path> [episodes_per_scene] [max_scenes]
+# Example:
+#   sbatch scripts/cluster/submit_shortcut_mig.sh \
+#     pointnav/ddppo_pointnav_blind_gibson \
+#     /scratch/izar/wxu/habitat_checkpoints/blind_gibson/ckpt.19.pth 10 20
 
 CONFIG_NAME=${1:?"Error: config name required (e.g. pointnav/ddppo_pointnav_blind_gibson)"}
 CKPT_PATH=${2:?"Error: ckpt path required"}
@@ -38,17 +34,20 @@ OUT_DIR="/scratch/izar/${USER}/shortcut_results"
 OUT_PATH="${OUT_DIR}/${RUN_NAME}.json"
 
 echo "============================================"
-echo "  Shortcut Discovery / Cognitive-Map Eval"
-echo "  Config:   ${CONFIG_NAME}"
-echo "  Ckpt:     ${CKPT_PATH}"
+echo "  Shortcut Discovery Eval (MIG)"
+echo "  Config:    ${CONFIG_NAME}"
+echo "  Ckpt:      ${CKPT_PATH}"
 echo "  Eps/scene: ${EPISODES_PER_SCENE}"
 echo "  Max scenes: ${MAX_SCENES}"
-echo "  Node:     $(hostname)"
-echo "  Job ID:   ${SLURM_JOB_ID}"
-echo "  Date:     $(date)"
+echo "  Partition: ${SLURM_JOB_PARTITION}"
+echo "  Node:      $(hostname)"
+echo "  Job ID:    ${SLURM_JOB_ID}"
+echo "  Date:      $(date)"
 echo "============================================"
 
 cd /home/${USER}/habitat-lab
+
+mkdir -p "${OUT_DIR}"
 
 echo ""
 echo "=== Running shortcut discovery eval ==="

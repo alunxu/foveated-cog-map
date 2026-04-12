@@ -226,11 +226,14 @@ Project/
 │   │   └── shortcut.py                 # Shortcut discovery / cognitive-map behavioral eval
 │   └── cluster/                        # SLURM job scripts
 │       ├── common.sh                   # Shared env setup (sourced by all submit_*.sh)
-│       ├── submit_train.sh             # Submit DD-PPO training job
-│       ├── submit_eval.sh              # Submit evaluation + video recording
-│       ├── submit_probe.sh             # Submit probing pipeline (collect → analyze)
-│       ├── submit_cross.sh             # Submit cross-condition CKA analysis
-│       ├── submit_shortcut.sh          # Submit shortcut discovery eval
+│       ├── submit_train.sh             # Submit DD-PPO training job (Izar V100)
+│       ├── submit_eval.sh              # Submit evaluation + video (Izar V100)
+│       ├── submit_probe.sh             # Submit probing pipeline (Izar V100)
+│       ├── submit_cross.sh             # Submit cross-condition CKA (CPU-only)
+│       ├── submit_shortcut.sh          # Submit shortcut eval (Izar V100)
+│       ├── submit_probe_mig.sh         # Probing on Kuma MIG (H100 vGPU, free beta)
+│       ├── submit_eval_mig.sh          # Eval on Kuma MIG
+│       ├── submit_shortcut_mig.sh      # Shortcut eval on Kuma MIG
 │       ├── run_habitat.py              # Custom entry point (registers policies)
 │       ├── setup_env.sh                # Conda environment setup
 │       ├── download_gibson_0plus.sh    # Dataset download + validation

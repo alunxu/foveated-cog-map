@@ -2,7 +2,7 @@
 #SBATCH --job-name=cs503_eval
 #SBATCH --time=00:45:00
 #SBATCH --account=cs-503
-#SBATCH --qos=normal
+#SBATCH --partition=mig24gb
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
@@ -11,28 +11,28 @@
 #SBATCH --output=slurm_logs/%j.out
 #SBATCH --error=slurm_logs/%j.err
 
+# Eval + video recording on Kuma MIG (H100 virtual GPU).
+#
 # Usage:
-#   sbatch submit_eval.sh <config_name> <ckpt_path> [num_episodes]
+#   sbatch submit_eval_mig.sh <config_name> <ckpt_path> [num_episodes]
 # Example:
-#   sbatch scripts/cluster/submit_eval.sh \
+#   sbatch scripts/cluster/submit_eval_mig.sh \
 #     pointnav/ddppo_pointnav_uniform_gibson \
 #     /scratch/izar/wxu/habitat_checkpoints/uniform_gibson/ckpt.1.pth 5
-#
-# Writes MP4 videos to /scratch/izar/${USER}/eval_videos/<run_name>/
-# Does NOT touch training checkpoints.
 
 CONFIG_NAME=${1:?"Error: config name required"}
 CKPT_PATH=${2:?"Error: ckpt path required"}
 NUM_EPISODES=${3:-5}
 
 echo "============================================"
-echo "  Habitat Eval + Video Recording"
-echo "  Config:   ${CONFIG_NAME}"
-echo "  Ckpt:     ${CKPT_PATH}"
-echo "  Episodes: ${NUM_EPISODES}"
-echo "  Node:     $(hostname)"
-echo "  Job ID:   ${SLURM_JOB_ID}"
-echo "  Date:     $(date)"
+echo "  Habitat Eval + Video (MIG)"
+echo "  Config:    ${CONFIG_NAME}"
+echo "  Ckpt:      ${CKPT_PATH}"
+echo "  Episodes:  ${NUM_EPISODES}"
+echo "  Partition: ${SLURM_JOB_PARTITION}"
+echo "  Node:      $(hostname)"
+echo "  Job ID:    ${SLURM_JOB_ID}"
+echo "  Date:      $(date)"
 echo "============================================"
 
 source "${SLURM_SUBMIT_DIR}/scripts/cluster/common.sh"

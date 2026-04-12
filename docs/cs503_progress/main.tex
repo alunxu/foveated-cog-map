@@ -1,0 +1,285 @@
+\documentclass[10pt,conference,compsocconf]{IEEEtran}
+
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{multirow}
+
+\addtolength{\topmargin}{-32pt}
+\addtolength{\textheight}{32pt}
+
+\begin{document}
+\title{\vspace{-8pt}Progress Report: How Foveated Vision Shapes Cognitive Maps in Navigation Agents\vspace{-12pt}}
+
+\author{
+  Leo Bruneau, Weilun Xu (394449), Rim Abkari, Zyad Aoutir\\
+  \textit{CS-503 Visual Intelligence --- Progress Report (Updated: \today)}
+}
+
+\maketitle
+
+% ==========================================================================
+\section{Training Status}
+% ==========================================================================
+
+All agents are trained with DD-PPO~\cite{wijmans2020ddppo} on Gibson-0+ (411 scenes) + MP3D train (61 scenes) in Habitat~\cite{savva2019habitat}, sharing a 3-layer LSTM (512-d) backbone. Training targets are set to ensure convergence rather than a fixed frame budget.
+
+\begin{table}[h]
+\centering
+\caption{Training status per condition (as of April 12, 2026).}
+\label{tab:training}
+\begin{tabular}{lccccl}
+\toprule
+Condition & Frames & Target & Success & SPL & Status \\
+\midrule
+Blind       & 179M & 250M & 93.2\% & 0.589 & Training \\
+Uniform     & 249M & 400M & 81.1\% & 0.460 & Training \\
+Foveated    & 154M & 250M & 90.2\% & 0.448 & Training \\
+Matched     & 287M & 250M & 82.4\% & 0.454 & Past target \\
+Fov-learned & ---  & 250M & ---    & ---   & Not started \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Design note:} Uniform is trained to 400M (vs.\ 250M for others) because its ResNet-18 encoder requires more samples to converge. We match convergence level rather than frame count to ensure fair cross-condition comparison.
+
+% ==========================================================================
+\section{Probing Results (Phase 1 -- Baseline)}
+% ==========================================================================
+
+Full 13-experiment probing analysis has been completed for all four conditions using their best available checkpoints (blind: ckpt.19, uniform: ckpt.33, foveated: ckpt.21, matched: ckpt.30). All probes use full 512-d hidden states (no PCA).
+
+\subsection{Global GPS and Compass Probes (1b)}
+
+\begin{table}[h]
+\centering
+\caption{Global linear probe accuracy (Ridge, $\alpha=10$, episode-level train/test split). Higher R$^2$ = better spatial encoding.}
+\label{tab:probe_baseline}
+\begin{tabular}{lcccc}
+\toprule
+ & GPS R$^2$ & GPS MAE & Compass R$^2$ & Compass MAE \\
+\midrule
+Blind    & \textbf{0.899} & 0.020m & \textbf{0.878} & 0.8\textdegree \\
+Foveated & 0.841          & 0.034m & 0.715          & 2.1\textdegree \\
+Matched  & 0.832          & 0.033m & 0.607          & 1.3\textdegree \\
+Uniform  & 0.614          & 0.035m & 0.423          & 1.6\textdegree \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Key observations:}
+\begin{itemize}
+    \item Blind dominates baseline probes---GPS/compass are directly in the input, so the LSTM trivially encodes them. Replicates Wijmans et al.~\cite{wijmans2023emergence}.
+    \item Among sighted conditions, \textbf{foveated ranks highest} on both GPS (0.841) and compass (0.715).
+    \item Uniform is weakest (GPS 0.614)---the full visual stream may act as a crutch, reducing reliance on memory.
+\end{itemize}
+
+\subsection{Distance-to-Goal and Control Tasks (1c, 1e--f)}
+
+\begin{table}[h]
+\centering
+\caption{Distance-to-goal probe and selectivity (Hewitt \& Liang control).}
+\label{tab:probe_control}
+\begin{tabular}{lccc}
+\toprule
+ & Dist-to-goal R$^2$ & GPS selectivity & Compass selectivity \\
+\midrule
+Blind    & \textbf{0.984} & \textbf{0.911} & \textbf{0.890} \\
+Foveated & 0.953          & 0.880          & 0.751 \\
+Matched  & 0.977          & 0.871          & 0.701 \\
+Uniform  & 0.959          & 0.763          & 0.543 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent All selectivity values are well above zero, confirming probes capture genuine spatial structure, not memorization artifacts.
+
+\subsection{Multi-Layer Comparison (1d)}
+
+For the blind agent, layer~0 hidden state (h) achieves the highest GPS R$^2$ (0.958), while layer~1 cell state (c) is a close second (0.962). The top LSTM layer (layer~2, h) matches the default probe target (0.899). Spatial information is distributed across layers but concentrated in layers 0--1.
+
+% ==========================================================================
+\section{Probing Results (Phase 2 -- H1: Compensatory Memory)}
+% ==========================================================================
+
+\subsection{Path-History Probe (2c)}
+
+This probe decodes the agent's position at $k$ steps \emph{in the past} from the current hidden state, testing how far back spatial memory extends.
+
+\begin{table}[h]
+\centering
+\caption{Path-history probe: R$^2$ for decoding GPS at lag $k$ from current hidden state. Higher = longer working memory.}
+\label{tab:path_history}
+\begin{tabular}{lcccccc}
+\toprule
+ & lag-0 & lag-1 & lag-2 & lag-3 & lag-4 & lag-5 \\
+\midrule
+Blind    & 0.899 & 0.905 & 0.867 & 0.748 & 0.536 & 0.536 \\
+Foveated & 0.841 & 0.862 & 0.826 & 0.737 & \textbf{0.685} & \textbf{0.629} \\
+Matched  & 0.832 & 0.841 & 0.779 & 0.581 & 0.475 & 0.445 \\
+Uniform  & 0.614 & 0.555 & 0.393 & 0.386 & 0.008 & $-$0.105 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{This is the strongest finding so far.} The foveated agent retains spatial information over longer temporal horizons than any other condition:
+\begin{itemize}
+    \item At lag-5, foveated R$^2$=0.629 vs.\ blind 0.536, matched 0.445, uniform $-$0.105.
+    \item Foveated surpasses even blind at lags 4--5, despite blind having GPS directly in its input.
+    \item Uniform memory decays rapidly and becomes uninformative by lag-5.
+\end{itemize}
+This is \textbf{direct evidence for H1 (compensatory memory)}: degraded peripheral vision forces the foveated agent to build a richer temporal trace of where it has been.
+
+The foveated--matched comparison (0.629 vs.\ 0.445 at lag-5) isolates the effect of \emph{spatial non-uniformity} from total information volume: it is the uneven quality of the foveated sensor, not simply having less visual information, that drives compensatory memory.
+
+\subsection{Visited-Region Probe (2d)}
+
+\begin{table}[h]
+\centering
+\caption{Visited-region probe: can the hidden state predict which spatial cells the agent has visited?}
+\label{tab:visited}
+\begin{tabular}{lcc}
+\toprule
+ & R$^2$ & Binary accuracy \\
+\midrule
+Blind    & \textbf{0.834} & 99.8\% \\
+Uniform  & 0.826          & 99.8\% \\
+Matched  & 0.808          & 99.8\% \\
+Foveated & 0.801          & 99.8\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent All conditions track visited regions near-perfectly ($>$99.8\% binary accuracy). R$^2$ values are similar, suggesting this is a basic capability shared by all agents regardless of visual input.
+
+\subsection{Occupancy Map Reconstruction (2e)}
+
+\begin{table}[h]
+\centering
+\caption{Occupancy decoding from hidden states ($20\times20$ grid).}
+\label{tab:occupancy}
+\begin{tabular}{lcc}
+\toprule
+ & R$^2$ & Binary accuracy \\
+\midrule
+Blind    & $-$0.144 & 59.6\% \\
+Matched  & $-$0.379 & 58.1\% \\
+Foveated & $-$0.397 & 55.2\% \\
+Uniform  & $-$0.300 & 56.3\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Occupancy decoding is weak across all conditions (all R$^2 < 0$). None of the agents build detailed layout maps in their hidden states. This may require more episodes, a finer grid, or a non-linear decoder to detect.
+
+\subsection{Place Cells (5a)}
+
+\begin{table}[h]
+\centering
+\caption{Place-cell-like units (spatial information $>$ 1 bit) out of 512 hidden units.}
+\label{tab:place_cells}
+\begin{tabular}{lc}
+\toprule
+ & Place cells ($>$1 bit) \\
+\midrule
+Foveated & \textbf{475}/512 \\
+Blind    & 473/512 \\
+Uniform  & 473/512 \\
+Matched  & 461/512 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Nearly all units carry spatial information across all conditions. Matched has slightly fewer place-cell-like units (461 vs.\ $\sim$473).
+
+% ==========================================================================
+\section{Probing Results (Phase 3 -- H2: Representational Divergence)}
+% ==========================================================================
+
+\subsection{Cross-Condition CKA (3a)}
+
+Linear CKA measures representational similarity between conditions (1.0 = identical geometry, 0.0 = unrelated). We compute CKA on the top LSTM hidden states (h\_layer\_2) using matched episodes across all condition pairs.
+
+\begin{table}[h]
+\centering
+\caption{Linear CKA similarity (top-layer hidden state, $n\approx1{,}910$ steps).}
+\label{tab:cka}
+\begin{tabular}{lcccc}
+\toprule
+ & Blind & Uniform & Foveated & Matched \\
+\midrule
+Blind    & ---   & 0.0023 & 0.0023 & 0.0011 \\
+Uniform  &       & ---    & \textbf{0.0007} & 0.0017 \\
+Foveated &       &        & ---    & 0.0011 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Key observations:}
+\begin{itemize}
+    \item All CKA values are near zero ($<$0.003), indicating that each condition develops a \textbf{fundamentally different representational geometry} for encoding space.
+    \item Blind is the most dissimilar to all sighted conditions---consistent with its reliance on proprioceptive rather than visual features.
+    \item The closest pair is uniform--foveated (0.0007), yet still near zero, showing that even sighted agents with different visual sampling diverge strongly.
+\end{itemize}
+
+\subsection{Probe Transfer (3b)}
+
+We train a GPS probe on one condition's hidden states and evaluate it on another's. Self-accuracy ($\sim$0.96--0.97) confirms probes work; cross-condition transfer tests whether spatial information is encoded in a shared format.
+
+\begin{table}[h]
+\centering
+\caption{Probe-transfer R$^2$: GPS probe trained on row, tested on column.}
+\label{tab:transfer}
+\begin{tabular}{lcccc}
+\toprule
+Train $\backslash$ Test & Blind & Uniform & Foveated & Matched \\
+\midrule
+Blind    & \textbf{0.973} & $-$9.72  & $-$2.71  & $-$15.72 \\
+Uniform  & $-$7.26        & \textbf{0.973} & $-$13.53 & $-$11.47 \\
+Foveated & $-$11.25       & $-$5.12  & \textbf{0.963} & $-$10.66 \\
+Matched  & $-$5.70        & $-$11.74 & $-$15.52 & \textbf{0.959} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Cross-condition transfer is \textbf{catastrophically negative} in all cases, confirming that spatial information is not encoded in a shared linear subspace across conditions. Combined with near-zero CKA, this provides \textbf{strong evidence for H2}: visual input type fundamentally shapes the representational geometry used to encode space, not just the amount of spatial information stored.
+
+% ==========================================================================
+\section{Summary of Hypotheses}
+% ==========================================================================
+
+\begin{table}[h]
+\centering
+\caption{Hypothesis status based on current results.}
+\label{tab:hypotheses}
+\begin{tabular}{lll}
+\toprule
+Hypothesis & Status & Key evidence \\
+\midrule
+H1: Compensatory memory & \textbf{Supported} & Foveated lag-5 R$^2$=0.629 \\
+ & & (best across all conditions) \\
+H2: Representational divergence & \textbf{Supported} & All CKA $<$0.003; cross-transfer \\
+ & & catastrophically negative \\
+H3: Epistemic gaze & Not started & Learned-gaze not yet trained \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ==========================================================================
+\section{Next Steps}
+% ==========================================================================
+
+\begin{enumerate}
+    \item \textbf{Complete training:} Blind (179M$\to$250M), foveated (154M$\to$250M), uniform (249M$\to$400M). Re-probe with final checkpoints.
+    \item \textbf{Shortcut behavioral test:} Job running for blind. Will test whether persistent LSTM memory functionally aids navigation vs.\ reset memory.
+    \item \textbf{Foveated-learned (5th condition):} Train the learned-gaze agent to test H3. Requires launching a new training run.
+    \item \textbf{Visualization:} PCA/t-SNE of hidden states colored by position and condition for the paper.
+    \item \textbf{Re-probe after convergence:} Once all training finishes, re-run full probing suite on final checkpoints for the definitive comparison.
+\end{enumerate}
+
+\bibliographystyle{IEEEtran}
+\bibliography{literature}
+
+\end{document}

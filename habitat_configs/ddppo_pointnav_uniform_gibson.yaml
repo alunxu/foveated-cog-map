@@ -58,7 +58,7 @@ habitat_baselines:
   num_environments: 6              # fewer than blind (RGB needs more memory)
   checkpoint_folder: "data/checkpoints/uniform_gibson"
   num_updates: -1
-  total_num_steps: 2.5e8           # 250M steps (sighted converges fast)
+  total_num_steps: 4.0e8           # 400M steps (ResNet-18 encoder needs more frames to converge)
   log_interval: 10
   num_checkpoints: 50
   force_torch_single_threaded: True

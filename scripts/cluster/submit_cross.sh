@@ -1,11 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=habitat_cross
+#SBATCH --job-name=cs503_analysis
 #SBATCH --time=01:00:00
 #SBATCH --account=cs-503
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=10
+#SBATCH --gres=gpu:1
 #SBATCH --mem=32G
 #SBATCH --output=slurm_logs/%j.out
 #SBATCH --error=slurm_logs/%j.err
@@ -26,7 +27,8 @@ echo "  Job:   ${SLURM_JOB_ID}"
 echo "  Date:  $(date)"
 echo "============================================"
 
-source "$(dirname "$0")/common.sh"
+source "${SLURM_SUBMIT_DIR}/scripts/cluster/common.sh"
+scontrol update JobId=${SLURM_JOB_ID} JobName="cs503_cka" 2>/dev/null || true
 OUT_PATH="${RESULTS_DIR}/cross_analysis.json"
 
 # Build data arguments from available .npz files

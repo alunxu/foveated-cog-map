@@ -61,7 +61,7 @@ habitat_baselines:
   num_environments: 8              # 8 per worker × 2 workers = 16 total
   checkpoint_folder: "data/checkpoints/blind_gibson"
   num_updates: -1
-  total_num_steps: 5.0e8           # 500M steps as a first target (Wijmans uses 2B)
+  total_num_steps: 2.5e8           # 250M steps (consistent across all conditions)
   log_interval: 10
   num_checkpoints: 50
   force_torch_single_threaded: True

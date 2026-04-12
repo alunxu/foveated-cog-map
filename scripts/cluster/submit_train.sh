@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=habitat_ddppo
-#SBATCH --time=72:00:00
+#SBATCH --job-name=cs503_tr
+#SBATCH --time=168:00:00
 #SBATCH --account=cs-503
 #SBATCH --qos=cs-503
 #SBATCH --nodes=1
@@ -31,9 +31,12 @@ echo "  Date:     $(date)"
 echo "  Job ID:   ${SLURM_JOB_ID}"
 echo "============================================"
 
-source "$(dirname "$0")/common.sh"
+source "${SLURM_SUBMIT_DIR}/scripts/cluster/common.sh"
 
 RUN_NAME=$(run_name_from_config "${CONFIG_NAME}")
+# Abbreviated job name: blind→bld, uniform→uni, foveated→fov, matched→mtc, learned→lrn
+ABBREV=$(echo "${RUN_NAME}" | sed 's/blind/bld/;s/uniform/uni/;s/foveated/fov/;s/matched/mtc/;s/learned/lrn/')
+scontrol update JobId=${SLURM_JOB_ID} JobName="cs503_tr_${ABBREV}" 2>/dev/null || true
 mkdir -p "${CKPT_DIR}/${RUN_NAME}"
 
 cd /home/${USER}/habitat-lab

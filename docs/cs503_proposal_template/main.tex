@@ -14,7 +14,7 @@
 \title{\vspace{-8pt}How Foveated Vision Shapes Cognitive Maps in Navigation Agents\vspace{-12pt}}
 
 \author{
-  Leo Bruneau (SCIPER), Weilun Xu (394449), Rim Abkari (SCIPER), Zyad Aoutir (SCIPER)\\
+  Leo Bruneau (SCIPER), Weilun Xu (394449), Rim Abkari (344316), Zyad Aoutir (SCIPER)\\
   \textit{CS-503 Visual Intelligence --- Project Proposal}
 }
 
@@ -22,7 +22,7 @@
 
 % ---------- Abstract ----------
 \begin{abstract}
-Cognitive maps emerge in the recurrent hidden states of navigation agents, as shown for both sighted and blind conditions~\cite{wijmans2023emergence}, but all prior settings keep visual certainty spatially constant, bypassing the need to manage perceptual uncertainty. We introduce a foveated sensor---sharp at the centre, degraded in the periphery---and probe whether the resulting spatial memory merely buffers observations or develops compensatory representations of the agent's own observational uncertainty. We further ask whether foveation drives a shift toward allocentric spatial codes by forcing integration across partial glimpses, and whether learned gaze targets regions where spatial memory is weakest. We train five agents with an identical LSTM backbone on PointGoal navigation in Habitat, varying only visual input (blind, uniform, foveated-fixed, foveated-learned, matched-compute). To investigate the resulting memory structures, we decode spatial variables from frozen hidden states via linear probes, compare representational geometry across conditions with CKA, and identify place-cell-like units through per-unit rate maps.
+Human spatial cognition is built on foveated vision: we see sharply only at the centre of gaze, yet construct rich cognitive maps of our surroundings. In artificial navigation agents, map-like representations emerge in recurrent memory, but always under either conditions of blind or spatially uniform perception, leaving open how non-uniform input shapes what memory encodes. We therefore train navigation agents in Habitat under varying visual input, including a foveated sensor. To understand how non-uniform perception reshapes spatial memory, we probe whether the resulting memory compensates for perceptual uncertainty, develops more abstract spatial codes, and learns to direct gaze toward memory-weak regions. We then characterize the learned spatial representations by decoding spatial variables from frozen hidden states and comparing representational geometry across conditions. If sensor design predictably shapes the structure of learned spatial codes, it becomes a tunable axis---alongside architecture and objective---for steering embodied agents toward representations that humans can inspect, anticipate, and correct.
 \end{abstract}
 
 
