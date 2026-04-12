@@ -62,11 +62,11 @@ Training targets are set to ensure convergence rather than a fixed frame budget.
 \toprule
 Condition & Frames & Target & Success & SPL & Status \\
 \midrule
-Blind       & 179M & 250M & 93.2\% & 0.589 & Training \\
-Uniform     & 249M & 400M & 81.1\% & 0.460 & Training \\
-Foveated    & 154M & 250M & 90.2\% & 0.448 & Training \\
-Matched     & 287M & 250M & 82.4\% & 0.454 & Past target \\
-Fov-learned & ---  & 250M & ---    & ---   & Not started \\
+Blind       & 341M & 250M & 90.7\% & 0.550 & \textbf{Complete} \\
+Uniform     & 206M & 400M & 97.6\% & 0.805 & Training \\
+Foveated    & 139M & 250M & 98.3\% & 0.823 & Training \\
+Matched     & 203M & 250M & 92.9\% & 0.582 & \textbf{Complete} \\
+Fov-learned & 15M  & 250M & ---    & ---   & Training \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -275,6 +275,41 @@ Matched  & $-$5.70        & $-$11.74 & $-$15.52 & \textbf{0.959} \\
 \noindent Cross-condition transfer is \textbf{catastrophically negative} in all cases, confirming that spatial information is not encoded in a shared linear subspace across conditions. Combined with near-zero CKA, this provides \textbf{strong evidence for H2}: visual input type fundamentally shapes the representational geometry used to encode space, not just the amount of spatial information stored.
 
 % ==========================================================================
+\section{Behavioral Test: Shortcut / Cognitive Map}
+% ==========================================================================
+
+The shortcut discovery test~\cite{ramakrishnan2025space} evaluates whether an agent's accumulated spatial experience \emph{functionally} aids navigation---the behavioral signature of a cognitive map. For each scene, we run 10 episodes sequentially in two conditions:
+
+\begin{itemize}[nosep,leftmargin=1.5em]
+    \item \textbf{Reset} (standard): LSTM hidden state zeroed between episodes.
+    \item \textbf{Persistent} (cognitive-map): hidden state carries over, allowing spatial knowledge to accumulate across episodes within the same scene.
+\end{itemize}
+
+If persistent $>$ reset, the agent's recurrent representations encode reusable spatial knowledge. Results for the blind agent (ckpt.32, 341M frames) across 20 Gibson scenes (200 episodes total per condition):
+
+\begin{table}[h]
+\centering
+\caption{Shortcut / cognitive-map behavioral test (blind agent, 20 scenes $\times$ 10 episodes).}
+\label{tab:shortcut}
+\begin{tabular}{lcc}
+\toprule
+Condition & Success rate & SPL \\
+\midrule
+Reset (standard)     & \textbf{0.78} & \textbf{0.432} \\
+Persistent (cogmap)  & 0.24          & 0.145 \\
+\midrule
+\textit{Difference}  & $-$0.53       & $-$0.287 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Key finding:} Persistent memory \textbf{catastrophically hurts} the blind agent ($-53\%$ success, $-0.287$ SPL). The within-persistent-condition trend also shows degradation over time (late--early SPL gap: $-0.146$), confirming that accumulated hidden state progressively corrupts performance.
+
+\textbf{Interpretation:} The blind agent's LSTM representations are \emph{episode-scoped path-integration states}, not reusable cognitive maps. The hidden state encodes ``where I am relative to where I started this episode,'' and carrying it across episode boundaries places the LSTM in an out-of-distribution regime. This refines H1: the compensatory memory we observe via probing (lag-5 R$^2$=0.629 for foveated) operates \emph{within} episodes, not across them.
+
+\textbf{Status:} Shortcut eval for the three sighted conditions (uniform, foveated, matched) is currently queued on the cluster. These results will reveal whether visual input enables more transferable spatial representations.
+
+% ==========================================================================
 \section{Summary of Hypotheses}
 % ==========================================================================
 
@@ -290,7 +325,11 @@ H1: Compensatory memory & \textbf{Supported} & Foveated lag-5 R$^2$=0.629 \\
  & & (best across all conditions) \\
 H2: Representational divergence & \textbf{Supported} & All CKA $<$0.003; cross-transfer \\
  & & catastrophically negative \\
-H3: Epistemic gaze & Not started & Learned-gaze not yet trained \\
+H3: Epistemic gaze & In progress & Learned-gaze training at 15M/250M \\
+\midrule
+\multicolumn{3}{l}{\textit{Additional finding:}} \\
+Cognitive map (behavioral) & \textbf{Negative (blind)} & Persistent LSTM $-$53\% success \\
+ & Pending (sighted) & Eval queued for 3 conditions \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -300,12 +339,12 @@ H3: Epistemic gaze & Not started & Learned-gaze not yet trained \\
 % ==========================================================================
 
 \begin{enumerate}[nosep]
-    \item \textbf{Complete training} (in progress): Blind (179M$\to$250M), foveated (154M$\to$250M), uniform (249M$\to$400M). SLURM jobs submitted, pending resources.
-    \item \textbf{Shortcut behavioral test} (in progress): Blind condition running on cluster. Tests whether persistent LSTM memory functionally aids navigation vs.\ reset (zeroed) hidden states.
-    \item \textbf{Foveated-learned training} (ready to launch): Config and policy implementation complete. Will submit once a SLURM slot opens (cs-503 QOS allows max 2 submitted jobs). Target: 250M frames.
-    \item \textbf{Re-probe after convergence:} Once all training finishes, re-run full 13-experiment probing suite on final checkpoints for definitive comparison. Current results use mid-training checkpoints.
-    \item \textbf{Visualization:} PCA/t-SNE of hidden states colored by position and condition. Script ready (\texttt{scripts/probing/visualize.py}), will run after final probing data is collected.
-    \item \textbf{MP3D evaluation:} Evaluate all converged agents on the 1008 held-out MP3D test episodes for out-of-dataset generalization numbers.
+    \item \textbf{Complete training} (in progress): Foveated (139M$\to$250M, $\sim$12h), uniform (206M$\to$400M, $\sim$15h). Blind and matched already complete.
+    \item \textbf{Shortcut eval for sighted conditions} (queued): Uniform, foveated, matched eval jobs submitted. Will reveal whether visual input enables more transferable cross-episode spatial representations than blind.
+    \item \textbf{Foveated-learned training} (in progress, 15M/250M): Config, policy, and slow-gaze approximation implemented. Running on cs-503 QOS ($\sim$5 days to target).
+    \item \textbf{Re-probe after convergence:} Re-run full 13-experiment probing suite on final checkpoints for definitive comparison. Current probing results use mid-training checkpoints.
+    \item \textbf{Visualization:} PCA/t-SNE of hidden states colored by position and condition. Script ready (\texttt{scripts/probing/visualize.py}).
+    \item \textbf{Memory transplant test:} Cross-condition hidden state transplant (\texttt{scripts/eval/transplant.py}) to test whether spatial representations are interchangeable across conditions (complements CKA/transfer probing with a behavioral test).
 \end{enumerate}
 
 % ==========================================================================
@@ -327,8 +366,8 @@ H3: Epistemic gaze & Not started & Learned-gaze not yet trained \\
 
 \begin{description}[nosep,leftmargin=0em,font=\normalfont\bfseries]
     \item[Weeks 1--2 (Mar 24--Apr 6):] Codebase setup; implemented all 5 visual conditions; launched training for blind, uniform, foveated-fixed, matched-compute on Izar.
-    \item[Week 3 (Apr 7--12):] Probing infrastructure built (13-experiment suite). Discovered PCA-32 artifact, switched to full 512-d. Completed Phase~1 probing for all 4 training conditions. Ran cross-condition CKA (H2 supported). Submitted shortcut behavioral test. Prepared foveated-learned config and policy.
-    \item[Week 4 (Apr 13--):] \textit{Planned:} Complete remaining training. Launch foveated-learned (H3). Re-probe with final checkpoints. Generate visualizations. Begin final paper.
+    \item[Week 3 (Apr 7--12):] Probing infrastructure built (13-experiment suite). Discovered PCA-32 artifact, switched to full 512-d. Completed Phase~1 probing for all 4 training conditions. Ran cross-condition CKA (H2 supported). Fixed eval pipeline bugs (stale code path, checkpoint key format). Completed blind shortcut eval---persistent LSTM memory catastrophically hurts ($-$53\% success), showing episode-scoped path integration rather than reusable cognitive maps. Launched foveated-learned training (H3). Submitted shortcut eval for 3 sighted conditions.
+    \item[Week 4 (Apr 13--):] \textit{Planned:} Complete remaining training (foveated, uniform, fov-learned). Collect sighted shortcut results. Re-probe with final checkpoints. Generate visualizations. Run memory transplant. Begin final paper.
 \end{description}
 
 \bibliographystyle{IEEEtran}
