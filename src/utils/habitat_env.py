@@ -134,11 +134,23 @@ def load_policy(config, env, ckpt_path, device):
 
     ckpt = torch.load(ckpt_path, map_location="cpu")
     state_dict = ckpt.get("state_dict", ckpt)
-    policy.load_state_dict(
-        {k.replace("actor_critic.", ""): v for k, v in state_dict.items()
-         if k.startswith("actor_critic.")},
-        strict=False,
-    )
+
+    # DD-PPO checkpoints may use "actor_critic." prefix (multi-agent trainer)
+    # or bare keys (single-agent / our custom trainer). Handle both.
+    ac_keys = {k for k in state_dict if k.startswith("actor_critic.")}
+    if ac_keys:
+        weights = {k.replace("actor_critic.", ""): v
+                   for k, v in state_dict.items() if k in ac_keys}
+    else:
+        weights = state_dict
+
+    missing, unexpected = policy.load_state_dict(weights, strict=False)
+    if missing:
+        print(f"  [load_policy] WARNING: {len(missing)} missing keys "
+              f"(first 3: {missing[:3]})")
+    if unexpected:
+        print(f"  [load_policy] WARNING: {len(unexpected)} unexpected keys "
+              f"(first 3: {unexpected[:3]})")
     policy.to(device)
     policy.eval()
 

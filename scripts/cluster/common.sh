@@ -15,14 +15,14 @@ export MAGNUM_LOG=quiet
 export HYDRA_FULL_ERROR=1
 
 # Project root for custom policies + shared utilities
-export PYTHONPATH="/home/${USER}/CS503_Project:${PYTHONPATH}"
+export PYTHONPATH="/home/${USER}/cs503-project:${PYTHONPATH}"
 
 # Standard cluster paths
 export DATA_DIR="/scratch/izar/${USER}/habitat_data"
 export CKPT_DIR="/scratch/izar/${USER}/habitat_checkpoints"
 export PROBE_DIR="/scratch/izar/${USER}/probing_data"
 export RESULTS_DIR="/scratch/izar/${USER}/probing_results"
-export PROJECT_DIR="/home/${USER}/CS503_Project"
+export PROJECT_DIR="/home/${USER}/cs503-project"
 
 # Helper: extract short run name from config path
 # e.g. "pointnav/ddppo_pointnav_blind_gibson" → "blind_gibson"
