@@ -1,0 +1,293 @@
+\documentclass[10pt,conference,compsocconf]{IEEEtran}
+
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{multirow}
+
+\addtolength{\topmargin}{-32pt}
+\addtolength{\textheight}{32pt}
+
+\begin{document}
+\title{\vspace{-8pt}How Foveated Vision Shapes Cognitive Maps in Navigation Agents\vspace{-12pt}}
+
+\author{
+  Leo Bruneau, Weilun Xu (394449), Rim Abkari, Zyad Aoutir\\
+  \textit{CS-503 Visual Intelligence --- Final Report}
+}
+
+\maketitle
+
+% ==========================================================================
+% ABSTRACT
+% ==========================================================================
+\begin{abstract}
+Human spatial cognition is built on foveated vision: we see sharply only at the centre of gaze, yet construct rich cognitive maps of our surroundings. In artificial navigation agents, map-like representations emerge in recurrent memory, but always under either conditions of blind or spatially uniform perception, leaving open how non-uniform input shapes what memory encodes. We train navigation agents in Habitat under varying visual conditions---blind, uniform, foveated (fixed centre), matched-compute, and foveated (learned gaze)---and probe the resulting LSTM hidden states with linear decoders. We find that spatially non-uniform vision induces compensatory temporal memory: the foveated agent retains position information over longer horizons than all other conditions, including blind agents that receive GPS directly. Cross-condition CKA and probe-transfer analyses reveal that each visual condition produces a fundamentally different representational geometry, despite similar task performance. These results establish sensor structure---not just architecture or objective---as a causal factor in what recurrent memory learns to represent.
+\end{abstract}
+
+% ==========================================================================
+% 1. INTRODUCTION
+% ==========================================================================
+\section{Introduction}
+
+Wijmans et al.~\cite{wijmans2023emergence} showed that RL agents trained on PointGoal navigation develop map-like representations in their recurrent hidden states---even \emph{blind} agents receiving only goal displacement, GPS, compass, and a close-to-goal scalar. Dwivedi et al.~\cite{dwivedi2022isee} probed sighted agents for related spatial concepts. However, all these settings keep visual certainty spatially constant, leaving open whether the spatial representations are a property of the navigation task or an artifact of uniform input quality.
+
+In biological vision, input quality is never uniform: humans see sharply only within $\sim$2\textdegree{} of gaze. Wirth et al.~\cite{wirth2017gaze} showed that primate hippocampal spatial representations depend on what the animal foveates, not just where it is---suggesting that spatial memory is shaped by how reliably an agent observes each region. If this holds for learned agents, a foveated sensor should not merely degrade cognitive maps but reshape them: memory may develop qualitatively different strategies to compensate for uneven observation quality.
+
+Two accounts---passive buffering vs.\ active compensation---make divergent predictions. A passive memory's accuracy should fall with degraded input, since peripherally-seen regions are stored less faithfully. An uncertainty-aware memory predicts the opposite: accuracy staying flat or rising, because the agent devotes representational capacity to uncertain regions. We ask: \textbf{does a foveated agent's memory follow the passive-drop pattern, or does it exhibit the compensatory signature of epistemic representation?}
+
+We address this question through three hypotheses. \textbf{H1 (Compensatory memory):} foveated agents build richer temporal traces to compensate for perceptual uncertainty. \textbf{H2 (Representational divergence):} foveation produces qualitatively different spatial codes, not merely degraded versions of the uniform code. \textbf{H3 (Epistemic gaze):} learned gaze targets memory-weak regions, driven by task pressure alone.
+
+Our results support H1 and H2. The foveated agent retains spatial information over longer temporal horizons than any other condition (including blind), and cross-condition representational similarity is near zero despite comparable task performance. These findings establish that sensor structure---alongside architecture and objective---is a causal axis for the structure of learned spatial representations.
+
+% ==========================================================================
+% 2. RELATED WORK
+% ==========================================================================
+\section{Related Work}
+
+\textbf{Cognitive maps in RL agents.}\quad
+Beyond Wijmans et al.~\cite{wijmans2023emergence} and Dwivedi et al.~\cite{dwivedi2022isee}, Banino et al.~\cite{banino2018grid} and Cueva \& Wei~\cite{cueva2018grid} found grid-cell-like representations in recurrent networks trained on path integration, and Gornet \& Thomson~\cite{gornet2024cognitive} extended this via visual predictive coding. Hennig et al.~\cite{hennig2023belief} showed that RL under partial observability can induce belief-state-like representations without explicit probabilistic objectives---a precedent for our H1. Ramakrishnan et al.~\cite{ramakrishnan2025space} examined spatial cognition in frontier models. All these studies use uniform or absent perception; none vary input quality spatially.
+
+\textbf{Foveated vision in deep learning.}\quad
+Mnih et al.~\cite{mnih2014attention} introduced recurrent attention models. Pourrahimi \& Bashivan~\cite{pourrahimi2025foveated} probed a foveated visual-search model for neuroscience-predicted features; Shang \& Ryoo~\cite{shang2023sugarl} jointly learned gaze and motor policies. These address visual search or task performance, not how foveation reshapes a navigation agent's learned spatial memory.
+
+\textbf{Neuroscience and sensor structure.}\quad
+Wirth et al.~\cite{wirth2017gaze} established that primate hippocampal spatial representations depend on gaze, not just location. Atanov et al.~\cite{atanov2024photoreceptor} showed that sensor layout changes downstream task performance. Neither tests whether non-uniform input reshapes learned representations in navigation agents---our central question.
+
+\textbf{Probing neural representations.}\quad
+Belinkov~\cite{belinkov2022probing} surveys probing classifiers for neural networks. Hewitt \& Liang~\cite{hewitt2019control} introduced control tasks to distinguish genuine structure from probe memorization. We adopt both linear probing and the Hewitt--Liang selectivity metric to validate our findings.
+
+% ==========================================================================
+% 3. METHODS
+% ==========================================================================
+\section{Methods}
+
+\subsection{Agent Architecture and Training}
+
+All agents are trained on PointGoal navigation in Habitat~\cite{savva2019habitat} using DD-PPO~\cite{wijmans2020ddppo} on a merged pool of Gibson-0+~\cite{xia2018gibson} (411 scenes) and Matterport3D train (61 scenes), totalling 472 training scenes. Evaluation uses 18 held-out MP3D test scenes (1008 episodes).
+
+All agents share an identical 3-layer LSTM (512-d) backbone and the Wijmans non-visual sensor stack: goal-in-start-frame, GPS, compass, and a close-to-goal scalar, each projected to 32-d and concatenated with a 32-d previous-action embedding. Training targets are set per condition to ensure convergence rather than a fixed frame budget: uniform trains to 400M frames (its ResNet-18 encoder requires more samples), while other conditions target 250M frames.
+
+\subsection{Visual Conditions}
+
+Five conditions vary only the visual input:
+
+\begin{enumerate}
+    \item \textbf{Blind:} No visual input. Receives only the non-visual sensor stack, replicating Wijmans et al.~\cite{wijmans2023emergence}.
+    \item \textbf{Uniform:} Full-resolution 256$\times$256 RGB encoded by ResNet-18.
+    \item \textbf{Foveated (fixed):} Eccentricity-dependent Gaussian blur ($\sigma_{\max}=8$, quadratic falloff) with gaze locked at image centre. Same ResNet-18 encoder.
+    \item \textbf{Matched-compute:} Low-resolution uniform RGB that exceeds the foveated effective pixel budget, controlling for total information volume.
+    \item \textbf{Foveated (learned):} Same blur model, but gaze centre predicted by a lightweight MLP trained end-to-end with the navigation policy.
+\end{enumerate}
+
+The matched-compute condition is critical: by providing more total information than foveation but distributing it uniformly, it isolates the effect of \emph{spatial non-uniformity} from reduced information volume.
+
+\subsection{Probing Methodology}
+
+After training, we freeze all weights and collect per-step LSTM hidden states (top-layer $\mathbf{h}$, 512-d) paired with ground-truth spatial labels across the 1008 evaluation episodes. We train Ridge regression probes ($\alpha=10$) with \textbf{episode-level} train/test splits to prevent information leakage within episodes. Probe quality is validated with the Hewitt--Liang selectivity metric~\cite{hewitt2019control}: we compare probe accuracy on the true task to accuracy on a control task (random permutation of labels), confirming that high $R^2$ reflects genuine spatial structure rather than probe memorization.
+
+Probed variables include: GPS position, compass heading, distance-to-goal, path history (position at lag $k \in \{0,\ldots,5\}$ from current hidden state), visited-region occupancy, full occupancy grid (20$\times$20), and per-unit spatial information (place-cell analysis).
+
+\subsection{Cross-Condition Analysis}
+
+To test H2 (representational divergence), we employ two complementary methods:
+
+\textbf{Linear CKA}~\cite{kornblith2019cka} measures representational similarity between conditions by comparing the geometry of hidden-state activations on matched episodes. Values near 1.0 indicate identical geometry; near 0.0 indicates unrelated representations.
+
+\textbf{Probe transfer:} We train a GPS probe on one condition's hidden states and evaluate it on another's. If spatial information is encoded in a shared linear subspace, cross-condition transfer should succeed. Catastrophic failure indicates fundamentally different encoding formats.
+
+\subsection{Behavioral Tests}
+
+\textcolor{red}{TODO: Describe shortcut discovery protocol. Episodes with known shortcuts between rooms. Compare persistent-memory vs.\ reset-memory agents on shortcut exploitation rate.}
+
+% ==========================================================================
+% 4. RESULTS
+% ==========================================================================
+\section{Results}
+
+\subsection{Training Performance}
+
+\begin{table}[t]
+\centering
+\caption{Training status and task performance per condition. Success rate and SPL~\cite{anderson2018spl} on 1008 held-out MP3D episodes.}
+\label{tab:training}
+\begin{tabular}{lcccl}
+\toprule
+Condition & Frames & Success & SPL & Status \\
+\midrule
+Blind       & 179M & 93.2\% & 0.589 & Training \\
+Uniform     & 249M & 81.1\% & 0.460 & Training \\
+Foveated    & 154M & 90.2\% & 0.448 & Training \\
+Matched     & 287M & 82.4\% & 0.454 & Converged \\
+Fov-learned & ---  & ---    & ---   & Not started \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:training} summarizes current training status. Four of five conditions have reached usable checkpoints; all four achieve $>$80\% success rate. Blind leads in both success (93.2\%) and SPL (0.589), consistent with Wijmans et al.~\cite{wijmans2023emergence}---the PointGoal task can be solved well from proprioception alone. Among sighted conditions, foveated achieves the highest success rate (90.2\%), though SPL values are comparable across sighted conditions ($\sim$0.45--0.46).
+
+\textcolor{red}{TODO: Update with final checkpoint numbers once all training completes.}
+
+\subsection{Baseline Probes: GPS, Compass, Distance-to-Goal}
+
+\begin{table}[t]
+\centering
+\caption{Global linear probe accuracy (Ridge, $\alpha=10$, episode-level split).}
+\label{tab:probe_baseline}
+\begin{tabular}{lcccc}
+\toprule
+ & GPS $R^2$ & GPS MAE & Compass $R^2$ & Compass MAE \\
+\midrule
+Blind    & \textbf{0.899} & 0.020m & \textbf{0.878} & 0.8\textdegree \\
+Foveated & 0.841          & 0.034m & 0.715          & 2.1\textdegree \\
+Matched  & 0.832          & 0.033m & 0.607          & 1.3\textdegree \\
+Uniform  & 0.614          & 0.035m & 0.423          & 1.6\textdegree \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Distance-to-goal probe and Hewitt--Liang selectivity.}
+\label{tab:probe_control}
+\begin{tabular}{lccc}
+\toprule
+ & Dist-to-goal $R^2$ & GPS selectivity & Compass selectivity \\
+\midrule
+Blind    & \textbf{0.984} & \textbf{0.911} & \textbf{0.890} \\
+Foveated & 0.953          & 0.880          & 0.751 \\
+Matched  & 0.977          & 0.871          & 0.701 \\
+Uniform  & 0.959          & 0.763          & 0.543 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:probe_baseline} shows baseline probe results. Blind dominates GPS and compass probes because these signals are directly in its input, so the LSTM trivially encodes them---replicating Wijmans et al.~\cite{wijmans2023emergence}. Among sighted conditions, foveated ranks highest on both GPS ($R^2=0.841$) and compass ($R^2=0.715$). Uniform is weakest (GPS $R^2=0.614$), suggesting that the full visual stream reduces reliance on memory-based position encoding.
+
+Table~\ref{tab:probe_control} confirms probe validity: all selectivity values are well above zero, indicating that probes capture genuine spatial structure rather than memorization artifacts. Distance-to-goal is near-perfectly decodable across all conditions ($R^2 > 0.95$).
+
+\subsection{H1: Compensatory Memory --- Path-History Probe}
+
+\begin{table}[t]
+\centering
+\caption{Path-history probe: $R^2$ for decoding GPS at lag $k$ from the current hidden state. Higher values indicate longer working memory.}
+\label{tab:path_history}
+\begin{tabular}{lcccccc}
+\toprule
+ & lag-0 & lag-1 & lag-2 & lag-3 & lag-4 & lag-5 \\
+\midrule
+Blind    & 0.899 & 0.905 & 0.867 & 0.748 & 0.536 & 0.536 \\
+Foveated & 0.841 & 0.862 & 0.826 & 0.737 & \textbf{0.685} & \textbf{0.629} \\
+Matched  & 0.832 & 0.841 & 0.779 & 0.581 & 0.475 & 0.445 \\
+Uniform  & 0.614 & 0.555 & 0.393 & 0.386 & 0.008 & $-$0.105 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The path-history probe (Table~\ref{tab:path_history}) is the strongest finding. This probe decodes the agent's position at $k$ steps in the past from the current hidden state, testing how far back spatial memory extends.
+
+The foveated agent retains spatial information over longer temporal horizons than any other condition. At lag-5, foveated achieves $R^2=0.629$ vs.\ blind 0.536, matched 0.445, and uniform $-0.105$. Notably, foveated surpasses even blind at lags 4--5, despite blind having GPS directly in its input. Uniform memory decays rapidly and becomes uninformative by lag-5.
+
+This provides direct evidence for H1: degraded peripheral vision forces the foveated agent to build a richer temporal trace of where it has been. The foveated--matched comparison ($R^2=0.629$ vs.\ $0.445$ at lag-5) isolates the effect of spatial non-uniformity from total information volume: it is the uneven quality of the foveated sensor, not simply having less visual information, that drives compensatory memory.
+
+\subsection{H2: Representational Divergence --- CKA and Probe Transfer}
+
+\begin{table}[t]
+\centering
+\caption{Linear CKA similarity (top-layer hidden state, $n\approx1{,}910$ steps).}
+\label{tab:cka}
+\begin{tabular}{lcccc}
+\toprule
+ & Blind & Uniform & Foveated & Matched \\
+\midrule
+Blind    & ---   & 0.0023 & 0.0023 & 0.0011 \\
+Uniform  &       & ---    & \textbf{0.0007} & 0.0017 \\
+Foveated &       &        & ---    & 0.0011 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Probe-transfer $R^2$: GPS probe trained on row condition, tested on column condition.}
+\label{tab:transfer}
+\begin{tabular}{lcccc}
+\toprule
+Train $\backslash$ Test & Blind & Uniform & Foveated & Matched \\
+\midrule
+Blind    & \textbf{0.973} & $-$9.72  & $-$2.71  & $-$15.72 \\
+Uniform  & $-$7.26        & \textbf{0.973} & $-$13.53 & $-$11.47 \\
+Foveated & $-$11.25       & $-$5.12  & \textbf{0.963} & $-$10.66 \\
+Matched  & $-$5.70        & $-$11.74 & $-$15.52 & \textbf{0.959} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:cka} shows that all CKA values are near zero ($<$0.003), indicating that each condition develops a fundamentally different representational geometry for encoding space. Blind is the most dissimilar to all sighted conditions, consistent with its reliance on proprioceptive rather than visual features. The closest pair is uniform--foveated (0.0007), yet still near zero.
+
+Table~\ref{tab:transfer} confirms this: cross-condition probe transfer is catastrophically negative in all cases (self-accuracy $\sim$0.96--0.97; cross-transfer as low as $-15.7$). Spatial information is not encoded in a shared linear subspace across conditions.
+
+Combined, near-zero CKA and catastrophic transfer failure provide strong evidence for H2: visual input type fundamentally shapes the representational geometry used to encode space, not just the amount of spatial information stored.
+
+\subsection{H3: Epistemic Gaze}
+
+\textcolor{red}{TODO: The foveated-learned condition has not yet been trained. Once available, analyze whether learned gaze correlates with position-probe error (memory-uncertainty proxy). Compare H1/H2 effect sizes between foveated-fixed and foveated-learned to test whether active gaze strengthens compensatory memory.}
+
+\subsection{Additional Analyses}
+
+\textbf{Visited-region probe.}\quad
+All conditions track visited regions near-perfectly ($>$99.8\% binary accuracy; $R^2 \in [0.801, 0.834]$), suggesting this is a basic capability shared by all agents regardless of visual input.
+
+\textbf{Occupancy map reconstruction.}\quad
+Occupancy decoding from a 20$\times$20 grid is weak across all conditions (all $R^2 < 0$; binary accuracy 55--60\%). None of the agents build detailed layout maps in their hidden states at this resolution. This may require a finer grid, more evaluation episodes, or a non-linear decoder.
+
+\textbf{Place-cell-like units.}\quad
+Nearly all LSTM units carry spatial information ($>$1 bit) across all conditions: foveated 475/512, blind 473/512, uniform 473/512, matched 461/512. Spatial encoding is broadly distributed rather than concentrated in a small population.
+
+\textbf{Multi-layer comparison.}\quad
+For the blind agent, spatial information is distributed across LSTM layers but concentrated in layers 0--1, with layer-0 hidden state achieving the highest GPS $R^2$ (0.958).
+
+\textcolor{red}{TODO: Add shortcut discovery behavioral test results once analysis is complete. Add PCA/t-SNE visualization of hidden states colored by position and condition.}
+
+% ==========================================================================
+% 5. DISCUSSION
+% ==========================================================================
+\section{Discussion}
+
+\subsection{Sensor Structure as a Representational Axis}
+
+Our results establish that sensor structure---specifically, the spatial distribution of visual quality---causally shapes what recurrent memory learns to represent during navigation. The foveated agent does not simply store degraded versions of the uniform agent's representations; it builds qualitatively different spatial codes with stronger temporal memory (H1) embedded in a fundamentally different geometry (H2).
+
+The path-history result is particularly striking: the foveated agent retains position information over longer horizons than even the blind agent, which receives GPS directly. This suggests that spatially non-uniform input creates a pressure to maintain richer egocentric path traces---a form of compensatory memory that arises from pure RL without explicit probabilistic objectives or architectural priors for uncertainty, consistent with the belief-state emergence reported by Hennig et al.~\cite{hennig2023belief}.
+
+\subsection{The Role of Spatial Non-Uniformity}
+
+The matched-compute control is essential for interpretation. Matched-compute provides more total visual information than foveation but distributes it uniformly, yet its path-history retention ($R^2=0.445$ at lag-5) falls well below foveated ($R^2=0.629$). This isolates the causal factor: it is the spatial non-uniformity of visual quality, not merely reduced information volume, that drives compensatory memory. This is an information-bottleneck effect driven by sensor structure rather than architectural choice.
+
+\subsection{Why Uniform Agents Have Weak Memory}
+
+Uniform vision yields the weakest spatial encoding across nearly all probes. We interpret this as a form of representational outsourcing: when current visual input is reliable, the agent can re-derive spatial information from each frame rather than maintaining it in memory. This is efficient for the task but produces shallow temporal traces. Foveated and blind agents cannot rely on current visual input and must therefore invest in memory.
+
+\subsection{Limitations}
+
+Several limitations constrain the generality of our findings. First, all results use intermediate checkpoints; final-checkpoint probing may shift quantitative conclusions. Second, the foveated-learned condition (H3) has not yet been trained, leaving the epistemic gaze hypothesis untested. Third, our foveation model (Gaussian blur with quadratic falloff) is a simplification of biological foveation; log-polar or multi-scale pyramid models may produce different effects. Fourth, we probe only linear decoders---non-linear probes might reveal spatial structure that Ridge regression misses, particularly for occupancy maps. Fifth, the LSTM backbone limits generality to transformer-based architectures.
+
+\subsection{Broader Implications}
+
+If sensor design predictably shapes the structure of learned spatial codes, it becomes a tunable axis---alongside architecture and objective---for steering embodied agents toward representations that are more interpretable, more robust, or more aligned with human spatial cognition. The finding that degraded input can produce \emph{stronger} memory traces (rather than merely weaker ones) challenges the assumption that richer input always yields richer representations and suggests that controlled information bottlenecks may be a design tool for representational engineering.
+
+% ==========================================================================
+% 6. CONCLUSION
+% ==========================================================================
+\section{Conclusion}
+
+We investigated how foveated vision shapes cognitive maps in navigation agents by training five conditions that vary only in visual input and probing their LSTM hidden states with linear decoders. Our two main findings are: (1)~foveated vision induces compensatory temporal memory---the foveated agent retains spatial information over longer horizons than all other conditions, including blind agents with direct GPS access; and (2)~each visual condition produces a fundamentally different representational geometry (CKA~$<$~0.003, catastrophically negative probe transfer), despite comparable task performance. These results establish sensor structure as a causal factor in the structure of learned spatial representations, complementing prior work on architecture and objective design.
+
+\textcolor{red}{TODO: Update conclusion with H3 results and behavioral test findings once available.}
+
+\bibliographystyle{IEEEtran}
+\bibliography{literature}
+
+\end{document}

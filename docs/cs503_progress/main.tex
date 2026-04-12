@@ -6,6 +6,7 @@
 \usepackage{amsmath}
 \usepackage{xcolor}
 \usepackage{multirow}
+\usepackage{enumitem}
 
 \addtolength{\topmargin}{-32pt}
 \addtolength{\textheight}{32pt}
@@ -21,10 +22,35 @@
 \maketitle
 
 % ==========================================================================
+\section{Overview}
+% ==========================================================================
+
+\textbf{Research question:} Does non-uniform (foveated) visual input reshape the spatial representations learned in a navigation agent's recurrent memory, compared to blind, uniform-resolution, and matched-compute baselines?
+
+\textbf{Three hypotheses:}
+\begin{enumerate}[nosep,leftmargin=1.5em]
+    \item[\textbf{H1}] \textbf{Compensatory memory:} Foveated agents develop longer-horizon spatial memory to compensate for degraded peripheral vision.
+    \item[\textbf{H2}] \textbf{Representational divergence:} Different visual inputs produce qualitatively different representational geometries, not just different accuracy levels.
+    \item[\textbf{H3}] \textbf{Epistemic gaze:} A learned-gaze agent directs fixation toward memory-weak regions, driven by task pressure alone.
+\end{enumerate}
+
+\textbf{Setup:} All agents are trained with DD-PPO~\cite{wijmans2020ddppo} on PointGoal navigation in Habitat~\cite{savva2019habitat}, using Gibson-0+ (411 scenes) + MP3D train (61 scenes). All share an identical 3-layer LSTM (512-d hidden) and the Wijmans non-visual sensor stack (goal-in-start-frame, GPS, compass, close-to-goal scalar). Five conditions vary only the visual input:
+
+\begin{itemize}[nosep,leftmargin=1.5em]
+    \item \textbf{Blind:} No visual input (replicates Wijmans et al.~\cite{wijmans2023emergence}).
+    \item \textbf{Uniform:} Full-resolution 256$\times$256 RGB via ResNet-18.
+    \item \textbf{Foveated-fixed:} Eccentricity-dependent Gaussian blur ($\sigma_{\max}=8$, quadratic falloff), gaze locked at image centre.
+    \item \textbf{Matched-compute:} Low-resolution uniform RGB, total pixel budget exceeding foveated effective budget (controls for information volume).
+    \item \textbf{Foveated-learned:} Same blur as foveated-fixed, but gaze position predicted by an MLP from the LSTM hidden state (tests H3).
+\end{itemize}
+
+\textbf{Analysis:} Freeze weights $\to$ collect per-step LSTM hidden states $\to$ linear probing (Ridge regression, episode-level splits) for spatial variables $\to$ cross-condition CKA and probe transfer $\to$ behavioral tests $\to$ PCA/t-SNE visualization.
+
+% ==========================================================================
 \section{Training Status}
 % ==========================================================================
 
-All agents are trained with DD-PPO~\cite{wijmans2020ddppo} on Gibson-0+ (411 scenes) + MP3D train (61 scenes) in Habitat~\cite{savva2019habitat}, sharing a 3-layer LSTM (512-d) backbone. Training targets are set to ensure convergence rather than a fixed frame budget.
+Training targets are set to ensure convergence rather than a fixed frame budget.
 
 \begin{table}[h]
 \centering
@@ -271,13 +297,37 @@ H3: Epistemic gaze & Not started & Learned-gaze not yet trained \\
 \section{Next Steps}
 % ==========================================================================
 
-\begin{enumerate}
-    \item \textbf{Complete training:} Blind (179M$\to$250M), foveated (154M$\to$250M), uniform (249M$\to$400M). Re-probe with final checkpoints.
-    \item \textbf{Shortcut behavioral test:} Job running for blind. Will test whether persistent LSTM memory functionally aids navigation vs.\ reset memory.
-    \item \textbf{Foveated-learned (5th condition):} Train the learned-gaze agent to test H3. Requires launching a new training run.
-    \item \textbf{Visualization:} PCA/t-SNE of hidden states colored by position and condition for the paper.
-    \item \textbf{Re-probe after convergence:} Once all training finishes, re-run full probing suite on final checkpoints for the definitive comparison.
+\begin{enumerate}[nosep]
+    \item \textbf{Complete training} (in progress): Blind (179M$\to$250M), foveated (154M$\to$250M), uniform (249M$\to$400M). SLURM jobs submitted, pending resources.
+    \item \textbf{Shortcut behavioral test} (in progress): Blind condition running on cluster. Tests whether persistent LSTM memory functionally aids navigation vs.\ reset (zeroed) hidden states.
+    \item \textbf{Foveated-learned training} (ready to launch): Config and policy implementation complete. Will submit once a SLURM slot opens (cs-503 QOS allows max 2 submitted jobs). Target: 250M frames.
+    \item \textbf{Re-probe after convergence:} Once all training finishes, re-run full 13-experiment probing suite on final checkpoints for definitive comparison. Current results use mid-training checkpoints.
+    \item \textbf{Visualization:} PCA/t-SNE of hidden states colored by position and condition. Script ready (\texttt{scripts/probing/visualize.py}), will run after final probing data is collected.
+    \item \textbf{MP3D evaluation:} Evaluate all converged agents on the 1008 held-out MP3D test episodes for out-of-dataset generalization numbers.
 \end{enumerate}
+
+% ==========================================================================
+\section{Infrastructure and Tooling}
+% ==========================================================================
+
+\begin{itemize}[nosep,leftmargin=1.5em]
+    \item \textbf{Cluster:} SCITAS Izar (EPFL), V100 GPUs. cs-503 QOS: max 2 submitted, max 1 running, 7d12h wall-time.
+    \item \textbf{Probing suite:} 13 experiments per condition (GPS, compass, distance-to-goal, multi-layer, selectivity, path-history lags 0--5, visited-region, occupancy map, place-cell rate maps). All implemented in \texttt{scripts/probing/}.
+    \item \textbf{Cross-condition analysis:} Linear CKA + probe transfer (\texttt{scripts/probing/analyze\_cross.py}).
+    \item \textbf{Behavioral tests:} Shortcut discovery with persistent vs.\ reset LSTM (\texttt{scripts/eval/shortcut.py}).
+    \item \textbf{Visualization:} PCA/t-SNE + path-history decay plots (\texttt{scripts/probing/visualize.py}).
+    \item \textbf{Key lesson:} PCA-32 dimensionality reduction severely underestimates probe accuracy (blind GPS R$^2$ drops from 0.899 to 0.580). All final probes use full 512-d hidden states.
+\end{itemize}
+
+% ==========================================================================
+\section{Progress Log}
+% ==========================================================================
+
+\begin{description}[nosep,leftmargin=0em,font=\normalfont\bfseries]
+    \item[Weeks 1--2 (Mar 24--Apr 6):] Codebase setup; implemented all 5 visual conditions; launched training for blind, uniform, foveated-fixed, matched-compute on Izar.
+    \item[Week 3 (Apr 7--12):] Probing infrastructure built (13-experiment suite). Discovered PCA-32 artifact, switched to full 512-d. Completed Phase~1 probing for all 4 training conditions. Ran cross-condition CKA (H2 supported). Submitted shortcut behavioral test. Prepared foveated-learned config and policy.
+    \item[Week 4 (Apr 13--):] \textit{Planned:} Complete remaining training. Launch foveated-learned (H3). Re-probe with final checkpoints. Generate visualizations. Begin final paper.
+\end{description}
 
 \bibliographystyle{IEEEtran}
 \bibliography{literature}
