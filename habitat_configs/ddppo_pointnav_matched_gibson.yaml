@@ -88,7 +88,7 @@ habitat_baselines:
       gamma: 0.99
       tau: 0.95
       use_linear_clip_decay: False
-      use_linear_lr_decay: False
+      use_linear_lr_decay: True
       reward_window_size: 50
       use_normalized_advantage: False
       hidden_size: 512

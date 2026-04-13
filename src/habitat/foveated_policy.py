@@ -37,7 +37,7 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
 from habitat_baselines.rl.ppo import NetPolicy
 
 from src.habitat.torch_foveation import TorchFoveationTransform
-from src.habitat.wijmans_policy import WijmansPointNavNet
+from src.habitat.wijmans_policy import WijmansPointNavNet, _wrap_action_distribution_with_clamp
 from src.habitat.wijmans_sensors import (
     GoalInStartFrameSensor,
     CloseToGoalSensor,
@@ -374,6 +374,8 @@ class FoveatedWijmansPolicy(NetPolicy):
             policy_config=policy_config,
             aux_loss_config=aux_loss_config,
         )
+
+        _wrap_action_distribution_with_clamp(self)
 
     @classmethod
     def from_config(

@@ -61,6 +61,28 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
+# Logit clamping (prevents NaN crashes in DD-PPO)
+# ---------------------------------------------------------------------------
+
+_LOGIT_CLAMP = 20.0  # safe range: valid logits never exceed ~10
+
+
+def _wrap_action_distribution_with_clamp(policy):
+    """Replace policy.action_distribution.forward with a clamped version.
+
+    Prevents inf/NaN in torch.multinomial when policy logits overflow,
+    a known DD-PPO numerical instability. Clamping to [-20, 20] has no
+    effect on well-behaved logits but catches pathological gradient spikes.
+    """
+    original_forward = policy.action_distribution.forward
+
+    def clamped_forward(x):
+        return original_forward(x.clamp(-_LOGIT_CLAMP, _LOGIT_CLAMP))
+
+    policy.action_distribution.forward = clamped_forward
+
+
+# ---------------------------------------------------------------------------
 # Net
 # ---------------------------------------------------------------------------
 
@@ -335,6 +357,10 @@ class WijmansPointNavPolicy(NetPolicy):
             policy_config=policy_config,
             aux_loss_config=aux_loss_config,
         )
+
+        # Wrap action_distribution to clamp logits and prevent NaN crashes
+        # during DD-PPO training (logit overflow → inf → NaN in multinomial).
+        _wrap_action_distribution_with_clamp(self)
 
     @classmethod
     def from_config(

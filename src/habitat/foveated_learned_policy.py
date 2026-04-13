@@ -60,6 +60,7 @@ from habitat_baselines.rl.ppo import NetPolicy
 # (significant overhead, do not leave on in production)
 
 from src.habitat.foveated_policy import FoveatedResNetEncoder, FoveatedWijmansNet
+from src.habitat.wijmans_policy import _wrap_action_distribution_with_clamp
 from src.habitat.wijmans_sensors import (
     GoalInStartFrameSensor,
     CloseToGoalSensor,
@@ -304,6 +305,8 @@ class FoveatedLearnedGazePolicy(NetPolicy):
             policy_config=policy_config,
             aux_loss_config=aux_loss_config,
         )
+
+        _wrap_action_distribution_with_clamp(self)
 
     @classmethod
     def from_config(
