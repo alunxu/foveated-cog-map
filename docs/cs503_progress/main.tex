@@ -63,10 +63,10 @@ Training targets are set to ensure convergence rather than a fixed frame budget.
 Condition & Frames & Target & Success & SPL & Status \\
 \midrule
 Blind       & 341M & 250M & 90.7\% & 0.550 & \textbf{Complete} \\
-Uniform     & 206M & 400M & 97.6\% & 0.805 & Training \\
-Foveated    & 139M & 250M & 98.3\% & 0.823 & Training \\
+Uniform     & 400M & 400M & 97.6\% & 0.805 & \textbf{Complete} \\
+Foveated    & 155M & 250M & 98.3\% & 0.823 & Training \\
 Matched     & 203M & 250M & 92.9\% & 0.582 & \textbf{Complete} \\
-Fov-learned & 15M  & 250M & ---    & ---   & Training \\
+Fov-learned & 45M  & 250M & ---    & ---   & Training \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -285,29 +285,35 @@ The shortcut discovery test~\cite{ramakrishnan2025space} evaluates whether an ag
     \item \textbf{Persistent} (cognitive-map): hidden state carries over, allowing spatial knowledge to accumulate across episodes within the same scene.
 \end{itemize}
 
-If persistent $>$ reset, the agent's recurrent representations encode reusable spatial knowledge. Results for the blind agent (ckpt.32, 341M frames) across 20 Gibson scenes (200 episodes total per condition):
+If persistent $>$ reset, the agent's recurrent representations encode reusable spatial knowledge. Results across conditions (20 Gibson scenes, 10 episodes/scene each):
 
 \begin{table}[h]
 \centering
-\caption{Shortcut / cognitive-map behavioral test (blind agent, 20 scenes $\times$ 10 episodes).}
+\caption{Shortcut / cognitive-map behavioral test (20 scenes $\times$ 10 episodes per condition). $\Delta$ = persistent $-$ reset.}
 \label{tab:shortcut}
-\begin{tabular}{lcc}
+\begin{tabular}{lccccc}
 \toprule
-Condition & Success rate & SPL \\
+ & \multicolumn{2}{c}{Reset (standard)} & \multicolumn{2}{c}{Persistent} & $\Delta$ Success \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Condition & Success & SPL & Success & SPL & \\
 \midrule
-Reset (standard)     & \textbf{0.78} & \textbf{0.432} \\
-Persistent (cogmap)  & 0.24          & 0.145 \\
-\midrule
-\textit{Difference}  & $-$0.53       & $-$0.287 \\
+Blind    & 0.78 & 0.432 & 0.24 & 0.145 & \textbf{$-$0.53} \\
+Matched  & 0.86 & 0.511 & 0.75 & 0.421 & $-$0.12 \\
+Uniform  & \textbf{0.95} & \textbf{0.786} & \textbf{0.93} & \textbf{0.592} & $-$0.02 \\
+Foveated & \multicolumn{5}{c}{\textit{Pending (resubmitted after grid-buffer fix)}} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent\textbf{Key finding:} Persistent memory \textbf{catastrophically hurts} the blind agent ($-53\%$ success, $-0.287$ SPL). The within-persistent-condition trend also shows degradation over time (late--early SPL gap: $-0.146$), confirming that accumulated hidden state progressively corrupts performance.
+\noindent\textbf{Key findings:}
+\begin{enumerate}[nosep,leftmargin=1.5em]
+    \item \textbf{Persistent memory hurts all conditions}, but the severity varies by an order of magnitude: blind $-$53\%, matched $-$12\%, uniform $-$2\%.
+    \item \textbf{Vision acts as a grounding signal.} Sighted agents---especially uniform---maintain near-perfect success even with out-of-distribution hidden states. The visual stream provides real-time spatial evidence that overrides stale memory, preventing the catastrophic failure seen in blind.
+    \item \textbf{SPL drops even when success holds.} Uniform loses $-$0.194 SPL despite only $-$2\% success loss, indicating that accumulated state increases path inefficiency (more wandering) without preventing goal-reaching.
+    \item \textbf{Map-building is negative for all conditions.} Within the persistent condition, later episodes are \emph{worse} than earlier ones (blind: $-$0.146, matched: $-$0.127, uniform: $-$0.112), confirming progressive state corruption rather than spatial learning.
+\end{enumerate}
 
-\textbf{Interpretation:} The blind agent's LSTM representations are \emph{episode-scoped path-integration states}, not reusable cognitive maps. The hidden state encodes ``where I am relative to where I started this episode,'' and carrying it across episode boundaries places the LSTM in an out-of-distribution regime. This refines H1: the compensatory memory we observe via probing (lag-5 R$^2$=0.629 for foveated) operates \emph{within} episodes, not across them.
-
-\textbf{Status:} Shortcut eval for the three sighted conditions (uniform, foveated, matched) is currently queued on the cluster. These results will reveal whether visual input enables more transferable spatial representations.
+\textbf{Interpretation:} No condition builds a reusable cognitive map across episodes. The blind agent's LSTM representations are \emph{episode-scoped path-integration states}: ``where I am relative to where I started this episode.'' Carrying this across episode boundaries places the LSTM in an out-of-distribution regime, collapsing performance. Sighted agents degrade more gracefully because visual input re-anchors the hidden state each step, but even they do not \emph{benefit} from persistent memory.
 
 % ==========================================================================
 \section{Summary of Hypotheses}
@@ -328,8 +334,9 @@ H2: Representational divergence & \textbf{Supported} & All CKA $<$0.003; cross-t
 H3: Epistemic gaze & In progress & Learned-gaze training at 15M/250M \\
 \midrule
 \multicolumn{3}{l}{\textit{Additional finding:}} \\
-Cognitive map (behavioral) & \textbf{Negative (blind)} & Persistent LSTM $-$53\% success \\
- & Pending (sighted) & Eval queued for 3 conditions \\
+Cognitive map (behavioral) & \textbf{Negative (all)} & Persistent LSTM hurts all agents; \\
+ & & blind $-$53\%, uniform $-$2\%. \\
+ & & Vision grounds but doesn't build maps \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -339,8 +346,8 @@ Cognitive map (behavioral) & \textbf{Negative (blind)} & Persistent LSTM $-$53\%
 % ==========================================================================
 
 \begin{enumerate}[nosep]
-    \item \textbf{Complete training} (in progress): Foveated (139M$\to$250M, $\sim$12h), uniform (206M$\to$400M, $\sim$15h). Blind and matched already complete.
-    \item \textbf{Shortcut eval for sighted conditions} (queued): Uniform, foveated, matched eval jobs submitted. Will reveal whether visual input enables more transferable cross-episode spatial representations than blind.
+    \item \textbf{Complete training} (in progress): Foveated (155M$\to$250M), fov-learned (45M$\to$250M). Blind, uniform, and matched complete.
+    \item \textbf{Foveated shortcut eval} (queued): Resubmitted after grid-buffer fix. Will complete the cross-condition behavioral comparison.
     \item \textbf{Foveated-learned training} (in progress, 15M/250M): Config, policy, and slow-gaze approximation implemented. Running on cs-503 QOS ($\sim$5 days to target).
     \item \textbf{Re-probe after convergence:} Re-run full 13-experiment probing suite on final checkpoints for definitive comparison. Current probing results use mid-training checkpoints.
     \item \textbf{Visualization:} PCA/t-SNE of hidden states colored by position and condition. Script ready (\texttt{scripts/probing/visualize.py}).
