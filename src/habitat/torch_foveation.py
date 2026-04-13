@@ -47,8 +47,8 @@ class TorchFoveationTransform(nn.Module):
             torch.arange(image_size, dtype=torch.float32),
             indexing="ij",
         )
-        self.register_buffer("_y_grid", y)  # (H, W)
-        self.register_buffer("_x_grid", x)  # (H, W)
+        self.register_buffer("_y_grid", y.clone())  # (H, W)
+        self.register_buffer("_x_grid", x.clone())  # (H, W)
 
         # Pre-compute blur kernels for each level
         sigma_levels = torch.linspace(0, blur_sigma_max, n_levels)
