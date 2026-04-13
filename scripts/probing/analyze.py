@@ -41,7 +41,7 @@ from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from src.utils.probing import fit_probe, prepare_features, angular_mae, episode_split
+from src.utils.probing import fit_probe, fit_probe_cv, prepare_features, angular_mae, episode_split
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -67,7 +67,7 @@ def parse_args():
 # ═══════════════════════════════════════════════════════════════════════
 
 def probe_1b_global_gps_compass(H, gps, compass, ep_ids, alpha, pca_dim, train_frac, seed):
-    """1b. Global GPS + compass probe (episode-level split)."""
+    """1b. Global GPS + compass probe (episode-level split + k-fold CV)."""
     train_mask, test_mask = episode_split(ep_ids, train_frac, seed)
     H_tr, H_te = prepare_features(H[train_mask], H[test_mask], pca_dim)
     gps_tr, gps_te = gps[train_mask], gps[test_mask]
@@ -87,11 +87,20 @@ def probe_1b_global_gps_compass(H, gps, compass, ep_ids, alpha, pca_dim, train_f
     Y_te = np.hstack([gps_te, comp_sc_te])
     comb_r2, _, _ = fit_probe(H_tr, H_te, Y_tr, Y_te, alpha)
 
+    # Cross-validated GPS and compass probes (mean ± std across folds)
+    gps_cv = fit_probe_cv(H, gps, ep_ids, alpha=alpha, pca_dim=pca_dim, seed=seed)
+    comp_sincos = np.hstack([np.sin(compass), np.cos(compass)])
+    comp_cv = fit_probe_cv(H, comp_sincos, ep_ids, alpha=alpha, pca_dim=pca_dim, seed=seed)
+
     return {
         "gps_r2": gps_r2, "gps_mae_m": gps_mae,
+        "gps_cv_r2_mean": gps_cv["r2_mean"], "gps_cv_r2_std": gps_cv["r2_std"],
+        "gps_cv_mae_mean": gps_cv["mae_mean"], "gps_cv_mae_std": gps_cv["mae_std"],
         "compass_r2": comp_r2, "compass_mae_deg": comp_mae_deg,
+        "compass_cv_r2_mean": comp_cv["r2_mean"], "compass_cv_r2_std": comp_cv["r2_std"],
         "combined_r2": comb_r2,
         "n_train": int(train_mask.sum()), "n_test": int(test_mask.sum()),
+        "n_cv_folds": gps_cv["n_folds"],
     }
 
 
@@ -141,12 +150,20 @@ def probe_1a_per_scene_position(H, P, theta, scene_ids, alpha, train_frac, min_s
 
 
 def probe_1c_distance_to_goal(H, dtg, ep_ids, alpha, pca_dim, train_frac, seed):
-    """1c. Distance-to-goal probe."""
+    """1c. Distance-to-goal probe (with k-fold CV)."""
     train_mask, test_mask = episode_split(ep_ids, train_frac, seed)
     H_tr, H_te = prepare_features(H[train_mask], H[test_mask], pca_dim)
     dtg_tr, dtg_te = dtg[train_mask, None], dtg[test_mask, None]
     r2, mae, _ = fit_probe(H_tr, H_te, dtg_tr, dtg_te, alpha)
-    return {"r2": r2, "mae_m": mae}
+
+    dtg_cv = fit_probe_cv(H, dtg[:, None], ep_ids, alpha=alpha, pca_dim=pca_dim, seed=seed)
+
+    return {
+        "r2": r2, "mae_m": mae,
+        "cv_r2_mean": dtg_cv["r2_mean"], "cv_r2_std": dtg_cv["r2_std"],
+        "cv_mae_mean": dtg_cv["mae_mean"], "cv_mae_std": dtg_cv["mae_std"],
+        "n_cv_folds": dtg_cv["n_folds"],
+    }
 
 
 def probe_1d_multilayer(h_layers, c_layers, gps, compass, ep_ids, alpha, pca_dim, train_frac, seed):
@@ -333,18 +350,35 @@ def probe_2c_path_history(H, gps, ep_ids, step_in_ep, alpha, pca_dim, train_frac
     The decay of R² with lag measures how much trajectory history the
     memory retains. Compensatory memory (H1) predicts slower decay for
     agents with degraded input (they need to remember more).
+
+    Reliability guards:
+      - max_lag is capped at the median episode length minus 1
+      - Minimum 100 test samples per lag (was 10 — too few for stable R²)
+      - Minimum 200 train samples (Ridge with 512-d features needs this)
+      - Reports MAE alongside R² since R² is unreliable when test variance
+        is near zero (common at high lags with short episodes)
     """
     train_mask, test_mask = episode_split(ep_ids, train_frac, seed)
 
-    # Build lag targets: for each timestep t, collect GPS at t-k
-    # (only valid when step_in_ep >= k, i.e. there are k prior steps)
+    # Cap max_lag at median episode length - 1 to avoid degenerate samples
+    ep_lengths = np.array([
+        int(step_in_ep[ep_ids == ep].max()) + 1
+        for ep in np.unique(ep_ids)
+    ])
+    median_ep_len = int(np.median(ep_lengths))
+    effective_max_lag = min(max_lag, max(median_ep_len - 1, 0))
+
     N = len(H)
     lag_results = []
 
-    for k in range(max_lag + 1):
+    # Minimum sample thresholds for reliable probing
+    MIN_TRAIN = 200  # Ridge with 512-d features: need n >> d
+    MIN_TEST = 100   # For stable R² estimation
+
+    for k in range(effective_max_lag + 1):
         # For lag k, we need timesteps where step_in_ep >= k
         valid = step_in_ep >= k
-        if valid.sum() < 50:
+        if valid.sum() < MIN_TRAIN + MIN_TEST:
             continue
 
         # Build lagged GPS target: for each valid timestep t, find the
@@ -367,23 +401,40 @@ def probe_2c_path_history(H, gps, ep_ids, step_in_ep, alpha, pca_dim, train_frac
                         gps_lagged[global_i] = gps[ep_indices[local_target[0]]]
                         valid_mask[global_i] = True
 
-        if valid_mask.sum() < 50:
+        if valid_mask.sum() < MIN_TRAIN + MIN_TEST:
             continue
 
         # Split using the same train/test episodes
         tr = train_mask & valid_mask
         te = test_mask & valid_mask
-        if tr.sum() < 20 or te.sum() < 10:
+        if tr.sum() < MIN_TRAIN or te.sum() < MIN_TEST:
+            lag_results.append({
+                "lag_k": k, "r2": None, "mae_m": None,
+                "n_train": int(tr.sum()), "n_test": int(te.sum()),
+                "skipped": f"insufficient samples (train={int(tr.sum())}, test={int(te.sum())})",
+            })
             continue
+
+        # Check test target variance — near-zero variance makes R² meaningless
+        test_target_var = float(np.var(gps_lagged[te]))
 
         H_tr, H_te = prepare_features(H[tr], H[te], pca_dim)
         r2, mae, _ = fit_probe(H_tr, H_te, gps_lagged[tr], gps_lagged[te], alpha)
         lag_results.append({
             "lag_k": k, "r2": r2, "mae_m": mae,
             "n_train": int(tr.sum()), "n_test": int(te.sum()),
+            "test_target_var": test_target_var,
+            "reliable": test_target_var > 0.01 and te.sum() >= MIN_TEST,
         })
 
-    return lag_results
+    return {
+        "lags": lag_results,
+        "median_episode_length": median_ep_len,
+        "effective_max_lag": effective_max_lag,
+        "requested_max_lag": max_lag,
+        "min_train_threshold": MIN_TRAIN,
+        "min_test_threshold": MIN_TEST,
+    }
 
 
 def probe_2d_visited_region(H, positions, ep_ids, step_in_ep, scene_ids, alpha, pca_dim, train_frac, seed, grid_res=1.0):
@@ -682,7 +733,9 @@ def main():
         )
         results["1b_global_gps_compass"] = res_1b
         print(f"  GPS R²={res_1b['gps_r2']:+.4f}  MAE={res_1b['gps_mae_m']:.3f}m")
+        print(f"    CV: R²={res_1b['gps_cv_r2_mean']:+.4f} ± {res_1b['gps_cv_r2_std']:.4f}")
         print(f"  Compass R²={res_1b['compass_r2']:+.4f}  MAE={res_1b['compass_mae_deg']:.1f}°")
+        print(f"    CV: R²={res_1b['compass_cv_r2_mean']:+.4f} ± {res_1b['compass_cv_r2_std']:.4f}")
         print(f"  Combined R²={res_1b['combined_r2']:+.4f}")
 
     # 1a. Per-scene absolute position
@@ -711,6 +764,7 @@ def main():
         )
         results["1c_distance_to_goal"] = res_1c
         print(f"  R²={res_1c['r2']:+.4f}  MAE={res_1c['mae_m']:.3f}m")
+        print(f"    CV: R²={res_1c['cv_r2_mean']:+.4f} ± {res_1c['cv_r2_std']:.4f}")
 
     # 1d. Multi-layer comparison
     if h_layers is not None and gps is not None and compass is not None:
@@ -790,9 +844,17 @@ def main():
             max_lag=5,
         )
         results["2c_path_history"] = res_2c
-        for r in res_2c:
-            print(f"  lag={r['lag_k']}: GPS R²={r['r2']:+.4f}  "
-                  f"MAE={r['mae_m']:.3f}m  (n={r['n_test']})")
+        print(f"  Median episode length: {res_2c['median_episode_length']} steps")
+        print(f"  Effective max lag: {res_2c['effective_max_lag']} "
+              f"(requested: {res_2c['requested_max_lag']})")
+        for r in res_2c["lags"]:
+            if r.get("skipped"):
+                print(f"  lag={r['lag_k']}: SKIPPED — {r['skipped']}")
+            else:
+                reliable = "✓" if r.get("reliable", False) else "⚠"
+                print(f"  lag={r['lag_k']}: GPS R²={r['r2']:+.4f}  "
+                      f"MAE={r['mae_m']:.3f}m  (n={r['n_test']}) "
+                      f"[var={r['test_target_var']:.4f}] {reliable}")
 
     # 2d. Visited-region probe (spatial working memory)
     if step_in_ep is not None:

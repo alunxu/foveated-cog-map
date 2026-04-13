@@ -10,6 +10,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score, mean_absolute_error
+from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 
 
@@ -27,6 +28,70 @@ def fit_probe(X_tr, X_te, Y_tr, Y_te, alpha=10.0):
     r2 = float(np.clip(r2_score(Y_te, pred, multioutput="uniform_average"), -10, 1))
     mae = float(mean_absolute_error(Y_te, pred))
     return r2, mae, pred
+
+
+def fit_probe_cv(H, Y, ep_ids, alpha=10.0, n_folds=5, seed=42, pca_dim=0):
+    """K-fold cross-validated Ridge probe with episode-level splits.
+
+    Splits episodes (not timesteps) into folds so no episode leaks across
+    train/test. Returns mean and std of R² and MAE across folds.
+
+    Args:
+        H: (N, D) feature matrix
+        Y: (N, ...) target matrix
+        ep_ids: (N,) episode IDs per timestep
+        alpha: Ridge regularization
+        n_folds: number of CV folds
+        seed: random seed
+        pca_dim: if > 0, reduce features to this many dims
+
+    Returns:
+        dict with keys: r2_mean, r2_std, r2_folds, mae_mean, mae_std, mae_folds
+    """
+    unique_eps = np.unique(ep_ids)
+    rng = np.random.RandomState(seed)
+    rng.shuffle(unique_eps)
+
+    # If fewer episodes than folds, fall back to leave-one-out
+    n_folds = min(n_folds, len(unique_eps))
+    if n_folds < 2:
+        return {"r2_mean": float("nan"), "r2_std": float("nan"),
+                "mae_mean": float("nan"), "mae_std": float("nan"),
+                "r2_folds": [], "mae_folds": [], "n_folds": 0}
+
+    kf = KFold(n_splits=n_folds, shuffle=False)  # already shuffled above
+    ep_to_idx = {ep: i for i, ep in enumerate(unique_eps)}
+    ep_indices = np.array([ep_to_idx[e] for e in ep_ids])
+
+    r2_folds, mae_folds = [], []
+    for train_ep_idx, test_ep_idx in kf.split(unique_eps):
+        train_ep_set = set(train_ep_idx)
+        test_ep_set = set(test_ep_idx)
+        tr = np.array([ep_indices[i] in train_ep_set for i in range(len(H))])
+        te = np.array([ep_indices[i] in test_ep_set for i in range(len(H))])
+
+        if tr.sum() < 10 or te.sum() < 5:
+            continue
+
+        H_tr, H_te = prepare_features(H[tr], H[te], pca_dim)
+        r2, mae, _ = fit_probe(H_tr, H_te, Y[tr], Y[te], alpha)
+        r2_folds.append(r2)
+        mae_folds.append(mae)
+
+    if not r2_folds:
+        return {"r2_mean": float("nan"), "r2_std": float("nan"),
+                "mae_mean": float("nan"), "mae_std": float("nan"),
+                "r2_folds": [], "mae_folds": [], "n_folds": 0}
+
+    return {
+        "r2_mean": float(np.mean(r2_folds)),
+        "r2_std": float(np.std(r2_folds)),
+        "r2_folds": [float(x) for x in r2_folds],
+        "mae_mean": float(np.mean(mae_folds)),
+        "mae_std": float(np.std(mae_folds)),
+        "mae_folds": [float(x) for x in mae_folds],
+        "n_folds": len(r2_folds),
+    }
 
 
 def prepare_features(H_tr, H_te, pca_dim=0):

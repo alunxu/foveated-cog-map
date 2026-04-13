@@ -1,0 +1,109 @@
+# @package _global_
+#
+# Wijmans-faithful MATCHED-COMPUTE PointGoal navigator on Gibson (128×128).
+#
+# This is the CORRECTED matched-compute baseline. The original 48×48 config
+# (ddppo_pointnav_matched_gibson.yaml) produces a degenerate 1×1 feature map
+# after ResNet18, destroying all spatial structure in the visual features.
+# This confounds the foveated-vs-matched comparison: foveated (256×256)
+# produces a 4×4 feature map with rich spatial structure.
+#
+# At 128×128:
+#   avg_pool2d(2) → 64×64 → ResNet18 (stride 32) → 2×2 feature map
+#
+# The pixel budget is:
+#   128×128 = 16,384 pixels (vs foveated effective ~1,816 pixels)
+#   This OVER-budgets matched-compute by ~9× in raw pixels, giving it a
+#   strong advantage over the foveated agent. If foveated still wins, the
+#   result is unambiguous.
+#
+# Training set: Gibson-0+ (411 scenes) via the train_extra_large split.
+# See ddppo_pointnav_blind_gibson.yaml for the dataset rationale.
+#
+# Submit:
+#   sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_matched128_gibson
+
+defaults:
+  - /benchmark/nav/pointnav: pointnav_gibson
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - override /habitat/task/lab_sensors:
+      - gps_sensor
+      - compass_sensor
+      - goal_in_start_frame_sensor
+      - close_to_goal_indicator_sensor
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 2000
+  task:
+    success_reward: 2.5
+    slack_reward: -0.001
+    measurements:
+      success:
+        success_distance: 0.2
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            height: 128
+            width: 128
+          depth_sensor:
+            height: 128
+            width: 128
+  dataset:
+    data_path: data/datasets/pointnav/mp3d_gibson/v1/{split}/{split}.json.gz
+    split: train
+
+habitat_baselines:
+  verbose: False
+  trainer_name: "ddppo"
+  torch_gpu_id: 0
+  tensorboard_dir: "tb"
+  video_dir: "video_dir"
+  eval_ckpt_path_dir: "data/checkpoints/matched128_gibson"
+  num_environments: 6
+  checkpoint_folder: "data/checkpoints/matched128_gibson"
+  num_updates: -1
+  total_num_steps: 2.5e8
+  log_interval: 10
+  num_checkpoints: 50
+  force_torch_single_threaded: True
+  force_blind_policy: False
+
+  rl:
+    policy:
+      main_agent:
+        name: "WijmansPointNavPolicy"
+
+    ppo:
+      clip_param: 0.2
+      ppo_epoch: 2
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.01
+      lr: 2.5e-4
+      eps: 1.0e-5
+      max_grad_norm: 0.2
+      num_steps: 128
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+      use_linear_clip_decay: False
+      use_linear_lr_decay: True
+      reward_window_size: 50
+      use_normalized_advantage: False
+      hidden_size: 512
+      use_double_buffered_sampler: False
+
+    ddppo:
+      sync_frac: 0.6
+      distrib_backend: NCCL
+      pretrained: False
+      pretrained_encoder: False
+      train_encoder: True
+      reset_critic: True
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 3
