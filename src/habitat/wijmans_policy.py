@@ -68,34 +68,19 @@ _LOGIT_CLAMP = 10.0
 
 
 def _wrap_action_distribution_with_clamp(policy):
-    """Replace policy.action_distribution.forward to clamp OUTPUT logits.
+    """Monkey-patch the action_distribution's linear layer to clamp output logits.
 
     CategoricalNet.forward does: logits = self.linear(x) → Categorical(logits).
-    We must clamp *logits* (the linear output), not *x* (the LSTM features).
-    The previous version clamped x, which still allowed the linear layer to
-    produce extreme logits from clamped inputs → NaN in multinomial.
+    We patch self.linear.forward to clamp its output, which prevents NaN in
+    multinomial without changing the module structure or state_dict keys.
     """
-    action_dist = policy.action_distribution
-    original_linear = action_dist.linear
+    linear = policy.action_distribution.linear
+    original_forward = linear.forward
 
-    class ClampedLinear(torch.nn.Module):
-        def __init__(self, inner):
-            super().__init__()
-            self.inner = inner
+    def clamped_forward(x):
+        return original_forward(x).clamp(-_LOGIT_CLAMP, _LOGIT_CLAMP)
 
-        def forward(self, x):
-            return self.inner(x).clamp(-_LOGIT_CLAMP, _LOGIT_CLAMP)
-
-        # Delegate weight/bias access for optimizer
-        @property
-        def weight(self):
-            return self.inner.weight
-
-        @property
-        def bias(self):
-            return self.inner.bias
-
-    action_dist.linear = ClampedLinear(original_linear)
+    linear.forward = clamped_forward
 
 
 # ---------------------------------------------------------------------------
