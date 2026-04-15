@@ -64,22 +64,38 @@ if TYPE_CHECKING:
 # Logit clamping (prevents NaN crashes in DD-PPO)
 # ---------------------------------------------------------------------------
 
-_LOGIT_CLAMP = 20.0  # safe range: valid logits never exceed ~10
+_LOGIT_CLAMP = 10.0
 
 
 def _wrap_action_distribution_with_clamp(policy):
-    """Replace policy.action_distribution.forward with a clamped version.
+    """Replace policy.action_distribution.forward to clamp OUTPUT logits.
 
-    Prevents inf/NaN in torch.multinomial when policy logits overflow,
-    a known DD-PPO numerical instability. Clamping to [-20, 20] has no
-    effect on well-behaved logits but catches pathological gradient spikes.
+    CategoricalNet.forward does: logits = self.linear(x) → Categorical(logits).
+    We must clamp *logits* (the linear output), not *x* (the LSTM features).
+    The previous version clamped x, which still allowed the linear layer to
+    produce extreme logits from clamped inputs → NaN in multinomial.
     """
-    original_forward = policy.action_distribution.forward
+    action_dist = policy.action_distribution
+    original_linear = action_dist.linear
 
-    def clamped_forward(x):
-        return original_forward(x.clamp(-_LOGIT_CLAMP, _LOGIT_CLAMP))
+    class ClampedLinear(torch.nn.Module):
+        def __init__(self, inner):
+            super().__init__()
+            self.inner = inner
 
-    policy.action_distribution.forward = clamped_forward
+        def forward(self, x):
+            return self.inner(x).clamp(-_LOGIT_CLAMP, _LOGIT_CLAMP)
+
+        # Delegate weight/bias access for optimizer
+        @property
+        def weight(self):
+            return self.inner.weight
+
+        @property
+        def bias(self):
+            return self.inner.bias
+
+    action_dist.linear = ClampedLinear(original_linear)
 
 
 # ---------------------------------------------------------------------------
