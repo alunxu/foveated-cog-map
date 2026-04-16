@@ -68,19 +68,27 @@ _LOGIT_CLAMP = 10.0
 
 
 def _wrap_action_distribution_with_clamp(policy):
-    """Monkey-patch the action_distribution's linear layer to clamp output logits.
+    """Monkey-patch the action_distribution's linear layer to sanitize output logits.
 
     CategoricalNet.forward does: logits = self.linear(x) → Categorical(logits).
-    We patch self.linear.forward to clamp its output, which prevents NaN in
-    multinomial without changing the module structure or state_dict keys.
+    We patch self.linear.forward to (1) replace NaN/inf in the output with 0
+    and (2) clamp to [-10, 10]. Clamping alone is insufficient: if upstream
+    features contain NaN (from gradient overflow/underflow), the linear
+    output is NaN and NaN.clamp() is still NaN. We must explicitly remove
+    non-finite values to survive transient numerical instabilities.
     """
     linear = policy.action_distribution.linear
     original_forward = linear.forward
 
-    def clamped_forward(x):
-        return original_forward(x).clamp(-_LOGIT_CLAMP, _LOGIT_CLAMP)
+    def sanitized_forward(x):
+        logits = original_forward(x)
+        # Replace NaN with 0, +inf with +CLAMP, -inf with -CLAMP
+        logits = torch.nan_to_num(
+            logits, nan=0.0, posinf=_LOGIT_CLAMP, neginf=-_LOGIT_CLAMP
+        )
+        return logits.clamp(-_LOGIT_CLAMP, _LOGIT_CLAMP)
 
-    linear.forward = clamped_forward
+    linear.forward = sanitized_forward
 
 
 # ---------------------------------------------------------------------------
