@@ -1,0 +1,62 @@
+diff --git a/habitat-baselines/habitat_baselines/rl/ppo/ppo.py b/habitat-baselines/habitat_baselines/rl/ppo/ppo.py
+index XXXXXXX..XXXXXXX 100644
+--- a/habitat-baselines/habitat_baselines/rl/ppo/ppo.py
++++ b/habitat-baselines/habitat_baselines/rl/ppo/ppo.py
+@@ -353,6 +353,31 @@ class PPO(nn.Module, Updater):
+     def after_backward(self, loss: Tensor) -> None:
+         pass
+
++    def _sanitise_non_finite_grads(self) -> int:
++        """Replace NaN/+inf/-inf gradient elements with 0.
++
++        ``torch.nn.utils.clip_grad_norm_`` does not sanitise non-finite
++        gradients: if any grad is NaN, the global norm becomes NaN, the
++        clip coefficient becomes NaN, and ``grad *= NaN`` leaves the grad
++        NaN. The subsequent ``optimizer.step()`` then writes NaN into
++        every parameter. This method prevents that by zeroing non-finite
++        elements before clip_grad_norm_ runs — a bad mini-batch
++        degenerates to a no-op update instead of corrupting weights.
++
++        The check is a no-op on clean training paths: ``nan_to_num_`` of
++        a finite tensor is identity. Returns the number of sanitised
++        elements so callers can surface a metric.
++        """
++        fixed = 0
++        for p in self.actor_critic.parameters():
++            if p.grad is None:
++                continue
++            bad = ~torch.isfinite(p.grad)
++            if bad.any():
++                fixed += int(bad.sum().item())
++                torch.nan_to_num_(p.grad, nan=0.0, posinf=0.0, neginf=0.0)
++        return fixed
++
+     def before_step(self) -> torch.Tensor:
+         handles = []
+         if torch.distributed.is_initialized():
+@@ -367,6 +392,10 @@ class PPO(nn.Module, Updater):
+                         torch.distributed.all_reduce(
+                             p.grad.data.detach(), async_op=True
+                         )
+                     )
+
++        # Sanitise non-finite gradients before clip_grad_norm_, which is
++        # NaN-unsafe and would otherwise let NaN flow into optimizer.step.
++        self._nan_fixed_this_batch = self._sanitise_non_finite_grads()
++
+         grad_norm = nn.utils.clip_grad_norm_(
+             self.actor_critic.policy_parameters(),
+             self.max_grad_norm,
+@@ -388,6 +417,12 @@ class PPO(nn.Module, Updater):
+         grad_norm = self.before_step()
+         self.optimizer.step()
+         self.after_step()
++
++        # Surface the NaN sanitisation event as a metric so users can
++        # see whether the safety net fired.
++        learner_metrics["nan_sanitised"].append(
++            float(getattr(self, "_nan_fixed_this_batch", 0) > 0)
++        )
+
+         with inference_mode():
+             if "is_coeffs" in batch:
