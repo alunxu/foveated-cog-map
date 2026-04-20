@@ -70,6 +70,8 @@ All agents are trained on PointGoal navigation in Habitat~\cite{savva2019habitat
 
 All agents share an identical 3-layer LSTM (512-d) backbone and the Wijmans non-visual sensor stack: goal-in-start-frame, GPS, compass, and a close-to-goal scalar, each projected to 32-d and concatenated with a 32-d previous-action embedding. Training targets are set per condition to ensure convergence rather than a fixed frame budget: uniform trains to 400M frames (its ResNet-18 encoder requires more samples), while other conditions target 250M frames.
 
+\paragraph{Training stability.} During a pilot foveated run we observed silent weight corruption: NaN gradients produced by the value-head MSE backward pass propagated through \texttt{torch.nn.utils.clip\_grad\_norm\_} (which does not sanitise non-finite values) and into \texttt{optimizer.step()}, overwriting every parameter. Training did not crash for 2.5 days, leaving a checkpoint with no recoverable weights. We patched \texttt{PPO.before\_step} to zero non-finite gradient elements before clipping, which is a no-op on clean training paths and prevented recurrence across all five conditions. The underlying issue is reported upstream (\texttt{facebookresearch/habitat-lab} \#2226).
+
 \subsection{Visual Conditions}
 
 Five conditions vary only the visual input:
