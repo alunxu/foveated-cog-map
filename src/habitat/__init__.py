@@ -30,3 +30,11 @@ from src.habitat.foveated_policy import FoveatedWijmansPolicy  # noqa: F401
 from src.habitat.foveated_learned_policy import (  # noqa: F401
     FoveatedLearnedGazePolicy,
 )
+
+# Auxiliary losses (ablation experiments):
+#  - gaze_diversity: anti-collapse regulariser for learned-gaze policies.
+#    Importing the module has side effects (config store + baseline
+#    registry registration). Safe to import even when not used; the aux
+#    loss only activates if it is listed in the yaml's
+#    habitat_baselines.rl.auxiliary_losses section.
+from src.habitat import gaze_diversity_loss  # noqa: F401
