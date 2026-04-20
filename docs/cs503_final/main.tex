@@ -102,7 +102,7 @@ To test H2 (representational divergence), we employ two complementary methods:
 
 \subsection{Behavioral Tests}
 
-\textcolor{red}{TODO: Describe shortcut discovery protocol. Episodes with known shortcuts between rooms. Compare persistent-memory vs.\ reset-memory agents on shortcut exploitation rate.}
+Probes tell us what information is present in memory; they do not tell us whether that information is functionally used. We therefore add a behavioral test inspired by the shortcut-discovery protocol in the SPACE benchmark~\cite{ramakrishnan2025space}, itself a modern analogue of Tolman's classic cognitive-map experiments~\cite{tolman1948cognitive}. For each evaluation scene we run its episodes sequentially in two conditions: (i)~\textbf{persistent} memory, in which the LSTM hidden state carries over between episodes, so the agent accumulates spatial experience within a scene; and (ii)~\textbf{reset} memory, in which the hidden state is zeroed before each episode (the default evaluation protocol). For each condition we measure Success-weighted Path Length (SPL). The persistence benefit $\Delta\text{SPL} = \text{SPL}_\text{persistent} - \text{SPL}_\text{reset}$ quantifies how much accumulated spatial memory improves navigation efficiency. Comparing $\Delta\text{SPL}$ across conditions isolates which agents build the most operationally useful cognitive maps, independent of whether their probes decode well.
 
 % ==========================================================================
 % 4. RESULTS
