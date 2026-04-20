@@ -112,6 +112,30 @@ This means the agent **decides where to look based on what it remembers**, then 
   - DD-PPO runs multiple independent PPO workers that periodically sync gradients
   - Each worker manages multiple parallel environments (8 for blind, 6 for sighted)
 
+### 2.4.1 Numerical Stability: NaN Sanitisation (Important for Downstream Users)
+
+**Symptom observed in our foveated run**: training proceeded normally for ~170M frames, then at one update the policy's logit tensor contained NaN, the PPO loss became NaN, backward produced NaN gradients, and `optimizer.step()` wrote NaN into every parameter. From that point on the network produced NaN for every input, but the training loop did not crash — it silently continued for 2.5 more days until the frame budget was hit, leaving a corrupted checkpoint (90 of 97 parameter tensors all-NaN).
+
+**Root cause is upstream, not in our code**:
+
+- `torch.nn.utils.clip_grad_norm_` does not sanitise NaN. If any gradient is NaN, the global norm is NaN → clip coefficient is NaN → `grad *= NaN` leaves the grad NaN. The optimizer then propagates NaN into the weights.
+- The originating NaN on a single mini-batch can come from rare float32 edge cases that standard RL training hits only after many millions of updates: softmax under-flow then `log(0)`, value-head overflow, zero-variance advantage normalisation, LSTM cell blow-up combined with gate saturation. Our debug run (see `scripts/cluster_debug/`) pins the exact op.
+- DD-PPO's gradient all-reduce averages NaN with finite values → all workers get NaN → the corruption is systemic from the first bad batch.
+
+**Our fix** (`src/habitat/wijmans_policy.py`):
+
+1. At import time, monkey-patches `habitat_baselines.rl.ppo.ppo.PPO.before_step` to replace non-finite gradient elements with zero via `torch.nan_to_num_`. A bad mini-batch degenerates to a no-op update instead of corrupting weights.
+2. At policy construction time, wraps the action-head's `nn.Linear.forward` so NaN logits are replaced with 0 and clamped to [-10, 10]. This prevents `torch.multinomial` from raising on NaN probabilities.
+3. Exposes a sanitisation counter (`wijmans_policy.NAN_SANITISATION_STATS`) and a per-update `nan_sanitised` metric in `learner_metrics`, so you can see whether the safety net fired during training.
+
+**Scope and guarantees**:
+
+- The fix is a **no-op on clean training paths**: `nan_to_num` of a finite tensor is identity. A training run with zero NaN events produces bitwise-identical weights with or without the patch. Across our five conditions, four of them had zero NaN events throughout full training runs, confirming this.
+- The fix is installed automatically when you `import src.habitat`, which is what our training entry point does. Anyone using this codebase as a library for a different task inherits the fix without extra wiring.
+- If your `learner_metrics` tensorboard shows `nan_sanitised > 0`, rare numerical instability occurred and was absorbed safely. If it stays at 0, nothing is happening — the patch is inert.
+
+**For downstream users doing unrelated work with habitat-baselines DDPPO**: this failure mode is not specific to foveated agents; it can surface on any long-horizon float32 DDPPO run. If you port this code to a different task and see `nan_sanitised > 0`, your hyperparameters and numerical precision are tight; investigate rather than ignore. If you see the original crash (`torch.multinomial: probability tensor contains inf, nan`) without the fix, our patch is what you want.
+
 ### 2.5 Linear Probing (Reading the Agent's Mind)
 
 After training, we **freeze** the agent's weights and collect LSTM hidden states across many episodes. We then train simple linear classifiers/regressors to decode spatial information:

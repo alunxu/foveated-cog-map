@@ -113,6 +113,18 @@ def _wrap_action_distribution_with_clamp(policy):
     linear.forward = sanitized_forward
 
 
+# Module-level counters so the trainer + downstream tooling can see how
+# often the sanitisation fires. A downstream user should check
+# ``wijmans_policy.NAN_SANITISATION_STATS['total_events']`` after training
+# — a nonzero value means rare numerical instability occurred and was
+# safely absorbed. These are process-wide (per DDP worker), not
+# per-optimiser, because PPO only instantiates one.
+NAN_SANITISATION_STATS = {
+    "total_events": 0,        # mini-batches where any grad was non-finite
+    "total_params_fixed": 0,  # total non-finite grad elements sanitised
+}
+
+
 def _install_safe_optimizer_step():
     """Monkey-patch ``habitat_baselines.rl.ppo.ppo.PPO.before_step`` to zero
     out any non-finite gradients before ``optimizer.step()``.
@@ -128,6 +140,11 @@ def _install_safe_optimizer_step():
     We install this patch at import time so it is active as soon as
     src.habitat is imported by ``run_habitat.py`` before
     ``habitat_baselines.run.main()``.
+
+    Also records how many times the sanitisation fires (and how many grad
+    elements were sanitised), both in ``NAN_SANITISATION_STATS`` and as a
+    per-update ``nan_sanitised`` scalar in the PPO learner_metrics dict
+    (so it shows up in tensorboard / stdout logs alongside grad_norm).
     """
     from habitat_baselines.rl.ppo.ppo import PPO as _PPO
 
@@ -137,19 +154,45 @@ def _install_safe_optimizer_step():
     _original_before_step = _PPO.before_step
 
     def _safe_before_step(self):
-        # Zero any non-finite gradient element. After this, clip_grad_norm_
-        # and optimizer.step() see only finite values, so a single bad
-        # mini-batch degenerates to a no-op update rather than corrupting
-        # weights.
+        # Count and zero any non-finite gradient element. After this,
+        # clip_grad_norm_ and optimizer.step() see only finite values, so
+        # a bad mini-batch degenerates to a no-op update rather than
+        # corrupting weights.
+        fixed_this_batch = 0
         for p in self.actor_critic.parameters():
-            if p.grad is not None:
+            if p.grad is None:
+                continue
+            bad_mask = ~torch.isfinite(p.grad.data)
+            if bad_mask.any():
+                fixed_this_batch += int(bad_mask.sum().item())
                 torch.nan_to_num_(
                     p.grad.data, nan=0.0, posinf=0.0, neginf=0.0
                 )
+        if fixed_this_batch > 0:
+            NAN_SANITISATION_STATS["total_events"] += 1
+            NAN_SANITISATION_STATS["total_params_fixed"] += fixed_this_batch
+        # Stash on self so the _update_from_batch wrapper can read it.
+        self._nan_fixed_this_batch = fixed_this_batch
         return _original_before_step(self)
 
     _safe_before_step._safe_grad_patched = True
     _PPO.before_step = _safe_before_step
+
+    # Also wrap _update_from_batch so the per-batch sanitisation count
+    # lands in learner_metrics and therefore in tensorboard / stdout.
+    _original_update = _PPO._update_from_batch
+
+    def _update_with_nan_metric(self, batch, epoch, rollouts, learner_metrics):
+        result = _original_update(self, batch, epoch, rollouts, learner_metrics)
+        count = getattr(self, "_nan_fixed_this_batch", 0)
+        # Append a scalar so habitat-baselines' default metric logger
+        # (torch.mean over the list at end of update) gives a useful
+        # fraction-of-mini-batches-with-NaN reading.
+        learner_metrics["nan_sanitised"].append(float(count > 0))
+        return result
+
+    _update_with_nan_metric._safe_grad_patched = True
+    _PPO._update_from_batch = _update_with_nan_metric
 
 
 # Install the gradient-sanitisation patch at import time. The action-head
