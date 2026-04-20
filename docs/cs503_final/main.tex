@@ -70,7 +70,7 @@ All agents are trained on PointGoal navigation in Habitat~\cite{savva2019habitat
 
 All agents share an identical 3-layer LSTM (512-d) backbone and the Wijmans non-visual sensor stack: goal-in-start-frame, GPS, compass, and a close-to-goal scalar, each projected to 32-d and concatenated with a 32-d previous-action embedding. Training targets are set per condition to ensure convergence rather than a fixed frame budget: uniform trains to 400M frames (its ResNet-18 encoder requires more samples), while other conditions target 250M frames.
 
-\paragraph{Training stability.} During a pilot foveated run we observed silent weight corruption: NaN gradients produced by the value-head MSE backward pass propagated through \texttt{torch.nn.utils.clip\_grad\_norm\_} (which does not sanitise non-finite values) and into \texttt{optimizer.step()}, overwriting every parameter. Training did not crash for 2.5 days, leaving a checkpoint with no recoverable weights. We patched \texttt{PPO.before\_step} to zero non-finite gradient elements before clipping, which is a no-op on clean training paths and prevented recurrence across all five conditions. The underlying issue is reported upstream (\texttt{facebookresearch/habitat-lab} \#2226).
+We observed silent weight corruption in a pilot DD-PPO run caused by NaN gradients flowing through \texttt{clip\_grad\_norm\_} into \texttt{optimizer.step()}; we mitigate this with a gradient-sanitisation patch to \texttt{PPO.before\_step}, described in Appendix~\ref{app:training-stability}.
 
 \subsection{Visual Conditions}
 
@@ -291,5 +291,16 @@ We investigated how foveated vision shapes cognitive maps in navigation agents b
 
 \bibliographystyle{IEEEtran}
 \bibliography{literature}
+
+\appendices
+
+\section{Training Stability: Silent Weight Corruption in DD-PPO}
+\label{app:training-stability}
+
+During an initial foveated training run we observed a failure mode that did not manifest as a crash but as slow, silent corruption of the learned weights. After roughly 170M frames of stable progress (reward~$\approx$~10, SPL~$\approx$~0.83), one mini-batch on one DDP worker produced a NaN gradient. Because \texttt{torch.nn.utils.clip\_grad\_norm\_} does not sanitise non-finite gradients---the global norm becomes NaN, the clip coefficient becomes NaN, and \texttt{grad *= NaN} remains NaN---the subsequent \texttt{optimizer.step()} wrote NaN into every parameter. DDP all-reduce then propagated the corruption across workers. The training loop did not raise: it continued for 2.5 days with reward~$=$~NaN and SPL~$=$~0, until \texttt{torch.multinomial} finally rejected the NaN probability tensor. All checkpoints saved during this window were unrecoverable (90~of 97~parameter tensors entirely NaN).
+
+To isolate the origin of the NaN gradient we re-ran training from the last clean checkpoint with \texttt{torch.autograd.set\_detect\_anomaly(True)} and per-module forward-output hooks. The anomaly traceback pinned the failure to \texttt{MseLossBackward0}, i.e.\ the backward pass of the value-head loss~$0.5 \cdot (V(s) - R)^2$; rare return-vs-value discrepancies overflowed float32 in the squaring step, producing non-finite gradients downstream.
+
+Our mitigation is a minimally invasive patch to \texttt{habitat\_baselines.rl.ppo.ppo.PPO.before\_step} that zeroes any non-finite gradient element before clipping (\texttt{torch.nan\_to\_num\_} with \texttt{nan=posinf=neginf=0}). A mini-batch with any NaN gradient thus becomes a no-op update rather than a catastrophic one. The patch is installed at import time when \texttt{src.habitat} is loaded and is a no-op on clean training paths (\texttt{nan\_to\_num} of a finite tensor is identity). Across the five conditions reported in this paper, no NaN events were observed during full training after the patch was deployed, and all final checkpoints contain only finite weights. We reported the underlying habitat-baselines issue upstream (\texttt{facebookresearch/habitat-lab} \#2226) with a minimal reproduction and a proposed native fix.
 
 \end{document}
