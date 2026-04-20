@@ -61,7 +61,26 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
-# Logit clamping (prevents NaN crashes in DD-PPO)
+# NaN/inf sanitisation for DD-PPO
+#
+# We sanitise at two levels, because each addresses a different failure mode.
+#
+# (a) Action-head logits — prevents the `torch.multinomial` crash in
+#     `Categorical.sample()`. A single NaN/inf logit from an unlucky rollout
+#     would otherwise terminate the whole run.
+#
+# (b) Gradients before `optimizer.step()` — prevents silent WEIGHT
+#     CORRUPTION. If the forward pass produces NaN somewhere (value head,
+#     LSTM saturation, etc.), the backward pass produces NaN gradients.
+#     `torch.nn.utils.clip_grad_norm_` does NOT sanitise NaN (norm of NaN
+#     is NaN → clip coef = NaN → grad *= NaN stays NaN), so the optimizer
+#     would write NaN into every parameter. We observed this empirically:
+#     the foveated run (job 2836021) kept "training" for 2.5 days after
+#     silent corruption, saving a latest.pth with 90/97 tensors all NaN,
+#     while metrics showed reward=nan, spl=0.000 throughout.
+#
+#     The fix zeroes non-finite gradients before `optimizer.step()`, which
+#     makes the step a no-op for that mini-batch — the safe behaviour.
 # ---------------------------------------------------------------------------
 
 _LOGIT_CLAMP = 10.0
@@ -73,9 +92,12 @@ def _wrap_action_distribution_with_clamp(policy):
     CategoricalNet.forward does: logits = self.linear(x) → Categorical(logits).
     We patch self.linear.forward to (1) replace NaN/inf in the output with 0
     and (2) clamp to [-10, 10]. Clamping alone is insufficient: if upstream
-    features contain NaN (from gradient overflow/underflow), the linear
-    output is NaN and NaN.clamp() is still NaN. We must explicitly remove
-    non-finite values to survive transient numerical instabilities.
+    features contain NaN, the linear output is NaN and NaN.clamp() is still
+    NaN. This prevents the `torch.multinomial` crash in Categorical.sample().
+
+    NOTE: this is the DEFENSIVE fix. It prevents the crash but does NOT
+    prevent NaN gradients from corrupting weights — see
+    `_install_safe_optimizer_step` below for that.
     """
     linear = policy.action_distribution.linear
     original_forward = linear.forward
@@ -89,6 +111,50 @@ def _wrap_action_distribution_with_clamp(policy):
         return logits.clamp(-_LOGIT_CLAMP, _LOGIT_CLAMP)
 
     linear.forward = sanitized_forward
+
+
+def _install_safe_optimizer_step():
+    """Monkey-patch ``habitat_baselines.rl.ppo.ppo.PPO.before_step`` to zero
+    out any non-finite gradients before ``optimizer.step()``.
+
+    Rationale: ``torch.nn.utils.clip_grad_norm_`` does NOT sanitise NaN/inf
+    gradients. If any parameter has a NaN grad, the global norm becomes NaN,
+    the clip coefficient becomes NaN, and ``grad *= NaN`` leaves the grad
+    NaN. The subsequent ``optimizer.step()`` then writes NaN into the
+    parameter, and from that point on the model is dead even though the
+    training loop does not crash. This mechanism corrupted the foveated
+    checkpoint in job 2836021 (see module docstring above).
+
+    We install this patch at import time so it is active as soon as
+    src.habitat is imported by ``run_habitat.py`` before
+    ``habitat_baselines.run.main()``.
+    """
+    from habitat_baselines.rl.ppo.ppo import PPO as _PPO
+
+    if getattr(_PPO.before_step, "_safe_grad_patched", False):
+        return  # Already patched (idempotent guard).
+
+    _original_before_step = _PPO.before_step
+
+    def _safe_before_step(self):
+        # Zero any non-finite gradient element. After this, clip_grad_norm_
+        # and optimizer.step() see only finite values, so a single bad
+        # mini-batch degenerates to a no-op update rather than corrupting
+        # weights.
+        for p in self.actor_critic.parameters():
+            if p.grad is not None:
+                torch.nan_to_num_(
+                    p.grad.data, nan=0.0, posinf=0.0, neginf=0.0
+                )
+        return _original_before_step(self)
+
+    _safe_before_step._safe_grad_patched = True
+    _PPO.before_step = _safe_before_step
+
+
+# Install the gradient-sanitisation patch at import time. The action-head
+# logit clamp is installed per-policy in from_config() below.
+_install_safe_optimizer_step()
 
 
 # ---------------------------------------------------------------------------
