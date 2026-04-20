@@ -146,6 +146,23 @@ def main():
     all_local_occupancy = []  # optional: (N, grid_h, grid_w)
     scene_id_to_idx = {}
 
+    # ---- Optional gaze recording for learned-gaze policies (H3 analysis) ----
+    # The learned-gaze policy has a ``gaze_decoder`` submodule on its net that
+    # outputs (gx, gy) ∈ [0,1]². We attach a forward hook that captures its
+    # output on every forward pass; the hook appends one (2,) array per
+    # ``policy.act`` call. For agents without a gaze decoder (blind / uniform
+    # / foveated-fixed / matched), this list stays empty and is not saved.
+    all_gaze_positions = []
+    _gaze_decoder = getattr(getattr(policy, "net", None), "gaze_decoder", None)
+    if _gaze_decoder is not None:
+        def _capture_gaze(_mod, _inputs, output):
+            # output is (B, 2) with B = num_envs = 1 during collection
+            all_gaze_positions.append(output[0].detach().cpu().numpy())
+        _gaze_hook_handle = _gaze_decoder.register_forward_hook(_capture_gaze)
+        print("Gaze recording enabled (learned-gaze policy detected).")
+    else:
+        _gaze_hook_handle = None
+
     for ep in range(args.episodes):
         obs = env.reset()
         episode = env.current_episode
@@ -276,6 +293,13 @@ def main():
         save_dict["local_occupancy"] = np.array(all_local_occupancy, dtype=np.float32)
         save_dict["occ_grid_size"] = np.float32(args.occ_grid_size)
         save_dict["occ_grid_res"] = np.float32(args.occ_grid_res)
+    if all_gaze_positions:
+        # (N, 2) in [0, 1]² normalised image coordinates; only present for
+        # learned-gaze policies.
+        save_dict["gaze_positions"] = np.array(all_gaze_positions, dtype=np.float32)
+
+    if _gaze_hook_handle is not None:
+        _gaze_hook_handle.remove()
 
     np.savez_compressed(args.out, **save_dict)
 
