@@ -5,29 +5,30 @@
 
 ## Summary
 
-In long-horizon DD-PPO training runs, a single NaN gradient on one worker can corrupt every parameter in the network. The cause is that `torch.nn.utils.clip_grad_norm_` does not sanitise non-finite gradients, so after a rare NaN event the current `PPO.before_step` passes NaN gradients straight into `optimizer.step()`. The resulting corruption is silent: the training loop keeps running, metrics turn to NaN, and the final checkpoint is all zeros / NaN.
+In long-horizon DD-PPO training runs, a single NaN gradient on one worker can corrupt every parameter in the network. The cause is that `torch.nn.utils.clip_grad_norm_` does not sanitise non-finite gradients, so after a rare NaN event the current `PPO.before_step` passes NaN gradients straight into `optimizer.step()`. The resulting corruption is silent: the training loop keeps running, metrics turn to NaN, and the checkpoint is eventually saved with NaN weights.
 
 ## Observed behaviour
 
-One of our training runs (`habitat_baselines.rl.ppo.PPO` with default `max_grad_norm=0.2`, 2 GPUs × 4 environments, ResNet18 + 3-layer LSTM) reproduced this reliably:
+Running a standard DD-PPO PointGoal navigation setup (ResNet + recurrent policy, default `max_grad_norm=0.2`, 2 GPUs) reproduced this reliably on a multi-day run:
 
 | When | What |
 |---|---|
-| Frame 0 – 182,599,680 | Training stable, SPL ≈ 0.83, reward ≈ 10 |
-| Frame 182,599,680 | One update step produces NaN gradient on one worker |
-| Frame 182,599,680 + ε | DDP all-reduce averages NaN with finite → all workers see NaN grad |
-| Frame 182,599,680 + 2ε | `clip_grad_norm_(grads, 0.2)` with any NaN in grads returns NaN |
-| Frame 182,599,680 + 3ε | `optimizer.step()` writes NaN into every parameter |
-| All subsequent frames | Every forward output is NaN, metrics are NaN, but `torch.multinomial` eventually raises |
-| Final checkpoint | 90 / 97 parameter tensors are entirely NaN |
+| Training start → ~180M frames | Training stable, SPL ≈ 0.83, reward ≈ 10 |
+| One update step, ~180M frames | One worker's mini-batch produces a NaN gradient |
+| Next step (ε later) | DDP all-reduce averages NaN with finite → all workers see NaN grad |
+| Next step (2ε later) | `clip_grad_norm_(grads, 0.2)` with any NaN in grads returns NaN |
+| Next step (3ε later) | `optimizer.step()` writes NaN into every parameter |
+| All subsequent frames | Every forward output is NaN, metrics are NaN |
+| ~2.5 days later | `torch.multinomial` finally raises on the NaN probability tensor |
+| Final checkpoint | The vast majority of parameter tensors are entirely NaN |
 
-The training loop did not crash until `torch.multinomial` hit the NaN probability tensor **2.5 days later**. By that point all saved checkpoints for that condition were corrupt.
+The training loop did not crash at the moment of corruption; it kept running with a dead model for days. By the time `torch.multinomial` raised, every recent checkpoint was unusable.
 
-Log excerpt (one metric row before, one after):
+Log excerpt (one metric row just before and just after the event):
 
 ```
-2026-04-16 18:58:39   Num frames 182598720  reward: 10.341  spl: 0.829  success: 0.983
-2026-04-16 19:03:20   Num frames 182599680  reward:    nan  spl: 0.000  success: 0.000
+Num frames 182598720   reward: 10.341   spl: 0.829   success: 0.983
+Num frames 182599680   reward:    nan   spl: 0.000   success: 0.000
 ```
 
 ## Root cause
@@ -47,17 +48,7 @@ The NaN gradient then flows into `optimizer.step()`, which updates every paramet
 
 The originating NaN on a single mini-batch can come from standard float32 edge cases in PPO — softmax underflow + `log(0)`, value-head overflow, zero-variance advantage normalisation, LSTM cell blow-up combined with gate saturation — that long training runs hit only after tens of millions of updates. See https://github.com/pytorch/pytorch/issues/19222 for the PyTorch-side discussion.
 
-The problem is not limited to foveated inputs or unusual policies: any DD-PPO training run long enough to hit these float32 edge cases is vulnerable.
-
-## Fix
-
-Sanitise non-finite gradient elements before `clip_grad_norm_`. This turns a single bad mini-batch into a no-op update instead of corrupting weights. The fix is:
-
-- **No-op on clean training paths**: `torch.nan_to_num_` of a finite tensor is identity. Runs with zero NaN events produce bitwise-identical weights.
-- **One line per parameter group**: minimal intrusion on the existing code.
-- **Exposes a counter**: a `nan_sanitised` metric is added to `learner_metrics` so users can see whether the safety net fired.
-
-See `patch.diff` in this directory for the concrete change.
+The problem is not specific to any policy architecture: any DD-PPO run long enough to hit these float32 edge cases is vulnerable.
 
 ## Minimal reproduction
 
@@ -84,12 +75,27 @@ print("weights finite:", all(
 ))                                                     # False
 ```
 
-## Scope
+## Proposed fix
 
-The fix only touches `PPO.before_step`. It does not change any algorithm, hyperparameter, or public API. Anyone who wants the old behaviour (crash visibly on NaN instead of absorbing it) can set `self._skip_nan_sanitise = True` on the trainer — the patch checks that flag and falls through.
+Sanitise non-finite gradient elements before `clip_grad_norm_` runs. This turns a single bad mini-batch into a no-op update instead of corrupting weights:
+
+```python
+# In PPO.before_step, before clip_grad_norm_:
+for p in self.actor_critic.parameters():
+    if p.grad is not None and not torch.isfinite(p.grad).all():
+        torch.nan_to_num_(p.grad, nan=0.0, posinf=0.0, neginf=0.0)
+```
+
+Properties:
+
+- **No-op on clean training paths**: `torch.nan_to_num_` of a finite tensor is identity. Runs with zero NaN events produce bitwise-identical weights.
+- **One small addition, no API change, no new dependency.**
+- **Can be paired with a `nan_sanitised` scalar in `learner_metrics`** so users can see in tensorboard whether the safety net ever fired.
+
+I'm happy to open a PR with the full patch (including an optional metric) and a regression test if the maintainers are open to merging this.
 
 ## Alternatives considered
 
-- **Fix upstream in PyTorch**: `clip_grad_norm_` should arguably sanitise NaN, but changing that default behaviour is a larger discussion and unlikely to ship soon. This PR is a local fix in habitat-baselines that users benefit from immediately.
-- **Detect and skip the whole optimizer step**: equivalent outcome (no weight change on bad batch) but more intrusive to the existing control flow.
+- **Fix upstream in PyTorch**: `clip_grad_norm_` should arguably sanitise NaN, but changing that default behaviour is a larger discussion and unlikely to ship soon. A local fix in habitat-baselines gives users immediate benefit.
+- **Detect and skip the whole optimizer step on NaN**: equivalent outcome (no weight change on bad batch) but more intrusive to the existing control flow.
 - **Clip by value instead of by norm**: does not address the NaN case; `clip_grad_value_` with NaN input is also NaN-unsafe.
