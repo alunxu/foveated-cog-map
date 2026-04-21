@@ -172,27 +172,36 @@ Table~\ref{tab:probe_control} confirms probe validity: all selectivity values ar
 
 \subsection{H1: Compensatory Memory --- Path-History Probe}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{fig/h1_path_history.pdf}
+\caption{Path-history probe $R^2$ vs.\ lag $k$. The foveated agent retains decodable spatial information far into the past (lag-5 $R^2=0.556$); uniform decays catastrophically (lag-5 $R^2=-1.53$). Decoding is a Ridge regression ($\alpha=10$) with episode-level train/test splits; negative values indicate the probe fails to generalise.}
+\label{fig:path_history}
+\end{figure}
+
 \begin{table}[t]
 \centering
-\caption{Path-history probe: $R^2$ for decoding GPS at lag $k$ from the current hidden state. Higher values indicate longer working memory.}
+\caption{Path-history probe: $R^2$ for decoding GPS at lag $k$ from the current hidden state. Higher retention at large $k$ indicates longer working spatial memory. The foveated-learned row will be added once its re-analysis completes.}
 \label{tab:path_history}
 \begin{tabular}{lcccccc}
 \toprule
  & lag-0 & lag-1 & lag-2 & lag-3 & lag-4 & lag-5 \\
 \midrule
-Blind    & 0.899 & 0.905 & 0.867 & 0.748 & 0.536 & 0.536 \\
-Foveated & 0.841 & 0.862 & 0.826 & 0.737 & \textbf{0.685} & \textbf{0.629} \\
-Matched  & 0.832 & 0.841 & 0.779 & 0.581 & 0.475 & 0.445 \\
-Uniform  & 0.614 & 0.555 & 0.393 & 0.386 & 0.008 & $-$0.105 \\
+Blind    & 0.899 & 0.905 & 0.867 & 0.748 & 0.536 & 0.043 \\
+Foveated & 0.841 & 0.853 & 0.824 & 0.737 & \textbf{0.629} & \textbf{0.556} \\
+Matched  & 0.832 & 0.855 & 0.807 & 0.581 & 0.445 & 0.274 \\
+Uniform  & 0.614 & 0.595 & 0.534 & 0.386 & $-$0.105 & $-$1.532 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The path-history probe (Table~\ref{tab:path_history}) is the strongest finding. This probe decodes the agent's position at $k$ steps in the past from the current hidden state, testing how far back spatial memory extends.
+The path-history probe (Figure~\ref{fig:path_history}, Table~\ref{tab:path_history}) is the paper's strongest result. This probe decodes the agent's GPS position $k$ steps in the past from the current hidden state, testing how far back working spatial memory extends.
 
-The foveated agent retains spatial information over longer temporal horizons than any other condition. At lag-5, foveated achieves $R^2=0.629$ vs.\ blind 0.536, matched 0.445, and uniform $-0.105$. Notably, foveated surpasses even blind at lags 4--5, despite blind having GPS directly in its input. Uniform memory decays rapidly and becomes uninformative by lag-5.
+At lag-5, the foveated agent achieves $R^2=0.556$, compared with matched-compute ($R^2=0.274$), blind ($R^2=0.043$), and uniform ($R^2=-1.532$; probe fails to generalise). Retention relative to lag-0 is 66\% for foveated, 33\% for matched, 5\% for blind, and negative for uniform. Foveated is the only condition that retains more than half of its immediate-past encoding quality at 5 steps back.
 
-This provides direct evidence for H1: degraded peripheral vision forces the foveated agent to build a richer temporal trace of where it has been. The foveated--matched comparison ($R^2=0.629$ vs.\ $0.445$ at lag-5) isolates the effect of spatial non-uniformity from total information volume: it is the uneven quality of the foveated sensor, not simply having less visual information, that drives compensatory memory.
+Two comparisons isolate the mechanism. (i)~foveated~$>$~uniform at every lag~$k$: although both observe the environment, the uniform agent's full-resolution visual stream removes the \emph{necessity} of remembering where it has been. (ii)~foveated~$>$~matched at every lag~$k \geq 3$: matched-compute provides more \emph{total} visual pixels than foveated but distributes them uniformly, so total information volume does not drive the effect. It is the \emph{spatial non-uniformity} of the foveated sensor that forces compensatory temporal memory.
+
+A related timing view (Figure in Appendix, same data) shows that the spatial encoding rises steeply over the first three timesteps of each episode and stabilises thereafter; the compensatory effect is thus present throughout an episode rather than being a late-emergent behaviour.
 
 \subsection{H2: Representational Divergence --- CKA and Probe Transfer}
 
