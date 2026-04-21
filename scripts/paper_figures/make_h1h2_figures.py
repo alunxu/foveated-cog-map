@@ -80,7 +80,14 @@ def fig_path_history(in_dir: Path, out_dir: Path) -> None:
         d = _load_analysis(in_dir, cond)
         if d is None or "2c_path_history" not in d:
             continue
-        entries = d["2c_path_history"]
+        # Handle two JSON shapes: list (old analyze.py) or dict with
+        # "lags" subfield (newer analyze.py with metadata).
+        block = d["2c_path_history"]
+        entries = block["lags"] if isinstance(block, dict) and "lags" in block else block
+        # Skip entries with no 'r2' key (skipped lags)
+        entries = [r for r in entries if isinstance(r, dict) and "r2" in r]
+        if not entries:
+            continue
         lags = [r["lag_k"] for r in entries]
         r2s = [r["r2"] for r in entries]
         label, colour = COND_DISPLAY[cond]
@@ -93,7 +100,7 @@ def fig_path_history(in_dir: Path, out_dir: Path) -> None:
     ax.set_xlabel("lag $k$ (steps into the past)")
     ax.set_ylabel(r"position probe $R^2$ on GPS($t-k$)")
     ax.set_title("Path-history decoding across conditions (H1)")
-    ax.set_ylim(-1.8, 1.0)
+    ax.set_ylim(-3.0, 1.0)
     ax.legend(loc="lower left", fontsize=8, frameon=False)
     ax.grid(True, alpha=0.25)
     fig.tight_layout()
@@ -190,47 +197,57 @@ def fig_global_probe_summary(in_dir: Path, out_dir: Path) -> None:
 
 
 def fig_cka_heatmap(in_dir: Path, out_dir: Path) -> None:
-    cross_path = in_dir / "cross_analysis_5cond.json"
-    if not cross_path.exists():
+    # Prefer the 5-condition unaligned CKA (Kornblith 2019 standard).
+    # Falls back to position-aligned (analyze_cross.py output) if only
+    # that is available.
+    unaligned = in_dir / "cka_unaligned_5cond.json"
+    if unaligned.exists():
+        try:
+            with open(unaligned) as f:
+                uc = json.load(f)
+        except json.JSONDecodeError as e:
+            sys.stderr.write(f"[skip] cka: cannot parse {unaligned}: {e}\n")
+            return
+        conds = uc["conditions"]
+        mat = np.full((len(conds), len(conds)), np.nan)
+        for i, a in enumerate(conds):
+            for j, b in enumerate(conds):
+                mat[i, j] = uc["cka_matrix"][a][b]
+        n_samples = uc.get("n_samples_per_condition", None)
+    else:
         cross_path = in_dir / "cross_analysis.json"
-    if not cross_path.exists():
-        sys.stderr.write(f"[skip] cka: no cross_analysis*.json in {in_dir}\n")
-        return
-    try:
-        with open(cross_path) as f:
-            cx = json.load(f)
-    except json.JSONDecodeError as e:
-        sys.stderr.write(f"[skip] cka: cannot parse {cross_path}: {e}\n")
-        return
+        if not cross_path.exists():
+            sys.stderr.write("[skip] cka: no cka_unaligned or cross_analysis\n")
+            return
+        try:
+            with open(cross_path) as f:
+                cx = json.load(f)
+        except json.JSONDecodeError as e:
+            sys.stderr.write(f"[skip] cka: cannot parse {cross_path}: {e}\n")
+            return
+        cka_block = cx.get("3a_cka")
+        if cka_block is None:
+            sys.stderr.write(f"[skip] cka: no 3a_cka key in {cross_path}\n")
+            return
+        conds = cx.get("conditions") or sorted({
+            p for key in cka_block for p in key.split("_vs_")
+        })
+        mat = np.full((len(conds), len(conds)), np.nan)
+        for i, a in enumerate(conds):
+            for j, b in enumerate(conds):
+                if i == j:
+                    mat[i, j] = 1.0
+                    continue
+                key = f"{a}_vs_{b}" if f"{a}_vs_{b}" in cka_block else f"{b}_vs_{a}"
+                entry = cka_block.get(key, {})
+                v = entry.get("cka_top_layer") or entry.get("cka_aligned")
+                mat[i, j] = v if v is not None else np.nan
+        n_samples = None
 
-    # analyze_cross.py structure: expect a 'cka' (or '3a_cka') key with
-    # condition pairs → CKA value. Try a few likely layouts.
-    cka_block = None
-    for k in ("3a_cka_position_aligned", "3a_cka", "cka", "position_aligned_cka"):
-        if k in cx:
-            cka_block = cx[k]
-            break
-    if cka_block is None:
-        sys.stderr.write(
-            f"[skip] cka: no recognised CKA key in {cross_path} "
-            f"(keys = {list(cx.keys())})\n"
-        )
-        return
-
-    # Build symmetric matrix from pair entries {'condA|condB': float, ...}
-    conds = sorted({c for pair in cka_block for c in pair.split("|")})
-    mat = np.full((len(conds), len(conds)), np.nan)
-    for i, a in enumerate(conds):
-        for j, b in enumerate(conds):
-            if i == j:
-                mat[i, j] = 1.0
-            elif f"{a}|{b}" in cka_block:
-                mat[i, j] = cka_block[f"{a}|{b}"]
-            elif f"{b}|{a}" in cka_block:
-                mat[i, j] = cka_block[f"{b}|{a}"]
-
-    fig, ax = plt.subplots(figsize=(4.6, 4.0))
-    im = ax.imshow(mat, cmap="viridis", vmin=0, vmax=1)
+    fig, ax = plt.subplots(figsize=(4.8, 4.2))
+    # Use a log-style colormap so the near-zero off-diagonal values are
+    # visible; clip vmax to 0.05 so the diagonal (1.0) saturates.
+    im = ax.imshow(mat, cmap="viridis", vmin=0, vmax=0.05)
     ax.set_xticks(range(len(conds)))
     ax.set_yticks(range(len(conds)))
     labels = [COND_DISPLAY.get(c, (c, "#888"))[0] for c in conds]
@@ -240,10 +257,14 @@ def fig_cka_heatmap(in_dir: Path, out_dir: Path) -> None:
         for j in range(len(conds)):
             v = mat[i, j]
             if not np.isnan(v):
-                ax.text(j, i, f"{v:.2f}", ha="center", va="center",
-                        color="white" if v < 0.5 else "black", fontsize=7)
-    ax.set_title("Position-aligned CKA (H2)")
-    fig.colorbar(im, ax=ax, shrink=0.8, label="CKA")
+                txt = f"{v:.3f}" if i != j else "1.00"
+                ax.text(j, i, txt, ha="center", va="center",
+                        color="white" if v < 0.03 else "black", fontsize=7)
+    title = "Unaligned linear CKA (H2)"
+    if n_samples:
+        title += f"  (n={n_samples})"
+    ax.set_title(title)
+    fig.colorbar(im, ax=ax, shrink=0.8, label="CKA (clipped at 0.05)")
     fig.tight_layout()
 
     for ext in ("pdf", "png"):
