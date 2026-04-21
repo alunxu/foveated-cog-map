@@ -68,17 +68,21 @@ COND_ORDER = [
 
 def _read_tb_series(ckpt_root: Path, cond_dir: str, tag_suffix: str) -> tuple[np.ndarray, np.ndarray] | None:
     """Return (steps, values) for the first tag whose name ends with
-    ``tag_suffix``. Uses the most-recently-modified event file under the
-    condition's ``tb/`` dir (the latest training resume)."""
+    ``tag_suffix``. Concatenates event files from multiple training
+    resumes in mtime order; when a resume restarted the step counter
+    from zero (e.g. resume from latest.pth without .habitat-resume-state),
+    we shift the resumed file's steps by the previous file's max step so
+    the curve remains monotonic. This prevents visual spikes where
+    separate event files overlap in step range."""
     paths = sorted(
         glob.glob(str(ckpt_root / cond_dir / "tb" / "events.out.tfevents.*")),
         key=os.path.getmtime,
     )
     if not paths:
         return None
-    # Concat across all event files (one per resume).
     all_steps: list[int] = []
     all_vals: list[float] = []
+    offset = 0
     for p in paths:
         ea = EventAccumulator(p, size_guidance={"scalars": 1_000_000})
         try:
@@ -92,8 +96,18 @@ def _read_tb_series(ckpt_root: Path, cond_dir: str, tag_suffix: str) -> tuple[np
         )
         if tag is None:
             continue
-        for ev in ea.Scalars(tag):
-            all_steps.append(ev.step)
+        evs = ea.Scalars(tag)
+        if not evs:
+            continue
+        file_steps = [ev.step for ev in evs]
+        # If this file's min step is less than previous files' max step
+        # (step-counter restart), offset it.
+        if all_steps and min(file_steps) < max(all_steps):
+            base_offset = max(all_steps) - min(file_steps) + 1
+        else:
+            base_offset = 0
+        for ev in evs:
+            all_steps.append(ev.step + base_offset)
             all_vals.append(ev.value)
     if not all_steps:
         return None
@@ -134,10 +148,10 @@ def main() -> None:
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.2), sharex=True)
     _fig(axes[0], args.ckpt_root, "spl",
-         ylabel="SPL", title="Success-weighted path length vs.\\ training",
+         ylabel="SPL", title="Success-weighted path length vs. training",
          ylim=(0, 1.0))
     _fig(axes[1], args.ckpt_root, "success",
-         ylabel="success rate", title="Success rate vs.\\ training",
+         ylabel="success rate", title="Success rate vs. training",
          ylim=(0, 1.05))
     fig.tight_layout()
 

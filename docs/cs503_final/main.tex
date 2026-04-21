@@ -133,6 +133,13 @@ Table~\ref{tab:training} summarises task performance at the probed checkpoint fo
 
 Among fully converged conditions, uniform achieves the highest task performance (SPL $0.852$, $98.6\%$ success), reflecting the extreme informational advantage of a full-resolution RGB view on short-horizon PointGoal navigation. The fov-learned condition performs comparably ($0.820$ SPL, $97.8\%$), indicating that adding a blur-based foveation and a learned gaze decoder does not substantially degrade task ability. The blind baseline, which solves the task from proprioception alone, reaches $0.588$ SPL at 342M frames, reproducing the qualitative finding of Wijmans et al.~\cite{wijmans2023emergence}. The crucial observation for the representational analysis below is that \emph{all} converged sighted conditions surpass 97\% success, so any differences in probe decoding cannot be attributed to differential task competence.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{fig/training_curves.pdf}
+\caption{Training curves (rolling 50-episode windows) read directly from each condition's tensorboard event files. All four sighted conditions converge to similar SPL ($0.82$--$0.85$) and success ($>97\%$) by $\sim$100M frames; blind converges to lower SPL ($\sim$0.50) over a longer horizon. Short vertical glitches at frame~$\approx 228$M (fov-learned) are artefacts of the resume boundary between the initial run and the continuation from \texttt{latest.pth}; the final per-condition numbers in Table~\ref{tab:training} are read from the last scalar event.}
+\label{fig:training_curves}
+\end{figure}
+
 \subsection{Baseline Probes: GPS, Compass, Distance-to-Goal}
 
 \begin{table}[t]
