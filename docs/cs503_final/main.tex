@@ -284,18 +284,18 @@ H3 predicts that when gaze is learned end-to-end through the navigation loss, it
 \subsection{Additional Analyses}
 
 \textbf{Visited-region probe.}\quad
-All conditions track visited regions near-perfectly ($>$99.8\% binary accuracy; $R^2 \in [0.801, 0.834]$), suggesting this is a basic capability shared by all agents regardless of visual input.
+All five conditions track visited regions near-perfectly ($99.8\%$ binary accuracy; active-cell accuracy $96.6$--$97.0\%$; $R^2 \in [0.80, 0.83]$). Spatial working memory is a universal capability that does not discriminate between sensor structures. The one-bit SWM task is solved trivially by the LSTM regardless of visual input type.
 
 \textbf{Occupancy map reconstruction.}\quad
-Occupancy decoding from a 20$\times$20 grid is weak across all conditions (all $R^2 < 0$; binary accuracy 55--60\%). None of the agents build detailed layout maps in their hidden states at this resolution. This may require a finer grid, more evaluation episodes, or a non-linear decoder.
+Decoding the agent's local $20\times 20$ occupancy grid is weak across all conditions (all $R^2 < 0$; binary accuracy $55$--$60\%$, F1 on navigable cells $0.43$--$0.47$). None of the agents build detailed metric layout maps at this resolution using a linear decoder. This is consistent with the SPACE benchmark finding~\cite{ramakrishnan2025space} that metric-map sketching is hard even for much larger models; fine-grained layout likely requires either non-linear probes or longer training horizons.
 
 \textbf{Place-cell-like units.}\quad
-Nearly all LSTM units carry spatial information ($>$1 bit) across all conditions: foveated 475/512, blind 473/512, uniform 473/512, matched 461/512. Spatial encoding is broadly distributed rather than concentrated in a small population.
+Using the spatial-information metric of Banino et al.~\cite{banino2018vector}, the number of LSTM units carrying $>1$\,bit of spatial information per condition is: foveated $475$/$512$, blind $473$/$512$, uniform $473$/$512$, matched $461$/$512$, foveated-learned $285$/$512$. Max per-unit spatial information is highest for matched-compute ($2818$\,bits) and foveated-learned ($2141$\,bits); mean is highest for foveated and matched ($\sim 26$\,bits) and lowest for uniform ($12.7$\,bits). Spatial encoding is therefore broadly distributed in four of five conditions; foveated-learned is the clear outlier, with only $56\%$ of units carrying non-trivial spatial information.
 
 \textbf{Multi-layer comparison.}\quad
-For the blind agent, spatial information is distributed across LSTM layers but concentrated in layers 0--1, with layer-0 hidden state achieving the highest GPS $R^2$ (0.958).
+Across conditions, the layer-0 hidden state carries the strongest linear encoding of GPS, dropping at deeper layers. For blind, layer-0 $h$ achieves GPS $R^2 = 0.957$ (compass $R^2 = 0.947$); for foveated, $0.879$ / $0.803$; for uniform, $0.729$ / $0.624$; for matched, $0.805$ / $0.732$; for foveated-learned, $-0.348$ / $0.777$. The same heading$>$position dissociation reported for foveated-learned in §4.2 is present throughout the layer stack, not an artefact of the top-layer choice.
 
-\textcolor{red}{TODO: Add shortcut discovery behavioral test results once analysis is complete. Add PCA/t-SNE visualization of hidden states colored by position and condition.}
+\textcolor{red}{TODO: Add shortcut discovery behavioural test results once analysis is complete. Add PCA/t-SNE visualisation of hidden states coloured by position and condition.}
 
 % ==========================================================================
 % 5. DISCUSSION
@@ -310,19 +310,25 @@ The path-history result is particularly striking: the foveated agent retains pos
 
 \subsection{The Role of Spatial Non-Uniformity}
 
-The matched-compute control is essential for interpretation. Matched-compute provides more total visual information than foveation but distributes it uniformly, yet its path-history retention ($R^2=0.445$ at lag-5) falls well below foveated ($R^2=0.629$). This isolates the causal factor: it is the spatial non-uniformity of visual quality, not merely reduced information volume, that drives compensatory memory. This is an information-bottleneck effect driven by sensor structure rather than architectural choice.
+The matched-compute control is essential for interpretation. Matched-compute provides more total visual information than foveation but distributes it uniformly, yet its path-history retention ($R^2=0.274$ at lag-5) falls well below foveated ($R^2=0.556$). This isolates the causal factor: it is the spatial non-uniformity of visual quality, not merely reduced information volume, that drives compensatory memory. This is an information-bottleneck effect driven by sensor structure rather than architectural choice.
 
 \subsection{Why Uniform Agents Have Weak Memory}
 
-Uniform vision yields the weakest spatial encoding across nearly all probes. We interpret this as a form of representational outsourcing: when current visual input is reliable, the agent can re-derive spatial information from each frame rather than maintaining it in memory. This is efficient for the task but produces shallow temporal traces. Foveated and blind agents cannot rely on current visual input and must therefore invest in memory.
+Uniform vision yields the weakest spatial encoding across nearly all probes (global GPS $R^2 = 0.614$; path-history collapses to $R^2 = -1.53$ at lag 5). We interpret this as a form of representational outsourcing: when current visual input is reliable, the agent can re-derive spatial information from each frame rather than maintaining it in memory. This is efficient for the task but produces shallow temporal traces. Foveated and blind agents cannot rely on current visual input and must therefore invest in memory.
+
+\subsection{A Heading-vs-Position Dissociation in Learned Gaze}
+
+An unexpected finding emerges from the foveated-learned condition. While its task performance is statistically indistinguishable from the fixed-gaze foveated agent (SPL $0.820$ vs.\ $0.852$; success $97.8\%$ vs.\ $98.6\%$), its internal representation is qualitatively different. It has the \emph{strongest compass encoding} of any condition we tested ($R^2=0.941$, exceeding even the blind agent which receives compass in its input) while its absolute-position encoding is at chance ($R^2=0.031$). Only $285$ of $512$ LSTM units carry $>1$\,bit of spatial information, vs.\ $461$--$475$ for the other four conditions. This is not a graded weakening of spatial memory; it is a categorical shift in what the memory encodes.
+
+We believe this traces back to the gaze-collapse behaviour (§4.5): once the learned gaze converges to a near-constant position, the consistent-view-every-step condition emphasises heading-indicative cues (``what wall am I facing'') over position-indicative cues (``which room am I in''). In effect, collapsed gaze functions as a head-direction sensor rather than a landmark-localisation sensor. This suggests that \emph{gaze behaviour itself shapes what spatial content the recurrent memory can extract from visual input} --- an axis of representational control that our fixed-gaze conditions cannot access. Whether a \emph{non-trivially-moving} gaze would produce the opposite dissociation (strong position, weak heading) or would recover the standard pattern is an open question; the gaze-diversity ablation (Appendix~\ref{app:gaze_diversity}) is the first step toward answering it.
 
 \subsection{Limitations}
 
-Several limitations constrain the generality of our findings. First, all results use intermediate checkpoints; final-checkpoint probing may shift quantitative conclusions. Second, the foveated-learned condition (H3) has not yet been trained, leaving the epistemic gaze hypothesis untested. Third, our foveation model (Gaussian blur with quadratic falloff) is a simplification of biological foveation; log-polar or multi-scale pyramid models may produce different effects. Fourth, we probe only linear decoders---non-linear probes might reveal spatial structure that Ridge regression misses, particularly for occupancy maps. Fifth, the LSTM backbone limits generality to transformer-based architectures.
+Several limitations constrain the generality of our findings. First, the foveated-fixed and matched-128 numbers in this paper are probed on intermediate checkpoints; full-budget probing at final checkpoint is still in progress (see §4.1). Second, our H3 results are preliminary observations from a single seed and a single gaze-decoder architecture; we cannot distinguish a fundamental limit of implicit task pressure from a single-seed local minimum or a sigmoid-saturation gradient pathology. Third, our foveation model (Gaussian blur with quadratic falloff) is a simplification of biological foveation; log-polar or multi-scale pyramid models may produce different effects. Fourth, we probe only linear decoders---non-linear probes might reveal spatial structure that Ridge regression misses, particularly for occupancy maps (§4.6). Fifth, the LSTM backbone limits generality to transformer-based architectures where the definition of ``memory'' is quite different.
 
 \subsection{Broader Implications}
 
-If sensor design predictably shapes the structure of learned spatial codes, it becomes a tunable axis---alongside architecture and objective---for steering embodied agents toward representations that are more interpretable, more robust, or more aligned with human spatial cognition. The finding that degraded input can produce \emph{stronger} memory traces (rather than merely weaker ones) challenges the assumption that richer input always yields richer representations and suggests that controlled information bottlenecks may be a design tool for representational engineering.
+If sensor design predictably shapes the structure of learned spatial codes, it becomes a tunable axis---alongside architecture and objective---for steering embodied agents toward representations that are more interpretable, more robust, or more aligned with human spatial cognition. The finding that degraded input can produce \emph{stronger} memory traces (rather than merely weaker ones) challenges the assumption that richer input always yields richer representations and suggests that controlled information bottlenecks may be a design tool for representational engineering. The foveated-learned heading-vs-position dissociation further suggests that gaze policy --- even a trivial collapsed one --- is itself a representational-content axis, hinting that active-vision design choices that we typically make for task-performance reasons have representational side-effects that can be exploited or controlled for.
 
 % ==========================================================================
 % 6. CONCLUSION
@@ -337,6 +343,35 @@ We investigated how foveated vision shapes cognitive maps in navigation agents b
 \bibliography{literature}
 
 \appendices
+
+\section{Gaze-Diversity Auxiliary Loss (H3 Ablation)}
+\label{app:gaze_diversity}
+
+\subsection*{Motivation}
+
+The first foveated-learned training run (§4.5) produced a policy whose learned gaze collapsed to a near-constant offset from the image centre (per-dimension std $\approx 5\times 10^{-4}$). We attribute this to two mechanisms that reinforce each other during early training: (i)~once the sigmoid output saturates to a particular region of $[0,1]^2$, its derivative $\sigma'(x)\to 0$, so further gradient signal to the pre-activation is attenuated; (ii)~consistent-gaze views yield more predictable visual features, so the reward-gradient path from navigation loss through foveation has no explicit incentive for variety. Task signal alone is therefore insufficient to sustain active fixation.
+
+\subsection*{Target-variance hinge}
+
+To test whether an explicit anti-collapse pressure is sufficient to induce non-trivial gaze, we add an auxiliary loss
+\[
+\mathcal{L}_\text{div} \;=\; \lambda \cdot \text{relu}\!\left(\sigma^2_\text{target} \;-\; \text{Var}_\text{batch}[g]\right)
+\]
+where $g \in [0,1]^2$ is the gaze-decoder output, $\text{Var}_\text{batch}$ is the per-dimension variance across the mini-batch (averaged over the two gaze dimensions), and $\sigma^2_\text{target}=0.01$ is a target variance (corresponding to std $\approx 0.1$, or $10\%$ of the image range). The loss is zero whenever the observed batch variance exceeds the target; below the target, its gradient pushes the decoder toward more diverse outputs without specifying in which direction. $\lambda = 0.01$ is the coefficient used in the pilot.
+
+The hinge structure is a deliberate choice. An un-capped $-\lambda \cdot \text{Var}[g]$ regulariser would keep pushing for spread indefinitely, eventually degrading task learning by making gaze essentially uniform-random. We verified this empirically with a first pilot (uncapped variant, job $2840256$): after 10\,M frames, gaze spanned the entire $[0,1]^2$ space (std $\approx 0.42$), SPL plateaued at $0.05$, and training metrics transitioned to NaN at $\sim 8$\,M frames as the agent's exploration broke down. The hinge form localises the pressure to the collapsed regime and disappears once diversity is achieved.
+
+\subsection*{Implementation}
+
+The loss is registered as a standard habitat-baselines auxiliary loss module (\texttt{@baseline\_registry.register\_auxiliary\_loss("gaze\_diversity")}) with a matching Hydra structured-config node, so it can be enabled per-condition via
+\begin{verbatim}
+habitat_baselines.rl.auxiliary_losses.gaze_diversity.coef=0.01
+\end{verbatim}
+in the YAML. The module reads \texttt{aux\_loss\_state["gaze"]}, already exposed by \texttt{FoveatedLearnedGazeNet.forward}, and contributes one scalar to the PPO loss each mini-batch. It is a no-op for policies without a gaze decoder.
+
+\subsection*{Status}
+
+A 10\,M-frame pilot (job $2841404$, debug QOS) is queued at the time of writing. If gaze variance after 10\,M frames substantially exceeds the baseline's $5\times 10^{-4}$ and task SPL remains above some viability threshold (we use $> 0.5$ as a preliminary criterion), we will commit GPU time to a full 250\,M-frame run of the ablation condition and re-run all H1, H2, and H3 analyses on the resulting agent. Results will be reported in an updated version of this paper.
 
 \section{Training Stability: Silent Weight Corruption in DD-PPO}
 \label{app:training-stability}
