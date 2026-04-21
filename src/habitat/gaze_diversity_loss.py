@@ -59,9 +59,15 @@ from habitat_baselines.config.default_structured_configs import AuxLossConfig
 
 @dataclass
 class GazeDiversityLossConfig(AuxLossConfig):
-    """Coefficient for the per-batch gaze variance penalty."""
+    """Target-variance gaze diversity regulariser.
+
+    ``coef`` is the penalty magnitude when variance is below ``target_var``;
+    the loss is zero once the per-batch variance exceeds the target, so
+    the task loss dominates once collapse is avoided.
+    """
 
     coef: float = 0.01
+    target_var: float = 0.01  # std ≈ 0.1 → gaze spans ~10% of image range
 
 
 ConfigStore.instance().store(
@@ -79,32 +85,51 @@ ConfigStore.instance().store(
 
 @baseline_registry.register_auxiliary_loss(name="gaze_diversity")
 class GazeDiversityLoss(nn.Module):
-    """Anti-collapse regulariser for the learned-gaze policy.
+    """Target-variance anti-collapse regulariser for the learned-gaze policy.
 
     Reads ``aux_loss_state["gaze"]`` (shape ``(batch, 2)`` in [0,1]²) and
-    returns a loss equal to ``-coef * Var_batch(gaze).mean()``. A
-    minibatch with diverse gazes produces a negative loss (pulls total
-    loss down); a minibatch with collapsed gaze produces a loss of ~0.
-    Minimising the total loss therefore encourages variance. No-op when
-    ``aux_loss_state`` lacks a ``gaze`` entry (non-learned-gaze policies).
+    returns ``coef * relu(target_var - Var_batch(gaze))``. When the
+    per-batch variance of the gaze output falls below ``target_var``, a
+    positive penalty is applied whose gradient pushes the gaze decoder
+    to increase variance. Once variance exceeds ``target_var``, the loss
+    is zero and the task loss is the only signal on the gaze decoder.
+
+    This avoids the pathology observed in the uncapped variant (coef 0.01,
+    pilot job 2840256): the aux loss kept pushing variance even after
+    gaze was well-spread, eventually driving gaze toward uniform-random
+    behaviour and destroying the consistent-foveation → visual-feature
+    pipeline (SPL collapsed to 0.05, metric NaN at 8.3M frames).
+
+    ``target_var = 0.01`` corresponds to per-dim std ≈ 0.1 — the gaze
+    distribution covers roughly 10% of the image range. Baseline
+    (collapsed) gaze had std ≈ 5e-4, i.e. three orders of magnitude
+    below target; random gaze has std ≈ 0.29 (well above target).
+
+    No-op when ``aux_loss_state`` lacks a ``gaze`` entry.
     """
 
-    def __init__(self, action_space, net, coef: float = 0.01):
+    def __init__(
+        self,
+        action_space,
+        net,
+        coef: float = 0.01,
+        target_var: float = 0.01,
+    ):
         super().__init__()
         self.coef = coef
+        self.target_var = target_var
 
     def forward(self, aux_loss_state, batch):
         gaze = aux_loss_state.get("gaze")
         if gaze is None or gaze.shape[0] < 2:
-            # Return a zero tensor on an appropriate device so the
-            # aggregator can stack without warnings.
             device = (
                 gaze.device if isinstance(gaze, torch.Tensor) else torch.device("cpu")
             )
             return {"loss": torch.zeros((), device=device)}
 
-        # Per-dim variance across the minibatch, averaged over the 2
-        # gaze dims. Negated because PPO minimises the sum of losses.
-        var_per_dim = gaze.var(dim=0, unbiased=False)
-        loss = -self.coef * var_per_dim.mean()
+        # Mean per-dim variance across the minibatch.
+        var = gaze.var(dim=0, unbiased=False).mean()
+        # Hinge: only penalise when below target, zero otherwise.
+        shortfall = torch.clamp(self.target_var - var, min=0.0)
+        loss = self.coef * shortfall
         return {"loss": loss}
