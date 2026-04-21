@@ -424,7 +424,7 @@ def probe_2c_path_history(H, gps, ep_ids, step_in_ep, alpha, pca_dim, train_frac
             "lag_k": k, "r2": r2, "mae_m": mae,
             "n_train": int(tr.sum()), "n_test": int(te.sum()),
             "test_target_var": test_target_var,
-            "reliable": test_target_var > 0.01 and te.sum() >= MIN_TEST,
+            "reliable": bool(test_target_var > 0.01 and te.sum() >= MIN_TEST),
         })
 
     return {
