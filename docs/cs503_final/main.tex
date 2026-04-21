@@ -113,24 +113,25 @@ Probes tell us what information is present in memory; they do not tell us whethe
 
 \begin{table}[t]
 \centering
-\caption{Training status and task performance per condition. Success rate and SPL~\cite{anderson2018spl} on 1008 held-out MP3D episodes.}
+\caption{Task performance per condition on rolling 50-episode training windows (SPL and success reported on the final update; Gibson-0+/MP3D train pool, MP3D test held out). Foveated (resume) and matched-128 runs are in progress at time of writing; we report the partially-trained probed checkpoint.}
 \label{tab:training}
 \begin{tabular}{lcccl}
 \toprule
 Condition & Frames & Success & SPL & Status \\
 \midrule
-Blind       & 179M & 93.2\% & 0.589 & Training \\
-Uniform     & 249M & 81.1\% & 0.460 & Training \\
-Foveated    & 154M & 90.2\% & 0.448 & Training \\
-Matched     & 287M & 82.4\% & 0.454 & Converged \\
-Fov-learned & ---  & ---    & ---   & Not started \\
+Blind            & 342M & 0.928 & 0.588 & Converged \\
+Uniform          & 250M & \textbf{0.986} & \textbf{0.852} & Converged \\
+Foveated (fixed) & 174M$^\ast$ & --- & --- & Restarted (corrupt)$^\ast$ \\
+Matched-48 (deg.) & 250M & 0.979 & 0.670 & Converged, degenerate \\
+Matched-128      & 82M  & --- & --- & In progress \\
+Fov-learned      & 250M & 0.978 & 0.820 & Converged \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:training} summarizes current training status. Four of five conditions have reached usable checkpoints; all four achieve $>$80\% success rate. Blind leads in both success (93.2\%) and SPL (0.589), consistent with Wijmans et al.~\cite{wijmans2023emergence}---the PointGoal task can be solved well from proprioception alone. Among sighted conditions, foveated achieves the highest success rate (90.2\%), though SPL values are comparable across sighted conditions ($\sim$0.45--0.46).
+Table~\ref{tab:training} summarises task performance at the probed checkpoint for each condition. Three conditions (blind, uniform, fov-learned) have fully converged. Matched-48 reached 250M frames but with a degenerate $1\times 1$ feature map (Appendix~\ref{app:training-stability} documents the architectural issue and the matched-128 replacement currently training). The fixed-gaze foveated run initially completed 250M frames but its weights were silently corrupted (Appendix~\ref{app:training-stability}); we are re-training from its last clean intermediate checkpoint (ckpt.36 at 174M frames) and report probing results from that clean snapshot in the remainder of §4.
 
-\textcolor{red}{TODO: Update with final checkpoint numbers once all training completes.}
+Among fully converged conditions, uniform achieves the highest task performance (SPL $0.852$, $98.6\%$ success), reflecting the extreme informational advantage of a full-resolution RGB view on short-horizon PointGoal navigation. The fov-learned condition performs comparably ($0.820$ SPL, $97.8\%$), indicating that adding a blur-based foveation and a learned gaze decoder does not substantially degrade task ability. The blind baseline, which solves the task from proprioception alone, reaches $0.588$ SPL at 342M frames, reproducing the qualitative finding of Wijmans et al.~\cite{wijmans2023emergence}. The crucial observation for the representational analysis below is that \emph{all} converged sighted conditions surpass 97\% success, so any differences in probe decoding cannot be attributed to differential task competence.
 
 \subsection{Baseline Probes: GPS, Compass, Distance-to-Goal}
 
