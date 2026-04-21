@@ -167,9 +167,16 @@ Uniform  & 0.959          & 0.763          & 0.543 \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:probe_baseline} shows baseline probe results. Blind dominates GPS and compass probes because these signals are directly in its input, so the LSTM trivially encodes them---replicating Wijmans et al.~\cite{wijmans2023emergence}. Among sighted conditions, foveated ranks highest on both GPS ($R^2=0.841$) and compass ($R^2=0.715$). Uniform is weakest (GPS $R^2=0.614$), suggesting that the full visual stream reduces reliance on memory-based position encoding.
+Table~\ref{tab:probe_baseline} and Figure~\ref{fig:global_probe} show baseline probe results. Blind dominates GPS and compass probes because these signals are directly in its input, so the LSTM trivially encodes them---replicating Wijmans et al.~\cite{wijmans2023emergence}. Among sighted conditions, foveated ranks highest on both GPS ($R^2=0.841$) and compass ($R^2=0.715$). Uniform is weakest (GPS $R^2=0.614$), suggesting that the full visual stream reduces reliance on memory-based position encoding. The foveated-learned row will be added once its re-analysis JSON (truncated in the first write) is regenerated.
 
-Table~\ref{tab:probe_control} confirms probe validity: all selectivity values are well above zero, indicating that probes capture genuine spatial structure rather than memorization artifacts. Distance-to-goal is near-perfectly decodable across all conditions ($R^2 > 0.95$).
+Table~\ref{tab:probe_control} confirms probe validity: all selectivity values are well above zero (blind $0.91$, foveated $0.88$, matched $0.87$, uniform $0.76$), indicating that probes capture genuine spatial structure rather than memorisation artefacts. Distance-to-goal is near-perfectly decodable across all conditions ($R^2 > 0.95$).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{fig/h1_global_probe.pdf}
+\caption{Global GPS probe $R^2$ (solid) and Hewitt--Liang selectivity (hatched) per condition. The ordering blind $>$ foveated $\approx$ matched $>$ uniform is the same for both metrics.}
+\label{fig:global_probe}
+\end{figure}
 
 \subsection{H1: Compensatory Memory --- Path-History Probe}
 
