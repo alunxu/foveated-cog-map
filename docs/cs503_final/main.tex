@@ -74,7 +74,21 @@ We observed silent weight corruption in a pilot DD-PPO run caused by NaN gradien
 
 \subsection{Visual Conditions}
 
-Five conditions vary only the visual input:
+\begin{figure}[t]
+\centering
+\begin{tabular}{ccc}
+\includegraphics[width=0.30\columnwidth]{fig/fig_blind.png} &
+\includegraphics[width=0.30\columnwidth]{fig/fig_uniform.png} &
+\includegraphics[width=0.30\columnwidth]{fig/fig_foveated.png} \\
+{\scriptsize (a) Blind} & {\scriptsize (b) Uniform} & {\scriptsize (c) Foveated}
+\end{tabular}\\[2pt]
+\includegraphics[width=0.95\columnwidth]{fig/fig_topdown.png}\\
+{\scriptsize (d) Bird's-eye navigation map}
+\caption{Matterport3D test episode. (a)~Blind: only the non-visual sensor stack ($g$, GPS, compass, close-to-goal). (b)~Uniform: $256{\times}256$ RGB. (c)~Foveated: Gaussian blur with $\sigma_{\max}=8$, quadratic falloff from centre. (d)~Agent trajectory (blue) vs.\ geodesic shortest path (green).}
+\label{fig:setup}
+\end{figure}
+
+Five conditions vary only the visual input (Figure~\ref{fig:setup}):
 
 \begin{enumerate}
     \item \textbf{Blind:} No visual input. Receives only the non-visual sensor stack, replicating Wijmans et al.~\cite{wijmans2023emergence}.
