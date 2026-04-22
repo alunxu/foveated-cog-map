@@ -68,7 +68,7 @@ Belinkov~\cite{belinkov2022probing} surveys probing classifiers for neural netwo
 
 All agents are trained on PointGoal navigation in Habitat~\cite{savva2019habitat} using DD-PPO~\cite{wijmans2020ddppo} on a merged pool of Gibson-0+~\cite{xia2018gibson} (411 scenes) and Matterport3D train (61 scenes), totalling 472 training scenes. Evaluation uses 18 held-out MP3D test scenes (1008 episodes).
 
-All agents share an identical 3-layer LSTM (512-d) backbone and the Wijmans non-visual sensor stack: goal-in-start-frame, GPS, compass, and a close-to-goal scalar, each projected to 32-d and concatenated with a 32-d previous-action embedding. Training targets are set per condition to ensure convergence rather than a fixed frame budget: uniform trains to 400M frames (its ResNet-18 encoder requires more samples), while other conditions target 250M frames.
+All agents share an identical 3-layer LSTM (512-d) backbone and the Wijmans non-visual sensor stack: goal-in-start-frame, GPS, compass, and a close-to-goal scalar, each projected to 32-d and concatenated with a 32-d previous-action embedding. All sighted conditions are trained for a target of 250\,M environment frames; the blind baseline is trained to 342\,M frames to allow slower convergence from proprioception alone.
 
 We observed silent weight corruption in a pilot DD-PPO run caused by NaN gradients flowing through \texttt{clip\_grad\_norm\_} into \texttt{optimizer.step()}; we mitigate this with a gradient-sanitisation patch to \texttt{PPO.before\_step}, described in Appendix~\ref{app:training-stability}.
 
@@ -92,6 +92,8 @@ After training, we freeze all weights and collect per-step LSTM hidden states (t
 
 Probed variables include: GPS position, compass heading, distance-to-goal, path history (position at lag $k \in \{0,\ldots,5\}$ from current hidden state), visited-region occupancy, full occupancy grid (20$\times$20), and per-unit spatial information (place-cell analysis).
 
+The proposal originally framed H1 around \emph{eccentricity-stratified} probe accuracy (fovea vs.\ periphery). We replace that target with the temporal-lag path-history probe for three reasons. First, all agents in our setup observe roughly the same scene types episode-to-episode, so eccentricity in image coordinates is correlated with eccentricity of stored content in ways that are hard to disentangle. Second, the lag-$k$ probe directly operationalises \emph{compensatory memory}: if the agent invests in temporal memory because each individual frame is unreliable, the signature is longer retention of \emph{past} positions, which is what this probe measures. Third, lag-$k$ is symmetric across conditions (a blind agent and a foveated agent are evaluated on the same probe), whereas an eccentricity probe defined on the visual input is not well-defined for the blind condition. A confidence probe against cumulative blur $\sigma$ (proposal H1 extension) was not implemented and remains future work.
+
 \subsection{Cross-Condition Analysis}
 
 To test H2 (representational divergence), we employ two complementary methods:
@@ -99,6 +101,8 @@ To test H2 (representational divergence), we employ two complementary methods:
 \textbf{Linear CKA}~\cite{kornblith2019cka} measures representational similarity between conditions by comparing the geometry of hidden-state activations on matched episodes. Values near 1.0 indicate identical geometry; near 0.0 indicates unrelated representations.
 
 \textbf{Probe transfer:} We train a GPS probe on one condition's hidden states and evaluate it on another's. If spatial information is encoded in a shared linear subspace, cross-condition transfer should succeed. Catastrophic failure indicates fundamentally different encoding formats.
+
+A third test proposed in our original plan --- cross-heading generalisation (train a position probe on episodes with heading $A$, test on opposite heading) --- was implemented but did not produce usable numbers at our probe sample sizes: each per-scene train/test split left fewer than the required minimum episodes per heading bin, so every condition returned the ``insufficient samples'' sentinel. We report on this limitation in §5.5.
 
 \subsection{Behavioural Tests}
 
@@ -110,7 +114,7 @@ The learned-gaze agent's gaze decoder is a deterministic MLP that maps the previ
 
 \subsection{Implementation and Reproducibility}
 
-The full training and probing pipeline, including the custom foveation transform, learned-gaze decoder, Wijmans-style sensors, NaN-sanitisation patch described in Appendix~\ref{app:training-stability}, gaze-diversity aux loss module, and all probing scripts, is open-sourced at our (currently private) repository. Per-condition training requires $\sim$5--7 days on 2 V100 GPUs for 250\,M frames; probing completes in $\leq 1$ hour per condition on a single V100.
+The full training and probing pipeline, including the custom foveation transform, learned-gaze decoder, Wijmans-style sensors, NaN-sanitisation patch described in Appendix~\ref{app:training-stability}, gaze-diversity aux loss module, and all probing scripts, will be released on publication. Per-condition training requires $\sim$5--7 days on 2 V100 GPUs for 250\,M frames; probing completes in $\leq 1$ hour per condition on a single V100.
 
 % ==========================================================================
 % 4. RESULTS
@@ -121,23 +125,23 @@ The full training and probing pipeline, including the custom foveation transform
 
 \begin{table}[t]
 \centering
-\caption{Task performance per condition on rolling 50-episode training windows (SPL and success reported on the final update; Gibson-0+/MP3D train pool, MP3D test held out). Foveated (resume) and matched-128 runs are in progress at time of writing; we report the partially-trained probed checkpoint.}
+\caption{Task performance per condition on rolling 50-episode training windows (SPL and success reported on the final training-log entry; Gibson-0+/MP3D train pool, MP3D test held out). The foveated-fixed and matched-128 rows are in progress at time of writing; the ``probe ckpt'' column gives the checkpoint used for the probing results in §4.2--§4.6.}
 \label{tab:training}
-\begin{tabular}{lcccl}
+\begin{tabular}{lccccl}
 \toprule
-Condition & Frames & Success & SPL & Status \\
+Condition & Total frames & Success & SPL & Probe ckpt & Status \\
 \midrule
-Blind            & 342M & 0.928 & 0.588 & Converged \\
-Uniform          & 250M & \textbf{0.986} & \textbf{0.852} & Converged \\
-Foveated (fixed) & 174M$^\ast$ & --- & --- & Restarted (corrupt)$^\ast$ \\
-Matched-48 (deg.) & 250M & 0.979 & 0.670 & Converged, degenerate \\
-Matched-128      & 82M  & --- & --- & In progress \\
-Fov-learned      & 250M & 0.978 & 0.820 & Converged \\
+Blind            & 342M & 0.928 & 0.588 & 342M  & Converged \\
+Uniform          & 250M & \textbf{0.986} & \textbf{0.852} & 250M  & Converged \\
+Foveated (fix)   & 154M & ---   & ---   & 154M  & Re-training (see text) \\
+Matched-48 (deg) & 250M & 0.979 & 0.670 & 250M  & Converged, degenerate \\
+Matched-128      & in prog. & --- & ---  & ---   & Training ($\sim$190M) \\
+Fov-learned      & 250M & 0.978 & 0.820 & 250M  & Converged \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:training} summarises task performance at the probed checkpoint for each condition. Three conditions (blind, uniform, fov-learned) have fully converged. Matched-48 reached 250M frames but with a degenerate $1\times 1$ feature map (Appendix~\ref{app:training-stability} documents the architectural issue and the matched-128 replacement currently training). The fixed-gaze foveated run initially completed 250M frames but its weights were silently corrupted (Appendix~\ref{app:training-stability}); we are re-training from its last clean intermediate checkpoint (ckpt.36 at 174M frames) and report probing results from that clean snapshot in the remainder of §4.
+Table~\ref{tab:training} summarises task performance. Three conditions (blind, uniform, fov-learned) have fully converged. Matched-48 reached 250M frames but with a degenerate $1\times 1$ feature map (Appendix~\ref{app:training-stability} documents the issue); matched-128 is training as its replacement. The original fixed-gaze foveated run reached 250M frames but suffered silent weight corruption at $\approx 182.6$M (Appendix~\ref{app:training-stability}); we roll back to its last clean pre-corruption intermediate checkpoint (approximately 154M frames), report probing results from that checkpoint in §4.2--§4.6, and are re-training from a second clean intermediate (ckpt.36, 174M frames) under the gradient-sanitisation patch. Final-checkpoint probing for foveated-fixed is pending and will replace the 154M-frame numbers in a revised version of this paper.
 
 Among fully converged conditions, uniform achieves the highest task performance (SPL $0.852$, $98.6\%$ success), reflecting the extreme informational advantage of a full-resolution RGB view on short-horizon PointGoal navigation. The fov-learned condition performs comparably ($0.820$ SPL, $97.8\%$), indicating that adding a blur-based foveation and a learned gaze decoder does not substantially degrade task ability. The blind baseline, which solves the task from proprioception alone, reaches $0.588$ SPL at 342M frames, reproducing the qualitative finding of Wijmans et al.~\cite{wijmans2023emergence}. The crucial observation for the representational analysis below is that \emph{all} converged sighted conditions surpass 97\% success, so any differences in probe decoding cannot be attributed to differential task competence.
 
@@ -185,7 +189,7 @@ Uniform     & 0.959          & 0.763          & 0.543 \\
 
 Table~\ref{tab:probe_baseline} and Figure~\ref{fig:global_probe} show baseline probe results. Blind dominates GPS and compass probes because these signals are directly in its input, so the LSTM trivially encodes them---replicating Wijmans et al.~\cite{wijmans2023emergence}. Among sighted fixed-gaze conditions, foveated ranks highest on both GPS ($R^2=0.841$) and compass ($R^2=0.715$); uniform is weakest on GPS ($R^2=0.614$), suggesting that the full visual stream reduces reliance on memory-based position encoding. Foveated-learned is qualitatively different: it achieves the \emph{highest} compass $R^2$ of all five conditions ($0.941$) yet near-chance GPS ($R^2=0.031$). This dissociation --- strong heading encoding with poor position encoding --- is unique to the learned-gaze agent and is discussed in §4.3 and §4.5.
 
-Table~\ref{tab:probe_control} confirms probe validity: all selectivity values are well above zero (blind $0.91$, foveated $0.88$, matched $0.87$, uniform $0.76$), indicating that probes capture genuine spatial structure rather than memorisation artefacts. Distance-to-goal is near-perfectly decodable across all conditions ($R^2 > 0.95$).
+Table~\ref{tab:probe_control} confirms probe validity: all selectivity values are well above zero (blind $0.91$, foveated $0.88$, matched-48 $0.87$, uniform $0.76$), indicating that probes capture genuine spatial structure rather than memorisation artefacts. Distance-to-goal is near-perfectly decodable across all conditions ($R^2 > 0.95$). Foveated-learned is omitted from Table~\ref{tab:probe_control} because its distance-to-goal probe uses a dataset with $\sim$40$\times$ broader spatial range (see §4.4 caveat) and its selectivity value is not directly comparable; on a matched-distribution subset it tracks the other conditions qualitatively.
 
 \begin{figure}[t]
 \centering
@@ -234,7 +238,7 @@ A complementary timing analysis --- accuracy-vs-timestep-bin on the same data --
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth]{fig/h2_cka_heatmap.pdf}
-\caption{Unaligned linear CKA~\cite{kornblith2019cka} between top-layer LSTM hidden states of every pair of conditions (truncated to common $n=1{,}907$). Every off-diagonal value is below $0.004$; the most-similar pair is foveated-fixed vs.\ foveated-learned ($0.004$). Colour scale clipped at 0.05.}
+\caption{Unaligned linear CKA~\cite{kornblith2019cka} between top-layer LSTM hidden states of every pair of conditions (truncated to common $n=1{,}907$). Every off-diagonal value is below $0.004$; the most-similar pair is foveated-fixed vs.\ foveated-learned ($0.0035$). Colour scale clipped at 0.05.}
 \label{fig:cka}
 \end{figure}
 
@@ -341,13 +345,13 @@ Uniform vision yields the weakest spatial encoding across nearly all probes (glo
 
 \subsection{A Heading-vs-Position Dissociation in Learned Gaze}
 
-An unexpected finding emerges from the foveated-learned condition. While its task performance is statistically indistinguishable from the fixed-gaze foveated agent (SPL $0.820$ vs.\ $0.852$; success $97.8\%$ vs.\ $98.6\%$), its internal representation is qualitatively different. It has the \emph{strongest compass encoding} of any condition we tested ($R^2=0.941$, exceeding even the blind agent which receives compass in its input) while its absolute-position encoding is at chance ($R^2=0.031$). Only $285$ of $512$ LSTM units carry $>1$\,bit of spatial information, vs.\ $461$--$475$ for the other four conditions. This is not a graded weakening of spatial memory; it is a categorical shift in what the memory encodes.
+An unexpected finding emerges from the foveated-learned condition. Its task performance ($0.820$ SPL, $97.8\%$ success at 250M frames) is in the same range as the other converged sighted conditions --- comparable to uniform ($0.852$ SPL) and on trend with the fixed-gaze foveated agent (final-checkpoint number pending re-training). Despite this similar task competence, its internal representation is qualitatively different. It has the \emph{strongest compass encoding} of any condition we tested ($R^2=0.941$, exceeding even the blind agent which receives compass in its input) while its absolute-position encoding is at chance ($R^2=0.031$). Only $285$ of $512$ LSTM units carry $>1$\,bit of spatial information, vs.\ $461$--$475$ for the other four conditions. This is not a graded weakening of spatial memory; it is a categorical shift in what the memory encodes.
 
 We believe this traces back to the gaze-collapse behaviour (§4.5): once the learned gaze converges to a near-constant position, the consistent-view-every-step condition emphasises heading-indicative cues (``what wall am I facing'') over position-indicative cues (``which room am I in''). In effect, collapsed gaze functions as a head-direction sensor rather than a landmark-localisation sensor. This suggests that \emph{gaze behaviour itself shapes what spatial content the recurrent memory can extract from visual input} --- an axis of representational control that our fixed-gaze conditions cannot access. Whether a \emph{non-trivially-moving} gaze would produce the opposite dissociation (strong position, weak heading) or would recover the standard pattern is an open question; the gaze-diversity ablation (Appendix~\ref{app:gaze_diversity}) is the first step toward answering it.
 
 \subsection{Limitations}
 
-Several limitations constrain the generality of our findings. First, the foveated-fixed and matched-128 numbers in this paper are probed on intermediate checkpoints; full-budget probing at final checkpoint is still in progress (see §4.1). Second, our H3 results are preliminary observations from a single seed and a single gaze-decoder architecture; we cannot distinguish a fundamental limit of implicit task pressure from a single-seed local minimum or a sigmoid-saturation gradient pathology. Third, our foveation model (Gaussian blur with quadratic falloff) is a simplification of biological foveation; log-polar or multi-scale pyramid models may produce different effects. Fourth, we probe only linear decoders---non-linear probes might reveal spatial structure that Ridge regression misses, particularly for occupancy maps (§4.6). Fifth, the LSTM backbone limits generality to transformer-based architectures where the definition of ``memory'' is quite different.
+Several limitations constrain the generality of our findings. \emph{(i)~Intermediate checkpoints.} The foveated-fixed numbers are from a 154M-frame pre-corruption checkpoint rather than the 250M-frame target, and matched-128 probing is pending full convergence; we update these in the revised version once training finishes. \emph{(ii)~Single-seed H3.} Our H3 results are observations from a single seed and a single gaze-decoder architecture; we cannot distinguish a fundamental limit of implicit task pressure from a single-seed local minimum or a sigmoid-saturation gradient pathology. \emph{(iii)~Missing analyses.} Two probes from the proposal were not reported. The cross-heading generalisation probe failed the reliability threshold at our sample sizes (every condition returned the ``insufficient samples'' sentinel). A confidence probe (cumulative blur $\sigma$ as an inverse-certainty proxy) was not implemented. Both are in the immediate follow-up plan. \emph{(iv)~Foveation model.} Our foveation (Gaussian blur, quadratic falloff) is a simplification; log-polar or multi-scale pyramid models may behave differently. \emph{(v)~Linear probes only.} Non-linear probes might reveal spatial structure that Ridge regression misses, particularly for occupancy maps (§4.6). \emph{(vi)~Architecture scope.} The LSTM backbone limits generality to transformer-based architectures where the definition of ``memory'' is quite different.
 
 \subsection{Broader Implications}
 
