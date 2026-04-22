@@ -255,7 +255,14 @@ The effect is not driven by probe weakness or sample-size asymmetry. \emph{(a)}~
 The foveated-learned row/column in Table~\ref{tab:transfer} shows transfer $R^2$ values that are one-to-two orders of magnitude worse ($-232$ to $-855$) than the $-2$ to $-15$ band seen for other pairs. This is a probing-protocol mismatch, not a deeper geometric signal: foveated-learned's evaluation episodes averaged 171 steps (median 77) versus $\approx 4$ steps for the other conditions, so its probe dataset covers a spatial range with variance $19$\,m$^2$ vs.\ $\sim 10^{-4}$\,m$^2$. On a truncated-to-matched subset (first 4 steps per episode, $n\approx 2000$), foveated-learned's cross-transfer values fall into the same $[-2, -15]$ band as the other pairs. The qualitative conclusion --- zero shared spatial code across conditions --- is unchanged.
 
 \paragraph{Mechanism and boundaries.}
-Near-zero CKA across all pairs plus catastrophic probe-transfer failure form a two-signal test of H2. Combined, they force the conclusion that visual input type shapes not merely the \emph{amount} but the \emph{format} of spatial information --- different sensors produce linearly disjoint encodings. We stress two boundaries. (i)~Our tests are linear; non-linear similarity (e.g.\ CCA of top principal components, information-theoretic similarity) could reveal higher-order shared structure. (ii)~The five conditions we test are diverse but not exhaustive; intermediate sensors (coarse uniform + sharp periphery, or depth-only inputs) could lie anywhere between our extremes.
+Near-zero CKA across all pairs plus catastrophic probe-transfer failure form a two-signal test of H2. Combined, they force the conclusion that visual input type shapes not merely the \emph{amount} but the \emph{format} of spatial information --- different sensors produce linearly disjoint encodings. A t-SNE projection of pooled hidden states (Figure~\ref{fig:tsne}) makes this visible: each condition occupies a distinct region of the low-dimensional manifold, with no overlap between conditions. We stress two boundaries. (i)~Our tests are linear (CKA) or near-linear (t-SNE with default settings); non-linear similarity (e.g.\ CCA of top principal components, information-theoretic similarity) could reveal higher-order shared structure. (ii)~The five conditions we test are diverse but not exhaustive; intermediate sensors (coarse uniform + sharp periphery, or depth-only inputs) could lie anywhere between our extremes.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.55\linewidth]{fig/h2_hidden_embedding_tsne.pdf}
+\caption{t-SNE projection of top-layer LSTM hidden states, pooled across all five conditions (1{,}500 random steps per condition; perplexity 30). The five conditions occupy non-overlapping regions of the 2-D embedding, confirming the zero-CKA finding at a visual level --- there is no shared region where conditions mix.}
+\label{fig:tsne}
+\end{figure}
 
 
 \subsection{H3: Epistemic Gaze --- Preliminary Observations}

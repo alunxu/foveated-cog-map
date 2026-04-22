@@ -295,7 +295,14 @@ Table~\ref{tab:transfer} confirms the divergence behaviourally: cross-condition 
 
 \paragraph{Caveat on foveated-learned.} The foveated-learned row and column in Table~\ref{tab:transfer} show cross-transfer values that are one-to-two orders of magnitude worse than other pairs ($-232$ to $-855$ rather than $-2$ to $-15$). This is dominated by a probing-protocol mismatch rather than by representational content: the foveated-learned agent's evaluation episodes averaged 171 steps per episode (median length 77), vs.\ $\approx 4$ steps per episode for the other conditions, so its probe dataset covers a spatial range with variance $19$\,m$^2$ vs.\ $\sim 10^{-4}$\,m$^2$ for the others. On a truncated-to-matched subset (first 4 steps of each episode, $n\approx 2000$), cross-condition transfer values fall into the same $[-2, -15]$ band as the other pairs. The qualitative conclusion --- zero cross-condition sharing of spatial code --- is unchanged.
 
-Combined, near-zero CKA across all pairs and catastrophic probe-transfer failure provide strong evidence for H2: visual input type fundamentally shapes the representational geometry used to encode space, not just the amount of spatial information stored.
+Combined, near-zero CKA across all pairs and catastrophic probe-transfer failure provide strong evidence for H2: visual input type fundamentally shapes the representational geometry used to encode space, not just the amount of spatial information stored. Figure~\ref{fig:tsne} visualises this with a t-SNE projection: pooling top-layer hidden states from all five conditions and projecting to 2-D, each condition occupies a distinct non-overlapping region, confirming the zero-CKA result at a visual level.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\linewidth]{fig/h2_hidden_embedding_tsne.pdf}
+\caption{t-SNE projection of top-layer LSTM hidden states, pooled across conditions (1{,}500 random steps per condition; perplexity 30). Each condition occupies a non-overlapping region of the 2-D embedding.}
+\label{fig:tsne}
+\end{figure}
 
 \subsection{H3: Epistemic Gaze --- Preliminary Observations}
 
