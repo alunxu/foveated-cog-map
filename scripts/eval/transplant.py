@@ -262,51 +262,39 @@ def main():
     # (blind donor + sighted recipient), the blind policy only reads
     # non-visual sensors which are always present.
 
-    print("\n=== Loading recipient ===")
-    recip_config = load_habitat_config(args.recipient_config, args.recipient_ckpt, overrides=[
+    # Load both configs, then use the DONOR's config to build the single
+    # shared env. The donor's config is typically a superset (sighted
+    # donor -> has RGB; blind-only recipient can still read the non-visual
+    # stack from the same env). Running two simultaneous habitat.Env
+    # instances in one process caused segfaults during sim init.
+    print("\n=== Loading configs ===")
+    donor_config = load_habitat_config(args.donor_config, args.donor_ckpt, overrides=[
         "habitat.dataset.split=train",
         "habitat.environment.iterator_options.shuffle=True",
         "habitat.environment.iterator_options.group_by_scene=False",
     ])
-    env = habitat.Env(config=recip_config.habitat)
+    recip_config = load_habitat_config(args.recipient_config, args.recipient_ckpt, overrides=[
+        "habitat.dataset.split=train",
+    ])
+
+    print("\n=== Building shared env (from donor config) ===")
+    env = habitat.Env(config=donor_config.habitat)
     _ = env.reset()
 
+    print("\n=== Loading recipient policy ===")
     recip_policy, recip_hidden, recip_layers, recip_lstm = load_policy(
         recip_config, env, args.recipient_ckpt, device,
     )
     print(f"  config:  {args.recipient_config}")
     print(f"  hidden:  {recip_hidden}, layers: {recip_layers}, LSTM: {recip_lstm}")
 
-    # ---- Load donor policy ----
-    # We need a separate Habitat config for the donor to correctly
-    # instantiate its policy class, but we will NOT create a separate
-    # environment — the donor policy will receive observations from the
-    # recipient's env.
-    print("\n=== Loading donor ===")
-    donor_config = load_habitat_config(args.donor_config, args.donor_ckpt, overrides=[
-        "habitat.dataset.split=train",  # same split for consistent episodes
-    ])
-
-    # We need the donor's observation/action spaces.  For the policy factory,
-    # we can use the recipient env's spaces (the donor policy will only read
-    # the sensors it needs).  However, if the donor expects sensors not in
-    # the env, the policy constructor may fail.  The safest approach: build
-    # a temporary env from the donor config just to get obs/action spaces,
-    # then close it.
-    donor_env = habitat.Env(config=donor_config.habitat)
-    _ = donor_env.reset()
-
+    print("\n=== Loading donor policy ===")
     donor_policy, donor_hidden, donor_layers, donor_lstm = load_policy(
-        donor_config, donor_env, args.donor_ckpt, device,
+        donor_config, env, args.donor_ckpt, device,
     )
-    # We keep donor_env open only if the donor needs different observations
-    # than the recipient (e.g., different visual resolution).  In the common
-    # case we close it and feed donor from the recipient env.
-    # Actually, for correctness the donor must see the same scene state as
-    # the recipient — but if it has a different visual encoder it needs its
-    # own observation rendering.  The cleanest solution: keep both envs,
-    # sync them to the same episode, and step them in lockstep for the
-    # first half.
+    # No second env created. Cross-sensor transplant: donor consumes full
+    # observations (RGB + non-visual); blind recipient simply ignores RGB
+    # when its policy forward-passes through obs_transforms_batch.
     print(f"  config:  {args.donor_config}")
     print(f"  hidden:  {donor_hidden}, layers: {donor_layers}, LSTM: {donor_lstm}")
 
@@ -317,7 +305,6 @@ def main():
         print(f"  Recipient: hidden={recip_hidden}, layers={recip_layers}")
         print("A raw transplant requires identical LSTM dimensions.")
         print("Consider using a learned projection layer for mismatched sizes.")
-        donor_env.close()
         env.close()
         sys.exit(1)
 
@@ -389,75 +376,41 @@ def main():
         results_self.append(metrics_self)
 
         # ================================================================
-        # Condition 3: CROSS-TRANSPLANT — donor runs first half in its
-        #              own env (synced to same episode), hidden state
-        #              injected into recipient for second half.
+        # Condition 3: CROSS-TRANSPLANT — donor takes first-half actions
+        #              in the shared env; at midpoint, donor's hidden
+        #              state is injected into recipient and recipient
+        #              continues the second half from donor's physical
+        #              end-position.
         # ================================================================
 
-        # -- Donor first half: run in donor_env synced to same episode --
-        donor_env._current_episode = donor_env.episodes[0]  # placeholder
-        # Find matching episode in donor env by episode_id
-        donor_ep = None
-        for dep in donor_env.episodes:
-            if dep.episode_id == ep.episode_id and dep.scene_id == ep.scene_id:
-                donor_ep = dep
-                break
-
-        if donor_ep is None:
-            # Episode not in donor dataset — skip cross condition
-            results_cross.append(None)
-            if (ei + 1) % 25 == 0:
-                _print_progress(ei, n_episodes, results_baseline, results_self, results_cross)
-            continue
-
-        donor_env._current_episode = donor_ep
-        donor_env._episode_over = False
-        donor_obs = donor_env.reset()
+        # Reset env to this episode (same starting conditions as baseline).
+        env._current_episode = ep
+        env._episode_over = False
+        recip_obs = env.reset()
 
         donor_rnn_h, donor_prev_a, donor_mask = _init_rnn_state(
             num_recurrent_layers, hidden_size, device,
         )
 
-        # Also reset recipient env to same episode for the second half
-        env._current_episode = ep
-        env._episode_over = False
-        recip_obs = env.reset()
-
-        recip_rnn_h, recip_prev_a, recip_mask = _init_rnn_state(
-            num_recurrent_layers, hidden_size, device,
-        )
-
-        # Step both agents for the first half in lockstep
+        # Track path length starting from baseline start.
         recip_path_len = 0.0
-        recip_prev_pos = env.sim.get_agent_state().position.copy()
         done_donor = False
-        done_recip = False
 
+        # Donor drives first half in shared env.
         for step in range(midpoint):
-            # Step donor in donor_env
             if not done_donor:
-                donor_obs, done_donor, donor_rnn_h, donor_prev_a, donor_mask, _, _ = (
+                recip_obs, done_donor, donor_rnn_h, donor_prev_a, donor_mask, step_path, _ = (
                     _run_first_half(
-                        donor_env, donor_obs, donor_policy,
+                        env, recip_obs, donor_policy,
                         donor_rnn_h, donor_prev_a, donor_mask,
                         device, 1,
                     )
                 )
-
-            # Step recipient in recipient env (to keep env state consistent)
-            if not done_recip:
-                recip_obs, done_recip, recip_rnn_h, recip_prev_a, recip_mask, step_path, _ = (
-                    _run_first_half(
-                        env, recip_obs, recip_policy,
-                        recip_rnn_h, recip_prev_a, recip_mask,
-                        device, 1,
-                    )
-                )
                 recip_path_len += step_path
-
-            if done_recip:
+            if done_donor:
                 break
 
+        done_recip = done_donor
         if done_recip:
             # Episode ended before midpoint
             episode_obj = env.current_episode
@@ -489,7 +442,6 @@ def main():
         if (ei + 1) % 25 == 0:
             _print_progress(ei, n_episodes, results_baseline, results_self, results_cross)
 
-    donor_env.close()
     env.close()
 
     # ---- Aggregate results ----
