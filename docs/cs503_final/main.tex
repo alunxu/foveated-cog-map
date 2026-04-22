@@ -369,9 +369,21 @@ habitat_baselines.rl.auxiliary_losses.gaze_diversity.coef=0.01
 \end{verbatim}
 in the YAML. The module reads \texttt{aux\_loss\_state["gaze"]}, already exposed by \texttt{FoveatedLearnedGazeNet.forward}, and contributes one scalar to the PPO loss each mini-batch. It is a no-op for policies without a gaze decoder.
 
-\subsection*{Status}
+\subsection*{Pilot results}
 
-A 10\,M-frame pilot (job $2841404$, debug QOS) is queued at the time of writing. If gaze variance after 10\,M frames substantially exceeds the baseline's $5\times 10^{-4}$ and task SPL remains above some viability threshold (we use $> 0.5$ as a preliminary criterion), we will commit GPU time to a full 250\,M-frame run of the ablation condition and re-run all H1, H2, and H3 analyses on the resulting agent. Results will be reported in an updated version of this paper.
+Two 10\,M-frame pilots were run.
+
+\textbf{Pilot 1 (uncapped variant, $\mathcal{L}=-\lambda\,\text{Var}[g]$, $\lambda=0.01$, job $2840256$).} The un-capped version produced maximum anti-collapse pressure indefinitely. After 10\,M frames, gaze variance \emph{exceeded} that of a uniform distribution over $[0,1]^2$ (std $[0.43, 0.42]$, near the theoretical maximum $0.289$), meaning gaze was essentially random. Task performance collapsed: SPL plateaued at $0.05$ after an initial rise to $0.2$, and running-mean metrics transitioned to NaN at $\sim 8$\,M frames. The uncapped regulariser destroyed the consistent-foveation signal the policy needs to learn visual features.
+
+\textbf{Pilot 2 (target-variance hinge, $\lambda=0.01$, $\sigma^2_\text{target}=0.01$, job $2842288$).} The hinge formulation reduced the pressure but did not resolve the task incompatibility. After 10\,M frames the gaze converged to an extreme corner of image space, mean $(0.001, 0.998)$ with std $[0.020, 0.023]$ --- well below the target std of $0.1$ and therefore with the hinge still active throughout training. Task performance plateaued at the same SPL $\approx 0.05$ as pilot 1. The policy appears to have found the minimum-task-cost gaze that still partially satisfies the diversity pressure: a sigmoid saturated at one corner (hence very low gradient to further move), producing a constant visual view of the image corner that is maximally useless for navigation.
+
+\subsection*{Interpretation}
+
+The two pilots jointly argue that, in our deterministic sigmoid-MLP gaze architecture with slow-gaze rollouts, \emph{gaze collapse is a pre-requisite for task learning rather than an accident}: every gaze policy we found that produced non-trivial variance also destroyed navigation ability. This does not refute H3; it refines it. Implicit task pressure in a framework where gaze variety has no task-relevant reward does not spontaneously produce informative fixation, and an exogenous anti-collapse regulariser alone is insufficient because it moves gaze toward whatever region reduces regulariser loss fastest, which is generically \emph{not} the task-useful region.
+
+A genuine H3 test therefore requires one of: (i)~stochastic gaze policy with an entropy bonus, so diversity is sampled at rollout time rather than enforced by regularisation on a deterministic output; (ii)~an intrinsic-reward signal that is itself task-aligned (e.g., information gain about the goal-relative position, not just variance); or (iii)~an architectural change that separates gaze generation from visual-feature extraction (e.g., attention-based gaze). Any of these is substantial follow-up work beyond the scope of this course report.
+
+We therefore leave H3 as a preliminary observation: \emph{task signal alone is insufficient to produce epistemic gaze in our setup}, with strong caveats about architecture dependence (§4.5, Limitations).
 
 \section{Training Stability: Silent Weight Corruption in DD-PPO}
 \label{app:training-stability}
