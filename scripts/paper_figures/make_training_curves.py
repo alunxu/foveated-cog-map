@@ -54,8 +54,8 @@ COND_DISPLAY = {
     "uniform_gibson": ("Uniform", "#4daf4a"),
     "foveated_gibson": ("Foveated (fixed)", "#e41a1c"),
     "foveated_learned_gibson": ("Foveated (learned)", "#ff7f00"),
-    "matched_gibson": ("Matched-48 (deprecated)", "#377eb8"),
-    "matched128_gibson": ("Matched-128", "#377eb8"),
+    "matched_gibson": ("Matched-compute (48, deprecated)", "#377eb8"),
+    "matched128_gibson": ("Matched-compute (128)", "#377eb8"),
 }
 COND_ORDER = [
     "blind_gibson",

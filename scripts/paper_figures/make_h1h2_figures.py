@@ -42,23 +42,36 @@ COND_DISPLAY = {
     "uniform": ("Uniform", "#4daf4a"),
     "foveated": ("Foveated (fixed)", "#e41a1c"),
     "foveated_learned": ("Foveated (learned)", "#ff7f00"),
-    "matched": ("Matched-compute", "#377eb8"),
+    "matched": ("Matched-compute", "#377eb8"),  # matched-48 is the probed run; paper text calls it Matched-compute
 }
 COND_ORDER = ["blind", "uniform", "foveated", "foveated_learned", "matched"]
 
 
 def _load_analysis(in_dir: Path, cond: str) -> dict | None:
-    """Load an analysis JSON; returns None and warns if missing or invalid."""
-    path = in_dir / f"{cond}_gibson_analysis.json"
-    if not path.exists():
-        sys.stderr.write(f"[skip] {cond}: {path} not found\n")
-        return None
-    try:
-        with open(path) as f:
-            return json.load(f)
-    except json.JSONDecodeError as e:
-        sys.stderr.write(f"[skip] {cond}: invalid JSON ({e})\n")
-        return None
+    """Load an analysis JSON; returns None and warns if missing or invalid.
+
+    For foveated_learned we prefer the truncated (matched-distribution)
+    analysis because its full 85k-step probe dataset covers a spatial
+    range ~40x wider than the other conditions, making direct comparison
+    of R^2 and selectivity values misleading.
+    """
+    candidates = (
+        [f"{cond}_gibson_truncated_analysis.json", f"{cond}_gibson_analysis.json"]
+        if cond == "foveated_learned"
+        else [f"{cond}_gibson_analysis.json"]
+    )
+    for name in candidates:
+        path = in_dir / name
+        if not path.exists():
+            continue
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            sys.stderr.write(f"[skip] {cond}: invalid JSON ({e})\n")
+            return None
+    sys.stderr.write(f"[skip] {cond}: no analysis JSON found\n")
+    return None
 
 
 # ---------------------------------------------------------------------------

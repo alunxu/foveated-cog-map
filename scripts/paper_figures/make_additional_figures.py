@@ -22,7 +22,7 @@ COND_DISPLAY = {
     "uniform": ("Uniform", "#4daf4a"),
     "foveated": ("Foveated (fixed)", "#e41a1c"),
     "foveated_learned": ("Foveated (learned)", "#ff7f00"),
-    "matched": ("Matched-48", "#377eb8"),
+    "matched": ("Matched-compute", "#377eb8"),
 }
 COND_ORDER = ["blind", "uniform", "foveated", "foveated_learned", "matched"]
 
@@ -71,7 +71,7 @@ def fig_place_cells(in_dir: Path, out_dir: Path) -> None:
     ax.set_xticks(x)
     ax.set_xticklabels(names, rotation=18, ha="right", fontsize=9)
     ax.set_ylabel("LSTM units with $>$1 bit spatial info")
-    ax.set_title("Spatial encoding is broadly distributed except in foveated-learned")
+    ax.set_title("Place-cell-like units per condition")
     ax.set_ylim(0, 560)
     ax.grid(True, axis="y", alpha=0.25)
     fig.tight_layout()
