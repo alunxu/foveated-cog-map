@@ -205,13 +205,13 @@ Uniform  & 0.614 & 0.595 & 0.534 & 0.386 & $-$0.105 & $-$1.532 \\
 \end{table}
 
 \paragraph{Effect: magnitude and direction.}
-At lag 5 the foveated agent decodes past GPS at $R^2=0.556$ from current memory --- the only condition retaining more than half of its lag-0 encoding quality ($66\%$ relative retention; Figure~\ref{fig:path_history}, Table~\ref{tab:path_history}). Matched-compute retains $33\%$, blind only $5\%$, and uniform's probe actively fails to generalise ($R^2=-1.532$). In plain terms: only the foveated agent's hidden state, 5 steps after visiting a location, still contains enough information for a simple ridge regression to re-identify that location's coordinates.
+At lag 5, the foveated-fixed agent decodes past GPS at $R^2=0.556$ from current memory --- the only condition retaining more than half of its lag-0 encoding quality ($66\%$ relative retention; Figure~\ref{fig:path_history}, Table~\ref{tab:path_history}). Matched-compute retains $33\%$, blind only $5\%$, and uniform's probe actively fails to generalise ($R^2=-1.532$). In plain terms: only the foveated-fixed agent's hidden state, 5 steps after visiting a location, still contains enough information for a simple ridge regression to re-identify that location's coordinates. (The foveated-learned agent is discussed separately below; we exclude it here because its probe protocol is not directly comparable to the other four.)
 
 \paragraph{Defence against alternative explanations.}
-This is not a probe artefact or a training-budget confound. \emph{(a)}~All conditions achieve $R^2 \geq 0.61$ at lag 0 (Table~\ref{tab:path_history}), so the probe is calibrated and the decoder capacity is not a bottleneck. \emph{(b)}~Hewitt--Liang selectivity (Table~\ref{tab:probe_control}) is $\geq 0.76$ for all four conditions shown, ruling out memorisation of training-set positions as the source of the $R^2$. \emph{(c)}~The foveated$>$uniform separation is present at \emph{every} lag $k\in\{0,\dots,5\}$, not a single-point fluctuation; the curves do not cross. \emph{(d)}~All four compared conditions were probed on the same 500-episode held-out set with identical ridge hyperparameters and episode-level splits. Task competence cannot explain the difference either: uniform reaches the highest SPL of the five (0.852) yet has the worst retention.
+This is not a probe artefact or a training-budget confound. \emph{(a)}~All four compared conditions achieve $R^2 \geq 0.61$ at lag 0 (Table~\ref{tab:path_history}), so the probe is calibrated and decoder capacity is not a bottleneck. \emph{(b)}~Hewitt--Liang selectivity (Table~\ref{tab:probe_control}) is $\geq 0.76$ for all four, ruling out memorisation of training-set positions as the source of the $R^2$. \emph{(c)}~The foveated-fixed~$>$~uniform separation is present at \emph{every} lag $k\in\{0,\dots,5\}$, not a single-point fluctuation; the curves do not cross. \emph{(d)}~All four conditions were probed on the same 500-episode held-out set with identical Ridge hyperparameters and episode-level splits. Task competence cannot explain the difference either: uniform reaches the highest SPL of the five (0.852) yet has the worst retention.
 
 \paragraph{Mechanism and boundaries.}
-Two comparisons localise the mechanism. (i)~Foveated$>$uniform at every lag even though both observe the scene: a full-resolution visual stream removes the \emph{necessity} of maintaining spatial information in memory because each frame re-derives it. (ii)~Foveated$>$matched-compute at every lag $k\geq 3$: matched provides more total visual pixels than foveated but distributes them uniformly, and its retention ($R^2=0.27$ at lag 5) lies between foveated and uniform. Information volume alone does not explain the effect; it is the \emph{spatial non-uniformity} of the foveated sensor that forces compensatory temporal memory. The signature is consistent with Hennig et al.~\citep{hennig2023belief}'s observation that belief-state-like representations can emerge from pure RL under partial observability, without an explicit probabilistic objective.
+Two comparisons localise the mechanism. (i)~Foveated-fixed~$>$~uniform at every lag even though both observe the scene: a full-resolution visual stream removes the \emph{necessity} of maintaining spatial information in memory because each frame re-derives it. (ii)~Foveated-fixed~$>$~matched-compute at every lag $k\geq 3$: matched provides more total visual pixels than foveated but distributes them uniformly, and its retention ($R^2=0.27$ at lag 5) lies between foveated-fixed and uniform. Information volume alone does not explain the effect; it is the \emph{spatial non-uniformity} of the foveated sensor that forces compensatory temporal memory. The signature is consistent with Hennig et al.~\citep{hennig2023belief}'s observation that belief-state-like representations can emerge from pure RL under partial observability, without an explicit probabilistic objective.
 
 \paragraph{The foveated-learned exception.}
 Foveated-learned is flat at $R^2\approx-2.5$ across all lags (Figure~\ref{fig:path_history}, orange) --- not a retention failure of degree but a qualitative shift: foveated-learned has the highest compass decoding of all five conditions ($R^2=0.941$) yet near-chance GPS ($R^2=0.031$) (§\ref{sec:baseline}). We return to this dissociation in §\ref{sec:h3} and §\ref{sec:discussion}. \emph{Boundary:} our horizon is capped at $k=5$ by a minimum-sample threshold; longer-episode runs would likely show sharper separation.
@@ -299,7 +299,7 @@ Two probes do \emph{not} discriminate between conditions, consistent with their 
 \end{figure}
 
 \paragraph{Place-cell-like units and multi-layer depth.}
-Figure~\ref{fig:place_cells} combines both analyses. Using the spatial-information metric of Banino et al.~\citep{banino2018grid}, units with $>1$\,bit: foveated $475/512$, blind $473/512$, uniform $473/512$, matched-48 $461/512$, foveated-learned $285/512$. Four of five conditions distribute spatial encoding broadly; fov-learned is qualitatively different. The multi-layer heatmap shows the foveated-learned heading-$>$-position dissociation at every layer/state, ruling out a top-layer probing artefact.
+Figure~\ref{fig:place_cells} combines both analyses. Using the spatial-information metric of Banino et al.~\citep{banino2018grid}, units with $>1$\,bit: foveated-fixed $475/512$, blind $473/512$, uniform $473/512$, matched-48 $461/512$, foveated-learned $285/512$. Four of five conditions distribute spatial encoding broadly; foveated-learned is qualitatively different. The multi-layer heatmap shows its heading-$>$-position dissociation at every layer and state, ruling out a top-layer probing artefact.
 
 
 \section{Discussion}
@@ -331,6 +331,8 @@ We trained five navigation agents differing only in visual input and probed thei
 \bibliographystyle{plainnat}
 \bibliography{literature}
 
+\newpage
+\input{checklist}
 
 \newpage
 \appendix
