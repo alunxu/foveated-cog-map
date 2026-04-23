@@ -27,6 +27,7 @@ the global Habitat / habitat-baselines registries:
 from src.habitat import wijmans_sensors  # noqa: F401  (registers sensors)
 from src.habitat.wijmans_policy import WijmansPointNavPolicy  # noqa: F401
 from src.habitat.foveated_policy import FoveatedWijmansPolicy  # noqa: F401
+from src.habitat.foveated_shifted_policy import FoveatedShiftedGazePolicy  # noqa: F401
 from src.habitat.foveated_learned_policy import (  # noqa: F401
     FoveatedLearnedGazePolicy,
 )
