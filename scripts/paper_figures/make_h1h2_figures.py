@@ -82,22 +82,31 @@ def _load_analysis(in_dir: Path, cond: str) -> dict | None:
 def fig_path_history(in_dir: Path, out_dir: Path) -> None:
     """R² of decoding past GPS(t-k) from current hidden h(t), vs lag k.
 
-    The H1 prediction is that the foveated agent retains temporal spatial
-    memory for longer (slower decay, higher R² at large k) than the
-    sighted uniform baseline, because its degraded visual input forces
-    greater reliance on memory.
+    H1 prediction: the foveated agent retains temporal spatial memory for
+    longer (slower decay, higher R² at large k) than the sighted uniform
+    baseline, because its degraded visual input forces greater reliance
+    on memory.
+
+    Foveated-learned is EXCLUDED from this figure. The lag-k probe
+    requires k+1 consecutive within-episode steps; applying the 4-step
+    cross-condition truncation (§Methods) to foveated-learned leaves
+    100-200 samples at lag k>=2 with near-zero target variance (the agent
+    has barely moved), which produces uninterpretable numbers (R² in
+    {-10 sentinel, +1 trivial}). These are sample-count/variance
+    artefacts, not representation-quality signal. Paper text §4.3
+    discusses this exclusion explicitly.
     """
+    # H1 comparison conditions: exclude fov-learned (see docstring)
+    h1_order = [c for c in COND_ORDER if c != "foveated_learned"]
+
     fig, ax = plt.subplots(figsize=(5.2, 3.2))
 
-    for cond in COND_ORDER:
+    for cond in h1_order:
         d = _load_analysis(in_dir, cond)
         if d is None or "2c_path_history" not in d:
             continue
-        # Handle two JSON shapes: list (old analyze.py) or dict with
-        # "lags" subfield (newer analyze.py with metadata).
         block = d["2c_path_history"]
         entries = block["lags"] if isinstance(block, dict) and "lags" in block else block
-        # Skip entries with no 'r2' key (skipped lags)
         entries = [r for r in entries if isinstance(r, dict) and "r2" in r]
         if not entries:
             continue
@@ -113,7 +122,7 @@ def fig_path_history(in_dir: Path, out_dir: Path) -> None:
     ax.set_xlabel("lag $k$ (steps into the past)")
     ax.set_ylabel(r"position probe $R^2$ on GPS($t-k$)")
     ax.set_title("Path-history decoding across conditions (H1)")
-    ax.set_ylim(-3.0, 1.0)
+    ax.set_ylim(-1.8, 1.0)
     ax.legend(loc="lower left", fontsize=8, frameon=False)
     ax.grid(True, alpha=0.25)
     fig.tight_layout()

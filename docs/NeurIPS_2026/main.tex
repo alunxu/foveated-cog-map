@@ -165,7 +165,7 @@ Fov-learned      & 250M & 0.82            & 0.98            & 0.03          & \t
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.75\linewidth]{fig/h1_path_history.pdf}
-\caption{Path-history probe $R^2$ vs.\ lag $k$. Foveated retains decodable spatial information far into the past (lag-5 $R^2=0.556$); uniform decays catastrophically (lag-5 $R^2=-1.53$). Negative values indicate probe failure to generalise. Foveated-learned (orange) is flat at $R^2\approx-2.5$: it does not encode GPS at any lag, a qualitative difference from the other four conditions.}
+\caption{Path-history probe $R^2$ vs.\ lag $k$: decoding GPS at $t{-}k$ from the current hidden state. Foveated-fixed (red) retains decodable spatial information far into the past (lag-5 $R^2=0.56$); uniform (green) decays catastrophically (lag-5 $R^2=-1.53$). Negative values indicate probe failure to generalise. Foveated-learned is \emph{excluded} from this comparison by the truncation policy (§\ref{sec:methods-probing}): the lag-$k$ probe requires $k{+}1$ consecutive steps per episode, and applying the 4-step cross-condition truncation leaves $\leq 200$ samples at $k\geq 2$ with near-zero target variance, producing uninterpretable sentinel values (sample-count artefact, not representation signal).}
 \label{fig:path_history}
 \end{figure}
 
