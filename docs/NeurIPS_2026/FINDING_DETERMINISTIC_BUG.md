@@ -150,6 +150,55 @@ deterministic re-collection removes this confound.
   `1/p(STOP)` ratio for high- vs low-entropy policies
 - Training-eval SPL for fov-fix (0.83) is incompatible with 0% probe
   success unless the two evals use different sampling protocols
+- **Paper internal contradiction (Methods §3.3)**:
+  - Line 105: "Four of the five conditions produce short evaluation
+    episodes (mean ≤ 5 steps)" — from the probing data (stochastic bug)
+  - Line 129: "Gibson PointNav episodes average ∼100–120 steps" — from
+    transplant/behavioral eval (deterministic)
+  - Same underlying policies, same test split, same dataset. The only
+    difference is the sampling protocol, which reproduces the two
+    regimes exactly.
+
+## Draft replacement text for §3.3 Methods (apply after re-collection)
+
+Old (line 105):
+> Four of the five conditions (blind, uniform, foveated-fixed, matched-
+> compute) produce short evaluation episodes (mean ≤ 5 steps in the
+> Gibson val split) because the agents navigate efficiently to goal.
+> Foveated-learned produces much longer episodes (mean 171, median 77
+> steps) because its collapsed gaze yields inefficient but ultimately
+> successful trajectories. This causes an ∼100× difference in the
+> effective spatial range covered by the probe-training set per episode
+> between foveated-learned and the other four conditions.
+
+New (if re-collection confirms ~uniform episode lengths):
+> Probing rollouts use deterministic (argmax) action selection, matching
+> the eval protocol of our shortcut-discovery and memory-transplant
+> interventions and of standard habitat-baselines evaluation. Under this
+> protocol, all five conditions produce comparable episode lengths
+> (mean ~100–150 steps, consistent with the 100–120-step transplant
+> baseline in §3.4). We collect 500 episodes per condition on the held-
+> out Gibson val split, yielding ~60–80k labelled per-step hidden states
+> per condition — enough for stable episode-split Ridge probes.
+
+(Replaces the "mean ≤ 5 steps" framing + the "natural 4-step horizon"
+truncation policy; the lag-$k$ probe description simplifies because
+every condition now has sufficient consecutive-step samples.)
+
+## Draft replacement text for H2 fov-learned caveat (line 213)
+
+Old:
+> Foveated-learned's transfer values are one-to-two orders of magnitude
+> worse than other pairs because its average episode is ∼40× longer,
+> spreading its probe data over a much larger spatial range. On a
+> first-4-steps-per-episode subset matched to the others, its cross-
+> transfer falls into the $[-2, -15]$ band of every other pair.
+
+New:
+> (Revisit once we have deterministic-collection numbers; under matched
+> episode lengths the ~40× imbalance should vanish and the cross-
+> transfer interpretation is straightforward. Expected: all pairs in
+> the same $[-2, -15]$ band, no special caveat needed.)
 
 **Remaining uncertainty**: quantitative effect on probe R² values can only
 be measured by actually re-running. Our qualitative predictions:
