@@ -93,6 +93,12 @@ def parse_args():
                    help="Occupancy grid side length in meters")
     p.add_argument("--occ-grid-res", type=float, default=0.25,
                    help="Occupancy grid resolution in meters")
+    p.add_argument("--override", action="append", default=[],
+                   help="Additional Hydra overrides, e.g. "
+                        "--override habitat.dataset.data_path=data/datasets/pointnav/mp3d/v1/{split}/{split}.json.gz "
+                        "(repeatable)")
+    p.add_argument("--split", default="train",
+                   help="Dataset split (default: train). Use 'val' or 'val_mini' for held-out scenes.")
     return p.parse_args()
 
 
@@ -101,11 +107,14 @@ def main():
     device = torch.device(args.device)
 
     # ---- Config + Environment + Policy ----
-    config = load_habitat_config(args.config_name, args.ckpt, overrides=[
-        "habitat.dataset.split=train",
+    base_overrides = [
+        f"habitat.dataset.split={args.split}",
         "habitat.environment.iterator_options.shuffle=True",
         "habitat.environment.iterator_options.group_by_scene=False",
-    ])
+    ]
+    config = load_habitat_config(
+        args.config_name, args.ckpt, overrides=base_overrides + list(args.override),
+    )
 
     print(f"Config: {args.config_name}")
     print(f"Checkpoint: {args.ckpt}")
