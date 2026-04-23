@@ -32,7 +32,13 @@ MIDPOINT_STEP=${8:-30}  # episodes avg ~100 steps; 30 = first 1/3 captured by do
 source "${SLURM_SUBMIT_DIR}/scripts/cluster/common.sh"
 
 OUT_DIR="/scratch/izar/${USER}/transplant_results"
-OUT_PATH="${OUT_DIR}/${DONOR_NAME}_to_${RECIP_NAME}.json"
+# Include midpoint in filename so midpoint sweeps don't clobber each other.
+# Default midpoint=30 keeps backward-compat with existing files.
+if [ "${MIDPOINT_STEP}" = "30" ]; then
+    OUT_PATH="${OUT_DIR}/${DONOR_NAME}_to_${RECIP_NAME}.json"
+else
+    OUT_PATH="${OUT_DIR}/${DONOR_NAME}_to_${RECIP_NAME}_mid${MIDPOINT_STEP}.json"
+fi
 mkdir -p "${OUT_DIR}"
 
 echo "============================================"
