@@ -36,15 +36,30 @@ def split_by_episode(ep_ids, seed=0, test_frac=0.2):
     return ~test_mask, test_mask
 
 
-def probe(npz_path: Path) -> dict | None:
+def probe(npz_path: Path, max_step_per_ep: int | None = None) -> dict | None:
     try:
         d = np.load(npz_path, allow_pickle=True)
     except FileNotFoundError:
         return None
-    X = d["hidden_states"].astype(np.float32)
-    headings = d["headings"].astype(np.float32)
-    positions = d["positions"].astype(np.float32)
-    ep_ids = d["episode_ids"]
+    # Full-episode data first, then optionally truncate to first
+    # `max_step_per_ep` steps per episode (matches paper's truncated-to-
+    # matched protocol for fov-learned).
+    X_full = d["hidden_states"].astype(np.float32)
+    headings_full = d["headings"].astype(np.float32)
+    positions_full = d["positions"].astype(np.float32)
+    ep_full = d["episode_ids"]
+    step_full = d["step_in_episode"]
+    if max_step_per_ep is not None:
+        keep = step_full < max_step_per_ep
+        X = X_full[keep]
+        headings = headings_full[keep]
+        positions = positions_full[keep]
+        ep_ids = ep_full[keep]
+    else:
+        X = X_full
+        headings = headings_full
+        positions = positions_full
+        ep_ids = ep_full
 
     # The PointGoal compass sensor is EGOCENTRIC: heading relative to the
     # agent's pose at episode start. Reconstruct by subtracting each
@@ -101,6 +116,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--in-dir", type=Path, required=True)
     ap.add_argument("--out",   type=Path, required=True)
+    ap.add_argument("--max-step", type=int, default=None,
+                    help="Truncate each episode to its first N steps before "
+                         "probing. Matches paper's truncated-to-matched "
+                         "protocol for fov-learned cross-condition comparison.")
     args = ap.parse_args()
 
     results = {}
@@ -109,7 +128,7 @@ def main():
           f"{'ep-compass R²':>14} {'MAE°':>6} {'ep-GPS R²':>11}")
     for cond, base, mask in CONDITIONS:
         for tag, fname in [("base", base), ("masked", mask)]:
-            r = probe(args.in_dir / fname)
+            r = probe(args.in_dir / fname, max_step_per_ep=args.max_step)
             if r is None:
                 print(f"{cond:<20} {tag:<8} (missing)")
                 continue

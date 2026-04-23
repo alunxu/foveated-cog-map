@@ -1,0 +1,42 @@
+{
+  "foveated_fix_base": {
+    "n_steps": 2097,
+    "n_episodes": 500,
+    "avg_steps_per_ep": 4.194,
+    "episodic_compass_r2": 0.31778401136398315,
+    "episodic_compass_mae_deg": 4.497786290159178,
+    "episodic_gps_r2": -0.03569144010543823
+  },
+  "foveated_fix_masked": {
+    "n_steps": 407765,
+    "n_episodes": 300,
+    "avg_steps_per_ep": 1359.2166666666667,
+    "episodic_compass_r2": -0.16657882928848267,
+    "episodic_compass_mae_deg": 108.35487914408016,
+    "episodic_gps_r2": -0.4815419912338257
+  },
+  "foveated_learned_base": {
+    "n_steps": 85746,
+    "n_episodes": 500,
+    "avg_steps_per_ep": 171.492,
+    "episodic_compass_r2": 0.19328132271766663,
+    "episodic_compass_mae_deg": 55.122829960723635,
+    "episodic_gps_r2": -13.29336929321289
+  },
+  "foveated_learned_masked": {
+    "n_steps": 486237,
+    "n_episodes": 300,
+    "avg_steps_per_ep": 1620.79,
+    "episodic_compass_r2": -0.07283943891525269,
+    "episodic_compass_mae_deg": 106.24155714317568,
+    "episodic_gps_r2": -1.700010895729065
+  },
+  "uniform_base": {
+    "n_steps": 1907,
+    "n_episodes": 500,
+    "avg_steps_per_ep": 3.814,
+    "episodic_compass_r2": 0.3338591754436493,
+    "episodic_compass_mae_deg": 5.636596537080098,
+    "episodic_gps_r2": -0.23592764139175415
+  }
+}
