@@ -27,6 +27,7 @@ RECIP_NAME=${4:?recipient name required}
 RECIP_CFG=${5:?recipient config required}
 RECIP_CKPT=${6:?recipient ckpt required}
 EPISODES=${7:-150}
+MIDPOINT_STEP=${8:-30}  # episodes avg ~100 steps; 30 = first 1/3 captured by donor
 
 source "${SLURM_SUBMIT_DIR}/scripts/cluster/common.sh"
 
@@ -51,4 +52,5 @@ python -u ${PROJECT_DIR}/scripts/eval/transplant.py \
     --recipient-config="${RECIP_CFG}" \
     --recipient-ckpt="${RECIP_CKPT}" \
     --episodes=${EPISODES} \
+    --midpoint-step=${MIDPOINT_STEP} \
     --out="${OUT_PATH}"
