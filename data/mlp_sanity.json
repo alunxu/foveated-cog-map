@@ -1,0 +1,42 @@
+{
+  "blind_gibson": {
+    "n_steps": 1912,
+    "n_episodes": 500,
+    "gps_r2_mlp": 0.7663674354553223,
+    "compass_r2_mlp": 0.8570861220359802,
+    "goal_vector_r2_mlp": -0.08502477407455444,
+    "path_history_lag5_r2_mlp": -1.3426183462142944
+  },
+  "uniform_gibson": {
+    "n_steps": 1907,
+    "n_episodes": 500,
+    "gps_r2_mlp": 0.7360661029815674,
+    "compass_r2_mlp": 0.7753233313560486,
+    "goal_vector_r2_mlp": -0.19743716716766357,
+    "path_history_lag5_r2_mlp": -0.30242761969566345
+  },
+  "foveated_gibson": {
+    "n_steps": 2097,
+    "n_episodes": 500,
+    "gps_r2_mlp": 0.8101725578308105,
+    "compass_r2_mlp": 0.8783605098724365,
+    "goal_vector_r2_mlp": -0.43967264890670776,
+    "path_history_lag5_r2_mlp": -0.6492907404899597
+  },
+  "foveated_learned_gibson": {
+    "n_steps": 85746,
+    "n_episodes": 500,
+    "gps_r2_mlp": 0.6996658444404602,
+    "compass_r2_mlp": 0.7483448386192322,
+    "goal_vector_r2_mlp": -0.361630916595459,
+    "path_history_lag5_r2_mlp": -1.7655030488967896
+  },
+  "matched_gibson": {
+    "n_steps": 1914,
+    "n_episodes": 500,
+    "gps_r2_mlp": 0.7317012548446655,
+    "compass_r2_mlp": 0.7208750247955322,
+    "goal_vector_r2_mlp": -0.23496222496032715,
+    "path_history_lag5_r2_mlp": -0.30888015031814575
+  }
+}

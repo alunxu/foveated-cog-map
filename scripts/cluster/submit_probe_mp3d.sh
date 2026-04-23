@@ -44,14 +44,15 @@ echo "============================================"
 cd /home/${USER}/habitat-lab
 
 # Step 1: Collect on MP3D val split.
-# The config's default data_path is mp3d_gibson/v1/{split}; we override to
-# MP3D-only val via Hydra.
+# The config's default data_path uses `{split}` placeholders which Hydra's
+# override grammar parses as special tokens. Pass the literal expanded path
+# (already substituted for split=val) to avoid the parser error.
 python -u ${PROJECT_DIR}/scripts/probing/collect.py \
     --config-name="${CONFIG_NAME}" \
     --ckpt="${CKPT_PATH}" \
     --episodes=${NUM_EPISODES} \
     --split=val \
-    --override "habitat.dataset.data_path=data/datasets/pointnav/mp3d/v1/{split}/{split}.json.gz" \
+    --override 'habitat.dataset.data_path=data/datasets/pointnav/mp3d/v1/val/val.json.gz' \
     --collect-occupancy \
     --out="${NPZ_PATH}"
 

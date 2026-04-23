@@ -99,6 +99,14 @@ def parse_args():
                         "(repeatable)")
     p.add_argument("--split", default="train",
                    help="Dataset split (default: train). Use 'val' or 'val_mini' for held-out scenes.")
+    p.add_argument("--mask-compass", action="store_true",
+                   help="Zero the compass sensor in each observation before the "
+                        "policy forward pass. Used by the H3-revised heading-probe "
+                        "causal test: if the hidden state still encodes heading "
+                        "when compass is masked, the LSTM genuinely represents "
+                        "heading; if not, it was passing the compass input through.")
+    p.add_argument("--mask-gps", action="store_true",
+                   help="Zero the GPS sensor (same rationale as --mask-compass).")
     return p.parse_args()
 
 
@@ -195,6 +203,15 @@ def main():
         done = False
         step = 0
         while not done:
+            # Optionally mask compass / GPS sensor values before passing to
+            # policy. This is a *policy-time* ablation: we want to see whether
+            # the policy still navigates and whether the resulting hidden state
+            # still encodes heading / position when the direct sensor input is
+            # disabled. Ground-truth labels recorded below are unchanged.
+            if args.mask_compass and "compass" in obs:
+                obs["compass"] = np.zeros_like(obs["compass"])
+            if args.mask_gps and "gps" in obs:
+                obs["gps"] = np.zeros_like(obs["gps"])
             # Build batched observation
             batch = {k: torch.from_numpy(np.expand_dims(v, 0)).to(device)
                      for k, v in obs.items()}
