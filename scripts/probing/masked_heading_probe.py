@@ -104,12 +104,20 @@ def probe(npz_path: Path, max_step_per_ep: int | None = None) -> dict | None:
     }
 
 
-CONDITIONS = [
+COMPASS_CONDITIONS = [
     # (display_name, baseline_npz, masked_npz)
     ("foveated_fix",     "foveated_gibson.npz",         "foveated_gibson_mask_compass.npz"),
     ("foveated_learned", "foveated_learned_gibson.npz", "foveated_learned_gibson_mask_compass.npz"),
     ("uniform",          "uniform_gibson.npz",          "uniform_gibson_mask_compass.npz"),
 ]
+
+GPS_CONDITIONS = [
+    ("foveated_fix",     "foveated_gibson.npz",         "foveated_gibson_mask_gps.npz"),
+    ("foveated_learned", "foveated_learned_gibson.npz", "foveated_learned_gibson_mask_gps.npz"),
+    ("uniform",          "uniform_gibson.npz",          "uniform_gibson_mask_gps.npz"),
+]
+
+CONDITIONS = COMPASS_CONDITIONS  # backward-compat
 
 
 def main():
@@ -120,13 +128,16 @@ def main():
                     help="Truncate each episode to its first N steps before "
                          "probing. Matches paper's truncated-to-matched "
                          "protocol for fov-learned cross-condition comparison.")
+    ap.add_argument("--mask-type", default="compass", choices=["compass", "gps"],
+                    help="Which sensor was masked in the masked run.")
     args = ap.parse_args()
 
+    CONDS = COMPASS_CONDITIONS if args.mask_type == "compass" else GPS_CONDITIONS
     results = {}
     print(f"{'Condition':<20} {'run':<8} "
           f"{'n_ep':>6} {'steps/ep':>8} "
           f"{'ep-compass R²':>14} {'MAE°':>6} {'ep-GPS R²':>11}")
-    for cond, base, mask in CONDITIONS:
+    for cond, base, mask in CONDS:
         for tag, fname in [("base", base), ("masked", mask)]:
             r = probe(args.in_dir / fname, max_step_per_ep=args.max_step)
             if r is None:
