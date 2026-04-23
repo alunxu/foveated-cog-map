@@ -426,14 +426,15 @@ def main():
             }
         else:
             # === THE TRANSPLANT ===
-            # Inject donor's hidden state into recipient, then run recipient
-            # for the second half in the recipient's env (which is at the
-            # correct physical state from the recipient's first-half actions).
+            # Donor has taken first-half actions in the shared env; the
+            # agent is now at donor's midpoint physical position. Inject
+            # donor's hidden state into recipient, carry over prev-action
+            # and mask, and let recipient drive the second half from here.
             transplanted_rnn_h = donor_rnn_h.clone()
 
             metrics_cross = _run_second_half(
                 env, recip_obs, recip_policy,
-                transplanted_rnn_h, recip_prev_a, recip_mask,
+                transplanted_rnn_h, donor_prev_a, donor_mask,
                 device, recip_path_len, args.max_steps - midpoint,
             )
         results_cross.append(metrics_cross)
