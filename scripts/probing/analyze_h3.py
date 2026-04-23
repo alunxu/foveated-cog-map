@@ -186,24 +186,27 @@ def _permutation_pvalue(
     n_perms: int = 1000,
     seed: int = 0,
 ) -> float:
-    """Shuffle residuals within episode identities and compute fraction of
-    permuted correlations ≥ the observed one. Controls for episode-level
-    confounds (episode length, scene, task difficulty)."""
+    """Within-episode shuffle of the residual sequence, then re-correlate
+    against the original metric. Controls for episode-level confounds
+    (episode length, scene difficulty, reward trajectory) because any
+    cross-episode pattern is preserved; only within-episode alignment is
+    broken. A significant p-value therefore indicates step-level
+    gaze↔uncertainty coupling beyond episode-level effects.
+    """
     rng = np.random.default_rng(seed)
     observed_r = abs(pearsonr(residuals, metric)[0])
-    ep_ids = np.unique(episode_ids)
+    # Pre-compute the per-episode index lists once (O(N) total).
+    episode_slots: dict[int, np.ndarray] = {}
+    for ep in np.unique(episode_ids):
+        episode_slots[int(ep)] = np.where(episode_ids == ep)[0]
+
     n_ge = 0
+    permuted = residuals.copy()
     for _ in range(n_perms):
-        # shuffle the residual-to-episode assignment
-        permuted_ep = ep_ids.copy()
-        rng.shuffle(permuted_ep)
-        ep_map = dict(zip(ep_ids, permuted_ep))
-        new_ep = np.array([ep_map[e] for e in episode_ids])
-        # pull residual values by swapped episode
-        new_res = np.empty_like(residuals)
-        for orig, new in zip(ep_ids, permuted_ep):
-            new_res[episode_ids == orig] = residuals[episode_ids == new]
-        r = abs(pearsonr(new_res, metric)[0])
+        # Shuffle residuals within each episode (keeps episode-level dist fixed).
+        for idx in episode_slots.values():
+            permuted[idx] = rng.permutation(residuals[idx])
+        r = abs(pearsonr(permuted, metric)[0])
         if r >= observed_r:
             n_ge += 1
     return (n_ge + 1) / (n_perms + 1)
