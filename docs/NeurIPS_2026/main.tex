@@ -106,7 +106,7 @@ Probed variables: GPS position, compass heading, distance-to-goal, path history 
 
 \begin{itemize}
   \setlength\itemsep{0pt}
-  \item \emph{Cross-condition quantitative comparisons} (§\ref{sec:baseline} baseline probes, §\ref{sec:h2} CKA and probe transfer, §\ref{sec:h3} goal-vector and heading-content claims, §\ref{sec:addl} MP3D) use \emph{truncated-to-first-4-steps} for foveated-learned and full episodes for the other four; the truncation matches the natural horizon of the other conditions. Tables and figures are labelled ``truncated'' where this applies.
+  \item \emph{Cross-condition quantitative comparisons} (§\ref{sec:summary} baseline-probe columns, §\ref{sec:h2} CKA and probe transfer, §\ref{sec:h3} goal-vector and heading-content claims, §\ref{sec:addl} MP3D) use \emph{truncated-to-first-4-steps} for foveated-learned and full episodes for the other four; the truncation matches the natural horizon of the other conditions. Tables and figures are labelled ``truncated'' where this applies.
   \item \emph{Within-condition analyses where foveated-learned is not compared against others} (§\ref{sec:addl} per-condition place-cell counts, §\ref{sec:addl} multi-layer heatmap) use each condition's full-episode data.
   \item \emph{Behavioural interventions} (§\ref{sec:h2} transplant, §\ref{sec:h3} shortcut) use full rollouts for every condition because they measure on-policy task performance, which cannot be meaningfully truncated.
   \item \emph{Path-history lag-$k$ probe} (§\ref{sec:h1}) requires $k+1$ consecutive steps per episode; with $k=5$ the 4-step truncation would exclude every sample. Foveated-learned is therefore \emph{excluded from H1} rather than truncated, and we discuss the absent data point separately.
@@ -132,65 +132,31 @@ We complement probe-based analysis with two interventions directly on the LSTM s
 \section{Results}
 \label{sec:results}
 
-\subsection{Training Performance}
+\subsection{Summary of Conditions and Key Metrics}
+\label{sec:summary}
+
+Table~\ref{tab:summary} collects the per-condition numbers this section returns to; subsequent subsections plot, defend, and interpret the patterns it summarises. All sighted conditions solve PointGoal at $97$--$99\%$ success; blind reaches $93\%$ at a longer budget, reproducing Wijmans et al.~\citep{wijmans2023emergence}. Differences in what the hidden state encodes therefore cannot be attributed to differences in what the agents \emph{do}. The probe machinery itself is calibrated: Hewitt--Liang label-permutation selectivity exceeds $0.76$ for every sighted condition, and distance-to-goal decodes near-perfectly ($R^2\geq 0.84$) everywhere. Two patterns previewed in the table motivate the hypotheses. Among sighted fixed-gaze conditions, \emph{foveated decodes GPS better than uniform} ($R^2$ $0.84$ vs.\ $0.61$) --- the opposite of ``more pixels $\Rightarrow$ better decoding,'' and the hook for H1. \emph{Foveated-learned} reaches the highest compass $R^2$ of any condition ($0.94$, above blind which gets compass directly) while its GPS decoding collapses to chance ($0.03$) --- the categorical content shift we develop in H3. Two training-stability caveats are disclosed in full in Appendix~\ref{app:training-stability}: foveated-fixed uses ckpt.36 at $\sim$174M frames (last clean checkpoint before a silent NaN-gradient corruption at $\approx\!182$M), and matched-compute converged with a degenerate $1{\times}1$ feature map in its encoder head (retained as an information-volume control because H2 is about encoded volume, not parameter count).
 
 \begin{table}[t]
 \centering
 \small
-\caption{Task performance per condition on rolling 50-episode training windows. The ``Probe ckpt'' column gives the checkpoint used for probing and behavioural-probe results in §\ref{sec:h1}--§\ref{sec:addl}.}
-\label{tab:training}
-\begin{tabular}{lcccc}
+\setlength{\tabcolsep}{3.5pt}
+\caption{Per-condition summary of every scalar metric referenced in §\ref{sec:h1}--§\ref{sec:addl}. Ridge $\alpha=10$ probes on held-out Gibson episodes with episode-level splits. Per §\ref{sec:methods-probing}, foveated-learned's cross-condition probe columns (GPS $R^2$, compass $R^2$, goal-direction $R^2$) use the first-4-steps truncation to match the $\leq 5$-step natural horizon of the other four conditions. Dashes mark metrics excluded by methodology (``lag-5'' for foveated-learned requires $\geq 6$ consecutive truncated steps). Bold entries mark the best within the H1/H2/H3-relevant comparison.}
+\label{tab:summary}
+\begin{tabular}{lccc@{\hspace{10pt}}ccc@{\hspace{10pt}}cc@{\hspace{10pt}}c@{\hspace{10pt}}c}
 \toprule
-Condition & Frames & Success & SPL & Probe ckpt \\
+ & \multicolumn{3}{c}{Training} & \multicolumn{3}{c}{Baseline probes ($R^2$)} & H1 & H3 & Shortcut & MP3D \\
+ \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-8} \cmidrule(lr){9-9} \cmidrule(lr){10-10} \cmidrule(lr){11-11}
+Condition & Frames & SPL & Succ.\ & GPS & Compass & DtG & lag-5 $R^2$ & goal-dir $R^2$ & rel.\ drop\,\% & $\Delta$GPS $R^2$ \\
 \midrule
-Blind            & 342M    & 0.928 & 0.588 & 342M \\
-Uniform          & 250M    & \textbf{0.986} & \textbf{0.852} & 250M \\
-Foveated (fix)   & 174M    & \TODO{0.98} & \TODO{0.83} & 174M (ckpt.36) \\
-Matched-compute  & 250M    & 0.979 & 0.670 & 250M \\
-Fov-learned      & 250M    & 0.978 & 0.820 & 250M \\
+Blind            & 342M & 0.59            & 0.93            & \textbf{0.90} & 0.88             & 0.98          & 0.04           & $-$0.06           & 52 & $+$0.07 \\
+Uniform          & 250M & \textbf{0.85}   & \textbf{0.99}   & 0.61          & 0.42             & 0.96          & $-$1.53        & $-$0.03           & 41 & $-$0.04 \\
+Foveated (fix)   & 174M & \TODO{0.83}     & \TODO{0.98}     & 0.84          & 0.72             & 0.95          & \textbf{0.56}  & $-$0.08           & \textbf{21} & $-$0.10 \\
+Matched-compute  & 250M & 0.67            & 0.98            & 0.83          & 0.61             & 0.98          & 0.27           & $-$0.03           & 18 & $+$0.02 \\
+Fov-learned      & 250M & 0.82            & 0.98            & 0.03          & \textbf{0.94}    & 0.84          & ---            & $-$0.78           & \textbf{15} & $-$0.24 \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{fig/training_curves.pdf}
-\caption{Training curves read from tensorboard event files. All four sighted conditions converge to similar SPL ($0.82$--$0.85$) and success ($>97\%$) by $\sim$100M frames; blind converges to lower SPL ($\sim$0.50) over a longer horizon. A short glitch at frame~$\approx 228$M (fov-learned) is a resume-boundary artefact in the scalar log.}
-\label{fig:training_curves}
-\end{figure}
-
-All four sighted conditions converge to comparable task performance ($97$--$99\%$ success) at matched training budgets; blind reaches $93\%$ at a longer horizon, reproducing Wijmans et al.~\citep{wijmans2023emergence}. This matters for everything that follows: differences in what the \emph{hidden state} encodes cannot be attributed to differences in what the agents \emph{do}. Two training-stability issues are disclosed in full in Appendix~\ref{app:training-stability}: the foveated-fixed agent suffered a NaN-gradient corruption at $\approx\!182$M frames (we use ckpt.36 at $\sim$174M, the last clean intermediate), and matched-compute converged with a degenerate $1{\times}1$ feature-map in its encoder head (a valid information-volume control, since our H2 question is about the \emph{encoded} volume).
-
-
-\subsection{Baseline Probes: GPS, Compass, Distance-to-Goal}
-\label{sec:baseline}
-
-\begin{table}[t]
-\centering
-\small
-\caption{Global linear probe accuracy (Ridge, $\alpha=10$, episode-level split, $n=500$ held-out Gibson evaluation episodes per condition). Per the sample-size and truncation policy in §\ref{sec:methods-probing}, foveated-learned is reported on the first 4 steps per episode to match the natural horizon of the other four conditions, whose episodes are short by nature of successful navigation (mean $\leq 5$ steps). Foveated-fixed uses ckpt.36 (~174M); others use the final converged checkpoint.}
-\label{tab:probe_baseline}
-\begin{tabular}{lcccc}
-\toprule
- & GPS $R^2$ & GPS MAE & Compass $R^2$ & Compass MAE \\
-\midrule
-Blind       & \textbf{0.899} & 0.020\,m & 0.878 & 0.8\textdegree \\
-Foveated    & 0.841          & 0.034\,m & 0.715 & 2.1\textdegree \\
-Matched-compute  & 0.832          & 0.033\,m & 0.607 & 1.3\textdegree \\
-Uniform     & 0.614          & 0.035\,m & 0.423 & 1.6\textdegree \\
-Fov-learned & 0.031          & 0.022\,m & \textbf{0.941} & --- \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.75\linewidth]{fig/h1_global_probe.pdf}
-\caption{Global GPS probe $R^2$ (solid) and Hewitt--Liang selectivity (hatched). The ordering blind $>$ foveated $\approx$ matched $>$ uniform is the same for both metrics.}
-\label{fig:global_probe}
-\end{figure}
-
-Every condition's hidden state linearly encodes spatial quantities well above chance, and distance-to-goal decodes near-perfectly ($R^2>0.95$) everywhere: the probe machinery works. Hewitt--Liang selectivity exceeds $0.76$ in all sighted conditions, so the signals are genuine structure rather than probe memorisation. Two patterns visible in Table~\ref{tab:probe_baseline} pre-empt the three hypotheses that follow. First, among sighted fixed-gaze conditions, \emph{foveated decodes GPS better than uniform} (0.84 vs.\ 0.61) --- the opposite of what ``more pixels in $\Rightarrow$ better decoding out'' would predict, and the hook for H1. Second, \emph{foveated-learned} reaches the highest compass $R^2$ of any condition (0.94, exceeding even the blind agent that receives compass directly) while its GPS decoding collapses to chance (0.03) --- a categorical content shift we develop in H3.
 
 
 \subsection{H1: Sensor Structure \texorpdfstring{$\to$}{->} Compensatory Memory}
@@ -203,30 +169,13 @@ Every condition's hidden state linearly encodes spatial quantities well above ch
 \label{fig:path_history}
 \end{figure}
 
-\begin{table}[t]
-\centering
-\small
-\caption{Path-history probe: $R^2$ for decoding GPS at lag $k$ from the current hidden state.}
-\label{tab:path_history}
-\begin{tabular}{lcccccc}
-\toprule
- & lag-0 & lag-1 & lag-2 & lag-3 & lag-4 & lag-5 \\
-\midrule
-Blind    & 0.899 & 0.905 & 0.867 & 0.748 & 0.536 & 0.043 \\
-Foveated & 0.841 & 0.853 & 0.824 & 0.737 & \textbf{0.629} & \textbf{0.556} \\
-Matched  & 0.832 & 0.855 & 0.807 & 0.581 & 0.445 & 0.274 \\
-Uniform  & 0.614 & 0.595 & 0.534 & 0.386 & $-$0.105 & $-$1.532 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\noindent\textbf{Finding}\quad Non-uniform vision pushes memory to retain past positions longer. Five steps into the past, foveated hidden states still contain a linearly decodable location code ($R^2=0.56$, $66\%$ of their instant-decoding quality retained; Figure~\ref{fig:path_history}); uniform hidden states do not (probe fails to generalise at $R^2=-1.53$). In plain terms: only the foveated-fixed agent's memory, five steps after visiting a point, still "knows where it was" well enough for a linear readout to reconstruct the coordinates.
 
-\noindent\textbf{Finding}\quad Non-uniform vision pushes memory to retain past positions longer. Five steps into the past, foveated hidden states still contain a linearly decodable location code ($66\%$ of their instant-decoding quality retained); uniform hidden states do not (probe fails to generalise at the same lag). In plain terms: only the foveated-fixed agent's memory, five steps after visiting a point, still "knows where it was" well enough for a linear readout to reconstruct the coordinates.
-
-\noindent\textbf{Ruling out alternatives}\quad This is neither a probe nor a training-budget artefact. \emph{(a)}~Lag-0 decoding is comparable across conditions ($R^2\geq 0.61$), so probe capacity is not the bottleneck. \emph{(b)}~Hewitt--Liang label-permutation selectivity exceeds $0.76$ at every lag, ruling out probe memorisation. \emph{(c)}~The foveated $>$ uniform gap is present at every $k$, not a single-lag fluctuation; the curves do not cross. \emph{(d)}~All four conditions use the same held-out set, Ridge hyperparameters, and episode splits. Task competence also fails as an explanation: uniform achieves the highest task SPL of all five conditions ($0.852$) yet has the worst retention.
+\noindent\textbf{Ruling out alternatives}\quad This is neither a probe nor a training-budget artefact. Lag-0 decoding is comparable across conditions ($R^2\geq 0.61$), so probe capacity is not the bottleneck. Hewitt--Liang label-permutation selectivity exceeds $0.76$ at every lag, ruling out probe memorisation. The foveated $>$ uniform gap is present at every $k$, not a single-lag fluctuation; the curves do not cross. All four conditions use the same held-out set, Ridge hyperparameters, and episode splits. Task competence also fails as an explanation: uniform achieves the highest task SPL of all five conditions (Table~\ref{tab:summary}) yet has the worst retention.
 
 \noindent\textbf{Why: non-uniformity, not volume}\quad Two contrasts localise the mechanism. Foveated $>$ uniform even though both see the scene: a full-resolution stream removes the \emph{need} for memory-based position, because each frame re-derives it. Foveated $>$ matched-compute at every lag $k\geq 3$ even though matched-compute delivers more total pixels: the difference is that matched distributes its pixels uniformly. Compensatory retention tracks the \emph{non-uniformity} of the sensor, not the quantity of input. The signature is consistent with belief-state-like representations emerging from pure RL under partial observability~\citep{hennig2023belief}.
 
-\noindent\textbf{Fov-learned exclusion}\quad The lag-$k$ probe needs $k+1$ consecutive within-episode steps, which the 4-step truncation used for cross-condition probing (§\ref{sec:methods-probing}) removes from foveated-learned. Its full-episode lag-$k$ numbers are not comparable to the other four (they drift into the very large spatial range of its long wandering episodes, §\ref{sec:h2} caveat), so we neither claim nor deny H1 for foveated-learned. Its content signature --- heading-dominant rather than position-dominant --- is a different effect addressed in H3.
+\noindent\textbf{Fov-learned exclusion}\quad The lag-$k$ probe needs $k+1$ consecutive within-episode steps, which the 4-step truncation used for cross-condition probing (§\ref{sec:methods-probing}) removes from foveated-learned. Its full-episode lag-$k$ numbers are not comparable to the other four, so we neither claim nor deny H1 for foveated-learned. Its content signature --- heading-dominant rather than position-dominant --- is a different effect addressed in H3.
 
 
 \subsection{H2: Sensor Structure \texorpdfstring{$\to$}{->} Format-Level Divergence}
@@ -261,16 +210,9 @@ Matched-compute  & $-$5.7        & $-$11.7 & $-$15.5  & $-$390  & \textbf{0.96} 
 
 \noindent\textbf{Ruling out alternatives}\quad Self-probes succeed ($R^2>0.90$) for every condition, so probe capacity is not the bottleneck. CKA is computed on a common-sample truncation, ruling out sample-size asymmetry. Task competence is tightly bunched ($97$--$99\%$ success), so the divergence is not a skill difference. And transfer fails symmetrically (both directions), which rules out the possibility that one condition's code simply embeds another's.
 
-\noindent\textbf{Foveated-learned caveat}\quad Foveated-learned's transfer values are one-to-two orders of magnitude worse than other pairs because its average episode is $\sim\!40\times$ longer, spreading its probe data over a much larger spatial range (§\ref{sec:methods-probing}). On a first-4-steps-per-episode subset matched to the others, its cross-transfer falls into the $[-2, -15]$ band of every other pair --- the qualitative conclusion (no shared code) is unchanged. t-SNE of pooled hidden states (Figure~\ref{fig:tsne}) confirms visually: the five conditions occupy non-overlapping regions of the 2-D manifold.
+\noindent\textbf{Foveated-learned caveat}\quad Foveated-learned's transfer values are one-to-two orders of magnitude worse than other pairs because its average episode is $\sim\!40\times$ longer, spreading its probe data over a much larger spatial range (§\ref{sec:methods-probing}). On a first-4-steps-per-episode subset matched to the others, its cross-transfer falls into the $[-2, -15]$ band of every other pair --- the qualitative conclusion (no shared code) is unchanged. A t-SNE projection of pooled hidden states confirms this visually (Appendix~\ref{app:supp_figs}): the five conditions occupy non-overlapping regions of a 2-D manifold.
 
 \noindent\textbf{Boundaries}\quad Our similarity tests are linear (CKA) or near-linear (t-SNE default); non-linear similarity measures could reveal higher-order shared structure. Our five sensors are diverse but not exhaustive; hybrid sensors (coarse uniform periphery + sharp fovea, depth-only inputs) might produce intermediate geometries.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.55\linewidth]{fig/h2_hidden_embedding_tsne.pdf}
-\caption{t-SNE projection of top-layer LSTM hidden states, pooled across all five conditions (1{,}500 random steps per condition; perplexity 30). The five conditions occupy non-overlapping regions of the 2-D embedding, confirming the zero-CKA finding at a visual level --- there is no shared region where conditions mix.}
-\label{fig:tsne}
-\end{figure}
 
 \begin{figure}[t]
 \centering
@@ -291,23 +233,16 @@ H1 and H2 identify sensor structure as one axis on representational content. H3 
 
 \noindent\textbf{Content-steering form: supported}\quad Fov-learned has the same foveation transform as foveated-fixed and matches its task-success range (SPL $0.820$, $97.8\%$), yet its representation encodes qualitatively different content: the highest compass decoding of any condition ($R^2=0.941$, exceeding even blind which receives compass directly as input) and near-chance GPS decoding ($R^2=0.031$). The dissociation holds at every LSTM layer (Figure~\ref{fig:multilayer}), so it is not a top-layer probing artefact. In plain terms: the gaze policy that happens to collapse sends the LSTM a near-constant view of one image patch, which reliably carries orientation cues (what wall am I facing?) but not much position information (which room am I in?); the memory specialises accordingly. Gaze policy is a representational-content lever even when it does not move.
 
-\noindent\textbf{Mechanism}\quad It would be natural to read fov-learned as "heading-only because it does not store the goal vector." A goal-vector probe (Figure~\ref{fig:goal_vector}) rejects this reading in a revealing way: \emph{no} condition stores the ego-to-goal direction linearly, because the PointGoal task provides it as a per-step input and the LSTM has no reason to memorise it. What each LSTM memorises is its own condition-specific trajectory and scene-history features. The heading-vs-position dissociation in fov-learned is therefore not a gap in its memory; it is a specialisation: the foveated-centre patch under a locked gaze preferentially feeds heading cues into the recurrent dynamics, and the full-visual stream under uniform gaze preferentially feeds position cues. Same architecture, same task, same sensor transform, different gaze $\Rightarrow$ different content.
+\noindent\textbf{Mechanism}\quad It would be natural to read fov-learned as "heading-only because it does not store the goal vector." A goal-vector probe (Figure~\ref{fig:h3_content}a) rejects this reading in a revealing way: \emph{no} condition stores the ego-to-goal direction linearly, because the PointGoal task provides it as a per-step input and the LSTM has no reason to memorise it. What each LSTM memorises is its own condition-specific trajectory and scene-history features. The heading-vs-position dissociation in fov-learned is therefore not a gap in its memory; it is a specialisation: the foveated-centre patch under a locked gaze preferentially feeds heading cues into the recurrent dynamics, and the full-visual stream under uniform gaze preferentially feeds position cues. Same architecture, same task, same sensor transform, different gaze $\Rightarrow$ different content.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.72\linewidth]{fig/goal_vector_probe.pdf}
-\caption{Ridge probe $R^2$ for three goal-related targets. Goal distance is linearly decodable in every condition ($R^2\geq 0.78$); goal \emph{direction} and the full 2-D ego-to-goal vector are at chance or negative for every condition, including the ones most hurt by the shortcut manipulation below. No condition stores the goal vector; what differs across conditions is the integrated trajectory and scene-history content.}
-\label{fig:goal_vector}
+\includegraphics[width=\linewidth]{fig/h3_content.pdf}
+\caption{H3 content evidence. (a)~Goal-vector probe $R^2$: goal \emph{distance} is decodable everywhere ($R^2\geq 0.78$), but goal \emph{direction} and the full 2-D ego-to-goal vector are at chance or negative for every condition --- no condition stores the goal vector (the PointGoal task provides it as a per-step input). What differs is the integrated trajectory and scene-history content each recurrent state accumulates. (b)~Shortcut discovery: persistent vs.\ reset memory on the second of two paired same-scene/different-goal episodes ($n=200$ SPLs per bar: 20 Gibson scenes $\times$ 10 paired episodes). Conditions are ordered by relative SPL drop (\%). Heading-dominant foveated-learned is the most episode-robust condition; position-dominant uniform and blind are least. The ordering matches what the heading-vs-position dissociation predicts and is the opposite of what ``stronger memory $\Rightarrow$ more locked-in'' would predict.}
+\label{fig:h3_content}
 \end{figure}
 
-\noindent\textbf{Shortcut discovery}\quad The content-steering claim makes a testable prediction: heading-dominant representations should be more robust to goal changes than position-dominant representations, because a heading estimate stays useful when the goal moves while a position-to-goal mapping does not. We test this by running paired episodes in the same scene with fresh goals, comparing second-episode SPL under \emph{reset} vs.\ \emph{persistent} memory (20 scenes $\times$ 10 paired episodes = 200 paired SPLs per condition). Persistent memory hurts every condition --- the agent is primed by its previous trajectory --- but by very different amounts (Figure~\ref{fig:shortcut}): foveated-learned loses the smallest fraction of its baseline SPL ($15\%$), uniform and blind the largest ($41$--$52\%$), with foveated-fixed and matched-compute in between. Critically, this ordering is \emph{not} what a ``stronger memory $\Rightarrow$ more locked-in'' story would predict --- uniform and foveated-fixed both decode GPS at $R^2\approx 0.95$ at the top layer, yet foveated-fixed loses half as much. It \emph{is} what the heading-dominant content prediction gives us: the agent whose memory is oriented around what it is facing rather than where it is carries over best. The shortcut ordering therefore confirms H3's content-steering form behaviourally.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.70\linewidth]{fig/shortcut_bars.pdf}
-\caption{Shortcut discovery ($n=200$ second-episode SPLs per bar: 20 Gibson scenes $\times$ 10 paired episodes). Persistent recurrent memory across episodes (new goal, same scene) vs.\ reset memory. Conditions are ordered by relative SPL drop (bold $\Delta$SPL). Heading-dominant fov-learned is least hurt ($15\%$); position-dominant uniform and blind are most hurt ($41$--$52\%$). The ordering confirms the content-steering form of H3: the learned-gaze representation is functionally different from the fixed-gaze representation, not just probe-different.}
-\label{fig:shortcut}
-\end{figure}
+\noindent\textbf{Shortcut discovery}\quad The content-steering claim makes a testable prediction: heading-dominant representations should be more robust to goal changes than position-dominant representations, because a heading estimate stays useful when the goal moves while a position-to-goal mapping does not. We test this by running paired episodes in the same scene with fresh goals, comparing second-episode SPL under \emph{reset} vs.\ \emph{persistent} memory (Figure~\ref{fig:h3_content}b). Persistent memory hurts every condition but by very different amounts: foveated-learned loses the smallest fraction of its baseline SPL ($15\%$), uniform and blind the largest ($41$--$52\%$), with foveated-fixed and matched-compute in between. Critically, this ordering is \emph{not} what a ``stronger memory $\Rightarrow$ more locked-in'' story would predict --- uniform and foveated-fixed both decode GPS at $R^2\approx 0.95$ at the top layer, yet foveated-fixed loses half as much. It \emph{is} what the heading-dominant content prediction gives us: the agent whose memory is oriented around what it is facing rather than where it is carries over best. The shortcut ordering therefore confirms H3's content-steering form behaviourally.
 
 
 \subsection{Additional Analyses}
@@ -382,6 +317,24 @@ We ran a controlled five-condition ablation that isolates the effect of visual-i
 
 \newpage
 \appendix
+
+\section{Supplementary visualisations}
+\label{app:supp_figs}
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.52\linewidth}\centering
+\includegraphics[width=\linewidth]{fig/training_curves.pdf}\\
+{\footnotesize (a) Training curves (TensorBoard event-file scalars). All four sighted conditions converge to SPL $0.82$--$0.85$ and success $>97\%$ by $\sim$100M frames; blind converges to SPL $\sim$0.50 over a longer horizon. The glitch at frame~$\approx 228$M (fov-learned) is a resume-boundary artefact in the scalar log.}
+\end{minipage}\hfill
+\begin{minipage}{0.44\linewidth}\centering
+\includegraphics[width=\linewidth]{fig/h2_hidden_embedding_tsne.pdf}\\
+{\footnotesize (b) t-SNE projection of top-layer LSTM hidden states pooled across all five conditions ($1{,}500$ random steps each; perplexity 30). The five conditions occupy non-overlapping regions of the 2-D embedding --- a visual confirmation of the near-zero CKA result (§\ref{sec:h2}).}
+\end{minipage}
+\caption{Supplementary visualisations referenced from the main text.}
+\label{fig:supp_figs}
+\end{figure}
+
 
 \section{Gaze-Diversity Auxiliary Loss (H3 Ablation)}
 \label{app:gaze_diversity}
