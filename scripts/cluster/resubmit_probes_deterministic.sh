@@ -40,24 +40,26 @@ echo "  Mode: ${MODE}"
 echo "============================================"
 
 # --- Gibson 5-condition canonical ---
+# Checkpoints match paper: ckpt.49 for fully-converged conditions; fov-fix
+# uses the pre-corruption ckpt.36 from foveated_gibson_corrupt_job2836021
+# (see §Appendix training-stability — last clean intermediate at ~174M).
 echo ""
 echo "# Gibson canonical 5 conditions"
 submit_det_probe \
     "pointnav/ddppo_pointnav_blind_gibson" \
-    "${CKPT_ROOT}/blind_gibson/ckpt.9.pth"
+    "${CKPT_ROOT}/blind_gibson/ckpt.49.pth"
 submit_det_probe \
     "pointnav/ddppo_pointnav_uniform_gibson" \
-    "${CKPT_ROOT}/uniform_gibson/ckpt.9.pth"
-# fov-fix uses the pre-corruption intermediate (ckpt.36 ~174M frames)
+    "${CKPT_ROOT}/uniform_gibson/ckpt.49.pth"
 submit_det_probe \
     "pointnav/ddppo_pointnav_foveated_gibson" \
-    "${CKPT_ROOT}/foveated_gibson/ckpt.36.pth"
+    "${CKPT_ROOT}/foveated_gibson_corrupt_job2836021/ckpt.36.pth"
 submit_det_probe \
     "pointnav/ddppo_pointnav_foveated_learned_gibson" \
-    "${CKPT_ROOT}/foveated_learned_gibson/ckpt.9.pth"
+    "${CKPT_ROOT}/foveated_learned_gibson/ckpt.49.pth"
 submit_det_probe \
     "pointnav/ddppo_pointnav_matched_gibson" \
-    "${CKPT_ROOT}/matched_gibson/ckpt.9.pth"
+    "${CKPT_ROOT}/matched_gibson/ckpt.49.pth"
 
 if [ "${MODE}" = "all" ]; then
     # --- MP3D (held-out scene dataset) ---
