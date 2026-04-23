@@ -341,6 +341,16 @@ Two probes do \emph{not} discriminate between conditions, consistent with their 
 \paragraph{Place-cell-like units and multi-layer depth.}
 Figure~\ref{fig:place_cells} combines both analyses. Using the spatial-information metric of Banino et al.~\citep{banino2018grid}, units with $>1$\,bit: foveated-fixed $475/512$, blind $473/512$, uniform $473/512$, matched-compute $461/512$, foveated-learned $285/512$. Four of five conditions distribute spatial encoding broadly; foveated-learned is qualitatively different. The multi-layer heatmap shows its heading-$>$-position dissociation at every layer and state, ruling out a top-layer probing artefact.
 
+\paragraph{Generalisation to held-out MP3D scenes.}
+Our probing data so far is from held-out Gibson scenes (the split not used in training). To test whether the findings generalise beyond Gibson's visual and architectural statistics, we re-ran the probing pipeline on MP3D validation scenes~\citep{savva2019habitat} (larger, more complex apartments than Gibson; same agents, no re-training; $300$ eval episodes per condition). The probe ordering and magnitudes largely hold (Figure~\ref{fig:mp3d}): uniform, foveated-fixed, and matched-compute maintain GPS/compass/distance-to-goal decoding within $\pm 0.11$ of their Gibson values (\TODO{blind still running}). The striking exception is foveated-learned, whose compass decoding drops from $R^2=0.94$ (Gibson, truncated-matched) to $0.38$ (MP3D) --- a larger drop than any other condition on any target. A plausible reading: the near-constant gaze collapse was fit to Gibson visual statistics, and the image region it locks onto delivers noisier heading cues on MP3D's more varied apartment layouts. Within MP3D, the heading $>$ position ordering for foveated-learned still holds (compass $R^2=0.38$ vs.\ GPS $R^2=-0.21$), so the qualitative H3 finding (gaze policy as a representational-content lever) is dataset-robust even though absolute numbers degrade.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{fig/mp3d_generalization.pdf}
+\caption{Probe generalisation from Gibson-trained evaluation to MP3D-val. Same five conditions, same trained checkpoints, re-run on $300$ held-out MP3D episodes per condition. GPS, compass, and distance-to-goal decoding remain in similar magnitude ranges for uniform, foveated-fixed, and matched-compute; foveated-learned shows larger drops, consistent with its gaze-collapse being fit to Gibson-specific image statistics. Blind: in progress.}
+\label{fig:mp3d}
+\end{figure}
+
 
 \section{Discussion}
 \label{sec:discussion}
