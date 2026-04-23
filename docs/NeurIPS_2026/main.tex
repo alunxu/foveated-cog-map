@@ -187,7 +187,7 @@ Table~\ref{tab:probe_baseline} and Figure~\ref{fig:global_probe}: blind dominate
 Selectivity values are well above zero (blind $0.91$, foveated $0.88$, matched-compute $0.87$, uniform $0.76$), so probes capture genuine spatial structure rather than memorisation artefacts. Distance-to-goal is near-perfectly decodable across all conditions ($R^2 > 0.95$).
 
 
-\subsection{H1: Sensor Structure $\to$ Compensatory Memory}
+\subsection{H1: Sensor Structure \texorpdfstring{$\to$}{->} Compensatory Memory}
 \label{sec:h1}
 
 \begin{figure}[t]
@@ -227,7 +227,7 @@ Two comparisons localise the mechanism. (i)~Foveated-fixed~$>$~uniform at every 
 Foveated-learned is flat at $R^2\approx-2.5$ across all lags (Figure~\ref{fig:path_history}, orange) --- not a retention failure of degree but a qualitative shift: foveated-learned has the highest compass decoding of all five conditions ($R^2=0.941$) yet near-chance GPS ($R^2=0.031$) (§\ref{sec:baseline}). We return to this dissociation in §\ref{sec:h3} and §\ref{sec:discussion}. \emph{Boundary:} our horizon is capped at $k=5$ by a minimum-sample threshold; longer-episode runs would likely show sharper separation.
 
 
-\subsection{H2: Sensor Structure $\to$ Format-Level Divergence}
+\subsection{H2: Sensor Structure \texorpdfstring{$\to$}{->} Format-Level Divergence}
 \label{sec:h2}
 
 \begin{figure}[t]
@@ -345,9 +345,9 @@ Figure~\ref{fig:place_cells} combines both analyses. Using the spatial-informati
 \section{Discussion}
 \label{sec:discussion}
 
-\subsection{A unified mechanism: sensor structure and gaze policy as orthogonal axes}
+\subsection{Two orthogonal axes: sensor structure and gaze policy}
 
-Our three findings share one underlying mechanism. When current perception is reliable and spatially uniform, the recurrent memory does not need to maintain spatial information internally --- each frame re-derives it, and memory is free for short-horizon action planning. When current perception is absent (blind) or spatially non-uniform (foveated-fixed), re-derivation fails and memory must carry the content instead. Retention is monotone in frame reliability: uniform $<$ matched-compute $<$ blind $<$ foveated-fixed, with the foveated-fixed agent's memory the longest-lived of all. A second, orthogonal axis appears when we vary \emph{gaze policy} rather than sensor quality. Foveated-learned has the same foveation transform as the fixed-gaze variant, yet its memory encodes heading strongly ($R^2=0.941$) and position barely ($R^2=0.031$): the collapsed gaze produces a near-constant view of one image region, which preferentially carries heading cues rather than position cues. Gaze policy is therefore a representational-content axis in its own right, not merely a visibility parameter. Sensor structure and gaze policy are two independent, controllable axes along which the format of learned spatial memory can be steered, neither visible if one studies only blind or uniform-sighted agents.
+Our three findings are unified under a two-axes picture. \emph{Sensor structure} (tested by H1 and H2) controls the spatial distribution of information each frame delivers: when current perception is reliable and spatially uniform, the recurrent memory does not need to maintain spatial information internally because each frame re-derives it; when current perception is absent (blind) or spatially non-uniform (foveated-fixed), re-derivation fails and memory must carry the content instead. Retention is monotone in frame reliability (uniform $<$ matched-compute $<$ blind $<$ foveated-fixed, with foveated-fixed's memory the longest-lived of all) and, independently, the representational \emph{format} diverges across conditions: no two share a common linear subspace, and mid-episode hidden states do not transfer even between the two foveated variants. \emph{Gaze policy} (tested by H3) is a second axis orthogonal to the first: foveated-learned has the same foveation transform as the fixed-gaze variant, yet a near-constant learned gaze produces a near-constant view of one image region, preferentially carrying heading cues over position cues, and the representation specialises accordingly (compass $R^2=0.941$, GPS $R^2=0.031$). The two axes are controllable independently and shape the \emph{format} of learned spatial memory, not merely its strength. Neither is visible if one studies only blind or uniform-sighted agents, which is why they have remained implicit in the emergent-map literature.
 
 \subsection{Why this, not alternative accounts}
 
