@@ -107,6 +107,16 @@ def parse_args():
                         "heading; if not, it was passing the compass input through.")
     p.add_argument("--mask-gps", action="store_true",
                    help="Zero the GPS sensor (same rationale as --mask-compass).")
+    p.add_argument("--deterministic", type=lambda x: x.lower() in ("1", "true", "yes"),
+                   default=True,
+                   help="Use deterministic (argmax) action selection (default: True). "
+                        "Matches the eval protocol used by shortcut.py, transplant.py, "
+                        "and debug_eval.py. Stochastic sampling (--deterministic=False) "
+                        "reflects the training-time policy but can cause trivially-short "
+                        "probe episodes for policies with high action-entropy (observed: "
+                        "fov-fix/uniform collapsed to 4-step episodes, 0%% success, under "
+                        "stochastic sampling, while reporting SPL 0.83 under deterministic "
+                        "eval).")
     return p.parse_args()
 
 
@@ -222,7 +232,7 @@ def main():
                     rnn_hidden,
                     prev_action,
                     not_done_mask,
-                    deterministic=False,
+                    deterministic=args.deterministic,
                 )
 
             # Extract ALL LSTM layer states.

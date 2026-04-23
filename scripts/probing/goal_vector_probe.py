@@ -153,11 +153,14 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in-dir", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--suffix", type=str, default="",
+                    help="Optional filename suffix (e.g. '_det' to read "
+                         "'<condition>_det.npz' instead of '<condition>.npz').")
     args = ap.parse_args()
 
     results = {}
     for cond in CONDITIONS:
-        path = args.in_dir / f"{cond}.npz"
+        path = args.in_dir / f"{cond}{args.suffix}.npz"
         print(f"\n=== {cond} ({path}) ===", flush=True)
         r = probe_goal_vector(path)
         if r is None:

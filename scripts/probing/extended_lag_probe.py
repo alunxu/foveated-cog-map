@@ -94,11 +94,14 @@ def main():
     ap.add_argument("--in-dir", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--max-lag", type=int, default=20)
+    ap.add_argument("--suffix", type=str, default="",
+                    help="Optional filename suffix (e.g. '_det' to read "
+                         "'<condition>_det.npz' instead of '<condition>.npz').")
     args = ap.parse_args()
 
     results = {"max_lag": args.max_lag, "per_condition": {}}
     for c in CONDITIONS:
-        path = args.in_dir / f"{c}.npz"
+        path = args.in_dir / f"{c}{args.suffix}.npz"
         if not path.exists():
             continue
         print(f"\n=== {c} ===", flush=True)
