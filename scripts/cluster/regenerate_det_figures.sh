@@ -24,7 +24,7 @@
 #SBATCH --job-name=regen_det_figs
 #SBATCH --time=01:00:00
 #SBATCH --account=cs-503
-#SBATCH --qos=cs-503
+#SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1

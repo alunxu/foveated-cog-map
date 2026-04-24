@@ -2,7 +2,7 @@
 #SBATCH --job-name=cs503_prb_mp3d
 #SBATCH --time=06:00:00
 #SBATCH --account=cs-503
-#SBATCH --qos=cs-503
+#SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
