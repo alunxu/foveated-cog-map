@@ -104,8 +104,19 @@ def probe_1b_global_gps_compass(H, gps, compass, ep_ids, alpha, pca_dim, train_f
     }
 
 
-def probe_1a_per_scene_position(H, P, theta, scene_ids, alpha, train_frac, min_steps, pca_dim):
-    """1a. Absolute position probe per scene (temporal split within scene)."""
+def probe_1a_per_scene_position(H, P, theta, scene_ids, ep_ids, alpha, train_frac, min_steps, pca_dim, seed=42):
+    """1a. Absolute position probe per scene (episode-level split within scene).
+
+    Prior version did a step-level temporal split (`h_s[:split]` /
+    `h_s[split:]`), which leaks because consecutive steps within the
+    same episode are highly correlated. If a single episode straddles
+    the 80% boundary, its late steps are in test while its early steps
+    are in train --- trivial to interpolate. Numbers were inflated.
+
+    Fix: split episodes inside the scene, not steps. Each scene's
+    episodes are partitioned 80/20; all steps of a given episode go to
+    the same side.
+    """
     unique_scenes = np.unique(scene_ids)
     results = []
 
@@ -115,24 +126,47 @@ def probe_1a_per_scene_position(H, P, theta, scene_ids, alpha, train_frac, min_s
         if n < min_steps:
             continue
 
-        h_s, p_s, t_s = H[mask], P[mask], theta[mask]
-        split = int(len(h_s) * train_frac)
-        if split < 10 or (len(h_s) - split) < 5:
+        h_s = H[mask]
+        p_s = P[mask]
+        t_s = theta[mask]
+        ep_s = ep_ids[mask]
+
+        # Episode-level split within this scene's data.
+        unique_eps_s = np.unique(ep_s)
+        if len(unique_eps_s) < 2:
+            continue  # need at least 2 episodes to hold one out
+
+        rng = np.random.RandomState(seed + int(sid))
+        perm = rng.permutation(unique_eps_s)
+        n_tr_eps = max(1, int(len(unique_eps_s) * train_frac))
+        # Guarantee at least one test episode
+        if n_tr_eps >= len(unique_eps_s):
+            n_tr_eps = len(unique_eps_s) - 1
+        train_eps = set(perm[:n_tr_eps].tolist())
+        tr_mask = np.isin(ep_s, list(train_eps))
+        te_mask = ~tr_mask
+
+        if tr_mask.sum() < 10 or te_mask.sum() < 5:
             continue
 
-        H_tr, H_te = prepare_features(h_s[:split], h_s[split:], pca_dim)
+        H_tr, H_te = prepare_features(h_s[tr_mask], h_s[te_mask], pca_dim)
 
         # Position (x, z)
-        pos_r2, pos_mae, _ = fit_probe(H_tr, H_te, p_s[:split, [0, 2]], p_s[split:, [0, 2]], alpha)
+        pos_r2, pos_mae, _ = fit_probe(
+            H_tr, H_te, p_s[tr_mask][:, [0, 2]], p_s[te_mask][:, [0, 2]], alpha
+        )
 
         # Heading (sin/cos)
-        Y_tr_h = np.stack([np.sin(t_s[:split]), np.cos(t_s[:split])], axis=1)
-        Y_te_h = np.stack([np.sin(t_s[split:]), np.cos(t_s[split:])], axis=1)
+        Y_tr_h = np.stack([np.sin(t_s[tr_mask]), np.cos(t_s[tr_mask])], axis=1)
+        Y_te_h = np.stack([np.sin(t_s[te_mask]), np.cos(t_s[te_mask])], axis=1)
         head_r2, _, head_pred = fit_probe(H_tr, H_te, Y_tr_h, Y_te_h, alpha)
-        head_mae = angular_mae(head_pred, t_s[split:])
+        head_mae = angular_mae(head_pred, t_s[te_mask])
 
         results.append({
-            "scene_id": int(sid), "n_steps": int(n),
+            "scene_id": int(sid),
+            "n_steps": int(n),
+            "n_episodes": int(len(unique_eps_s)),
+            "n_train_eps": int(n_tr_eps),
             "pos_r2": pos_r2, "pos_mae": pos_mae,
             "head_r2": head_r2, "head_mae": head_mae,
         })
@@ -743,8 +777,9 @@ def main():
     print(f"  1a. Per-scene absolute position (min_steps={args.min_steps_scene})")
     print(f"{'─'*60}")
     res_1a = probe_1a_per_scene_position(
-        H, P, theta, scene_ids,
+        H, P, theta, scene_ids, ep_ids,
         args.alpha, args.train_frac, args.min_steps_scene, args.pca_dim,
+        seed=args.seed,
     )
     results["1a_per_scene_position"] = res_1a
     if res_1a["n_scenes_probed"] > 0:

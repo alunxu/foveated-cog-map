@@ -322,14 +322,27 @@ def main():
     results_self = []
     results_cross = []
 
+    # Use the iterator-injection pattern from shortcut.py: set
+    # env._episode_iterator to yield exactly the episode we want. This
+    # is robust across habitat-lab versions; writing _current_episode
+    # directly is not reliable (some versions rebuild it from the
+    # iterator on reset() regardless of the attribute).
+    def _pin_episode(ep):
+        env._episode_iterator = iter([ep])
+        env._episode_over = False
+        obs = env.reset()
+        assert env.current_episode.episode_id == ep.episode_id, (
+            f"Episode pinning failed: wanted {ep.episode_id}, "
+            f"got {env.current_episode.episode_id}"
+        )
+        return obs
+
     for ei in range(n_episodes):
         # ================================================================
         # Condition 1: BASELINE — recipient runs full episode
         # ================================================================
         ep = all_episodes[ei]
-        env._current_episode = ep
-        env._episode_over = False
-        obs = env.reset()
+        obs = _pin_episode(ep)
 
         rnn_h, prev_a, mask = _init_rnn_state(num_recurrent_layers, hidden_size, device)
         metrics_baseline = _run_full_episode(
@@ -341,9 +354,7 @@ def main():
         # Condition 2: SELF-TRANSPLANT — recipient first half, then
         #              re-inject its own hidden state (sanity check)
         # ================================================================
-        env._current_episode = ep
-        env._episode_over = False
-        obs = env.reset()
+        obs = _pin_episode(ep)
 
         rnn_h, prev_a, mask = _init_rnn_state(num_recurrent_layers, hidden_size, device)
 
@@ -384,9 +395,7 @@ def main():
         # ================================================================
 
         # Reset env to this episode (same starting conditions as baseline).
-        env._current_episode = ep
-        env._episode_over = False
-        recip_obs = env.reset()
+        recip_obs = _pin_episode(ep)
 
         donor_rnn_h, donor_prev_a, donor_mask = _init_rnn_state(
             num_recurrent_layers, hidden_size, device,

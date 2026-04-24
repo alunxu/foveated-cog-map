@@ -127,7 +127,22 @@ class TorchFoveationTransform(nn.Module):
         dy = self._y_grid.unsqueeze(0) - gaze_y.view(B, 1, 1)  # (B, H, W)
         dist = torch.sqrt(dx ** 2 + dy ** 2)
 
-        # Normalized eccentricity
+        # Normalized eccentricity.
+        # NOTE: `self._max_dist` is computed ONCE from the image centre
+        # to the corner (= sqrt(2) * image_size / 2). For shifted-gaze
+        # conditions (fov-learned collapsed at (0.49, 0.62); fov-shifted
+        # control) the actual farthest corner from gaze is up to ~13%
+        # larger than this static value. Peripheral eccentricity
+        # saturates slightly earlier than intended, producing marginally
+        # stronger peripheral blur than the formula nominally specifies.
+        # We retain this behaviour rather than making it gaze-dependent
+        # because (a) every trained policy learned with this transform
+        # applied at training time, so changing it at probe time would
+        # feed the policy input it was not trained on, and (b) the bias
+        # is internal to each policy --- at equilibrium the policy has
+        # adapted to whatever peripheral blur it sees. The effect on the
+        # H3 fov-shifted vs fov-fix comparison is noted in Appendix
+        # \ref{app:foveation} of the paper.
         ecc = (dist - self.fovea_radius) / (self._max_dist - self.fovea_radius)
         ecc = ecc.clamp(0.0, 1.0)
 
