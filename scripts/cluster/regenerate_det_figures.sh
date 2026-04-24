@@ -100,10 +100,16 @@ else
     echo "[skip] Fig 7: no MP3D det analyses yet (${RESULTS_DIR}/*_mp3d_det_analysis.json missing). The paper caption flags this."
 fi
 
-# ---- App-B: t-SNE of pooled hidden states ----
+# ---- App-B: PCA + t-SNE of pooled hidden states ----
+# t-SNE is in the paper appendix; PCA is rendered as a sanity check.
 ${PY} "${PROJECT_DIR}/scripts/paper_figures/make_embedding_figures.py" \
     --in-dir "${PROBE_DIR}" \
-    --out-dir "${FIG_OUT}"
+    --out-dir "${FIG_OUT}" \
+    --method pca
+${PY} "${PROJECT_DIR}/scripts/paper_figures/make_embedding_figures.py" \
+    --in-dir "${PROBE_DIR}" \
+    --out-dir "${FIG_OUT}" \
+    --method tsne
 
 # ---- App-A: training curves (TB scalars, not probe-data; regenerate for freshness) ----
 ${PY} "${PROJECT_DIR}/scripts/paper_figures/make_training_curves.py" \
