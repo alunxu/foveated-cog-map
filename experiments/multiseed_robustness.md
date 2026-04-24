@@ -12,30 +12,34 @@ statistical error bars.
 
 ## Plan
 
-10 new training runs: 5 conditions × 2 additional seeds (the existing
-single-seed numbers serve as seed 0).
+Target: 3 seeds per condition (seed 0 already done; need 2 more each).
+**Some seeds are already training on Izar** — this experiment covers
+only the remaining gap.
 
-| Condition | Seeds still needed |
-|-----------|-------------------|
-| Blind | 2 |
-| Uniform | 2 (seed 2 already training on Izar; need seed 3) |
-| Foveated | 2 (seed 2 already training; need seed 3) |
-| Foveated-learned | 2 (seed 1, 3 already training) |
-| Matched-compute | 2 |
+| Condition | Seed 0 | Seed 1 | Seed 2 | Seed 3 | Gap to fill here |
+|-----------|--------|--------|--------|--------|------------------|
+| Blind | done | — | — | — | **s1 + s2** |
+| Uniform | done | — | Izar ~24h elapsed | — | **s3** |
+| Foveated | done | — | Izar ~23h elapsed | — | **s3** |
+| Foveated-learned | done | Izar ~22h | — | Izar ~23h | — (covered) |
+| Matched-compute | done | — | — | — | **s1 + s2** |
+
+**Gap = 6 new trainings** (blind × 2, uniform × 1, foveated × 1,
+matched × 2).
 
 ## Submit
 
 ```bash
-for seed in 1 2; do
-    for cfg in blind uniform foveated foveated_learned matched; do
-        sbatch --gres=gpu:1 --time=24:00:00 \
-            scripts/cluster/submit_train_seeded.sh \
-            pointnav/ddppo_pointnav_${cfg}_gibson ${seed}
-    done
-done
+# Gap fills — skip the seeds Izar is already running.
+sbatch scripts/cluster/submit_train_seeded.sh pointnav/ddppo_pointnav_blind_gibson 1
+sbatch scripts/cluster/submit_train_seeded.sh pointnav/ddppo_pointnav_blind_gibson 2
+sbatch scripts/cluster/submit_train_seeded.sh pointnav/ddppo_pointnav_uniform_gibson 3
+sbatch scripts/cluster/submit_train_seeded.sh pointnav/ddppo_pointnav_foveated_gibson 3
+sbatch scripts/cluster/submit_train_seeded.sh pointnav/ddppo_pointnav_matched_gibson 1
+sbatch scripts/cluster/submit_train_seeded.sh pointnav/ddppo_pointnav_matched_gibson 2
 ```
 
-Each run ~10–15h on H100/H200 for 250M frames. With 10-way
+Each run ~10–15h on H100/H200 for 250M frames. With 6-way
 parallelism → all done in ~15h. If fewer GPUs available, serialise.
 
 ## Probe

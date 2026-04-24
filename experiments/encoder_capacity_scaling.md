@@ -27,27 +27,25 @@ Sweep input resolution through ResNet18 with everything else held
 fixed. ResNet18 has total stride 32, so spatial feature map is
 `max(1, res/32) × max(1, res/32)`.
 
-### Training runs (4 new conditions)
+### Sweep points needed
 
-| Config | Input res | ResNet18 feat map | Total features |
-|--------|-----------|-------------------|----------------|
-| `matched32_gibson` (new) | 32×32 | 1×1 | 256 |
-| (matched_gibson) | 48×48 | 1×1 | 256 |
-| `matched64_gibson` (new) | 64×64 | 2×2 | 1024 |
-| `matched96_gibson` (new) | 96×96 | 3×3 | 2304 |
-| (matched128_gibson) | 128×128 | 4×4 | 4096 |
-| `matched192_gibson` (new) | 192×192 | 6×6 | 9216 |
-| (uniform_gibson) | 256×256 | 8×8 | 16384 |
+| Res | Config | Status | Who does what |
+|-----|--------|--------|---------------|
+| 32×32  | `matched32_gibson`  | **not trained** | **train + probe here** |
+| 48×48  | `matched_gibson`    | trained, det probe done | — |
+| 64×64  | `matched64_gibson`  | **not trained** | **train + probe here** |
+| 96×96  | `matched96_gibson`  | **not trained** | **train + probe here** |
+| 128×128 | `matched128_gibson` | trained on Izar (ckpt.49), det probe **missing** | **det probe only** |
+| 192×192 | `matched192_gibson` | **not trained** | **train + probe here** |
+| 256×256 | `uniform_gibson`    | trained, det probe done | — |
 
-Configs committed in `habitat_configs/`:
+So this experiment = **4 new trainings** (32, 64, 96, 192) + **1 det
+re-probe** of the Izar-trained matched128 checkpoint. All configs
+already committed in `habitat_configs/`:
 - `ddppo_pointnav_matched32_gibson.yaml`
 - `ddppo_pointnav_matched64_gibson.yaml`
 - `ddppo_pointnav_matched96_gibson.yaml`
 - `ddppo_pointnav_matched192_gibson.yaml`
-
-Plus `ddppo_pointnav_matched_gibson.yaml` (48), `_matched128_gibson`
-(128), `_uniform_gibson` (256) already exist and are trained or
-training on Izar.
 
 ### Submit (on any SLURM cluster with our repo synced)
 
@@ -64,14 +62,23 @@ parallel → all done in ~15h.
 ### Probe the trained checkpoints
 
 ```bash
+# 4 new sweep points
 for res in 32 64 96 192; do
     sbatch scripts/cluster/submit_probe_deterministic.sh \
         pointnav/ddppo_pointnav_matched${res}_gibson \
         /path/to/checkpoints/matched${res}_gibson/ckpt.49.pth 500
 done
+
+# Plus the Izar-trained matched128 checkpoint (needs det re-probe).
+# This ckpt is at /scratch/izar/wxu/habitat_checkpoints/matched128_gibson/ckpt.49.pth
+# on the Izar cluster; sync it to friend's cluster first, or run this
+# probe on Izar directly.
+sbatch scripts/cluster/submit_probe_deterministic.sh \
+    pointnav/ddppo_pointnav_matched128_gibson \
+    /path/to/matched128_gibson/ckpt.49.pth 500
 ```
 
-Probe time: ~2–4h each on H100. 4 parallel → ~4h.
+Probe time: ~2–4h each on H100. 5 parallel → ~4h.
 
 Output: `probing_data/matched${res}_gibson_det.npz`
         `probing_results/matched${res}_gibson_det_analysis.json`
