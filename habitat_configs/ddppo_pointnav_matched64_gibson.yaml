@@ -1,0 +1,94 @@
+# @package _global_
+#
+# Encoder-capacity sweep point: 64x64 input resolution. Part of the
+# scaling-law experiment for "Visual encoder bottleneck → LSTM spatial
+# encoding". See docs/NeurIPS_2026/PAPER_REFRAME.md.
+#
+# ResNet18 stride 32 → spatial feature map = max(1, 64/32) × max(1, 64/32).
+# Flattened and projected to 512-d visual_fc → into LSTM.
+#
+# Other matched variants: 48 (ddppo_pointnav_matched_gibson), 128 (_matched128_),
+# 256 (= uniform). Expected: GPS probe R² decreases monotonically with resolution.
+
+defaults:
+  - /benchmark/nav/pointnav: pointnav_gibson
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - override /habitat/task/lab_sensors:
+      - gps_sensor
+      - compass_sensor
+      - goal_in_start_frame_sensor
+      - close_to_goal_indicator_sensor
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 2000
+  task:
+    success_reward: 2.5
+    slack_reward: -0.001
+    measurements:
+      success:
+        success_distance: 0.2
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            height: 64
+            width: 64
+          depth_sensor:
+            height: 64
+            width: 64
+  dataset:
+    data_path: data/datasets/pointnav/mp3d_gibson/v1/{split}/{split}.json.gz
+    split: train
+
+habitat_baselines:
+  verbose: False
+  trainer_name: "ddppo"
+  torch_gpu_id: 0
+  tensorboard_dir: "tb"
+  video_dir: "video_dir"
+  eval_ckpt_path_dir: "data/checkpoints/matched64_gibson"
+  num_environments: 6
+  checkpoint_folder: "data/checkpoints/matched64_gibson"
+  num_updates: -1
+  total_num_steps: 2.5e8
+  log_interval: 10
+  num_checkpoints: 50
+  force_torch_single_threaded: True
+  force_blind_policy: False
+
+  rl:
+    policy:
+      main_agent:
+        name: "WijmansPointNavPolicy"
+    ppo:
+      clip_param: 0.2
+      ppo_epoch: 2
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.01
+      lr: 2.5e-4
+      eps: 1.0e-5
+      max_grad_norm: 0.2
+      num_steps: 128
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+      use_linear_clip_decay: False
+      use_linear_lr_decay: True
+      reward_window_size: 50
+      use_normalized_advantage: False
+      hidden_size: 512
+      use_double_buffered_sampler: False
+    ddppo:
+      sync_frac: 0.6
+      distrib_backend: NCCL
+      pretrained: False
+      pretrained_encoder: False
+      train_encoder: True
+      reset_critic: True
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 3
