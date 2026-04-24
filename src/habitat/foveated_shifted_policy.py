@@ -129,12 +129,16 @@ class FoveatedResNetEncoder(ResNetEncoder):
 
 
 class FoveatedShiftedGazeNet(WijmansPointNavNet):
-    """Wijmans-faithful PointNav net with foveated vision and learned gaze.
+    """Wijmans-faithful PointNav net with foveated vision at a hardcoded shifted gaze.
 
-    Inherits the Wijmans sensor stack from ``WijmansPointNavNet`` and:
-      - swaps the standard ResNet encoder for ``FoveatedResNetEncoder``
-      - adds a small MLP that decodes a 2-D gaze position from the previous
-        LSTM hidden state, used to drive the foveation transform
+    Inherits the Wijmans sensor stack from ``WijmansPointNavNet`` and swaps
+    the standard ResNet encoder for ``FoveatedResNetEncoder``.  The gaze
+    position is *not* learned; it is fixed at ``(0.49, 0.62)`` (normalised
+    image coordinates) to match the collapsed-gaze position of the
+    foveated-learned agent.  There is no gaze MLP in this policy.
+
+    The ``gaze_hidden`` constructor argument is accepted for API
+    compatibility but is unused.
     """
 
     def __init__(
@@ -152,7 +156,7 @@ class FoveatedShiftedGazeNet(WijmansPointNavNet):
         fovea_radius: int = 16,
         blur_sigma_max: float = 8.0,  # PoC default, see docs/foveation_design.md §2.1
         falloff: str = "quadratic",
-        gaze_hidden: int = 64,
+        gaze_hidden: int = 64,  # accepted for API compatibility; unused (no gaze MLP)
     ):
         super().__init__(
             observation_space=observation_space,
@@ -234,15 +238,11 @@ class FoveatedShiftedGazeNet(WijmansPointNavNet):
         x = []
         aux_loss_state: Dict[str, torch.Tensor] = {}
 
-        # ---- Visual features (with foveation at fixed center gaze) ----
-        # NOTE: Learned gaze is currently disabled because it has a shape
-        # mismatch between act() (per-env, B=num_envs) and evaluate_actions()
-        # (batched-over-time, B*T). For now we use a fixed center gaze
-        # (the "fixed-center" ablation from our proposal). This still gives
-        # the foveated input pattern (sharp center, blurry periphery) and
-        # leaves the sensor stack identical to the other conditions.
-        # Adding a learned gaze that works in both modes requires storing the
-        # gaze in the rollout buffer; that is a planned follow-up.
+        # ---- Visual features (with foveation at fixed shifted gaze) ----
+        # This is the foveated-shifted causal control: gaze is hardcoded at
+        # (0.49, 0.62) — 30 px below image centre in 256×256 pixels, matching
+        # the position where fov-learned's gaze decoder converged.  No gaze
+        # MLP exists in this policy; the shift is purely a static constant.
         if not self.is_blind:
             # Get the batch dimension from the first visual key.
             first_visual_key = next(
