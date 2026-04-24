@@ -80,6 +80,48 @@ def query_local_occupancy(sim, agent_pos, grid_size=5.0, grid_res=0.25):
     return occ
 
 
+def _save_npz(args, all_h_layers, all_c_layers, all_hidden, all_positions,
+              all_headings, all_distance_to_goal, all_goal_positions,
+              all_step_in_episode, all_episode_ids, all_scene_ids,
+              all_gps, all_compass, all_local_occupancy, all_gaze_positions):
+    """Pack the accumulated rollout buffers and save to args.out.
+
+    Safe to call multiple times during collection — each call overwrites
+    the output file with the current accumulated data. Used for
+    incremental checkpointing to survive SLURM walltime kills.
+    """
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+
+    save_dict = {
+        "h_layers": np.array(all_h_layers, dtype=np.float32),
+        "c_layers": np.array(all_c_layers, dtype=np.float32),
+        "hidden_states": np.array(all_hidden, dtype=np.float32),
+        "positions": np.array(all_positions, dtype=np.float32),
+        "headings": np.array(all_headings, dtype=np.float32),
+        "distance_to_goal": np.array(all_distance_to_goal, dtype=np.float32),
+        "goal_positions": np.array(all_goal_positions, dtype=np.float32),
+        "step_in_episode": np.array(all_step_in_episode, dtype=np.int32),
+        "episode_ids": np.array(all_episode_ids, dtype=np.int32),
+        "scene_ids": np.array(all_scene_ids, dtype=np.int32),
+    }
+    if all_gps:
+        save_dict["gps"] = np.array(all_gps, dtype=np.float32)
+    if all_compass:
+        save_dict["compass"] = np.array(all_compass, dtype=np.float32)
+    if all_local_occupancy:
+        save_dict["local_occupancy"] = np.array(all_local_occupancy, dtype=np.float32)
+        save_dict["occ_grid_size"] = np.float32(args.occ_grid_size)
+        save_dict["occ_grid_res"] = np.float32(args.occ_grid_res)
+    if all_gaze_positions:
+        save_dict["gaze_positions"] = np.array(all_gaze_positions, dtype=np.float32)
+
+    # Atomic-ish write: save to .tmp, then rename, so a crash mid-save
+    # doesn't leave a half-written output that unpickles wrong.
+    tmp_path = args.out + ".tmp.npz"
+    np.savez_compressed(tmp_path, **save_dict)
+    os.replace(tmp_path, args.out)
+
+
 def parse_args():
     p = argparse.ArgumentParser(description="Collect probing data from a Habitat agent")
     p.add_argument("--config-name", required=True, help="Hydra config name (e.g. pointnav/ddppo_pointnav_blind_gibson)")
@@ -117,6 +159,11 @@ def parse_args():
                         "fov-fix/uniform collapsed to 4-step episodes, 0%% success, under "
                         "stochastic sampling, while reporting SPL 0.83 under deterministic "
                         "eval).")
+    p.add_argument("--checkpoint-every", type=int, default=50,
+                   help="Save accumulated data to disk every N episodes. Guards "
+                        "against SLURM timeouts losing 3+ hours of rollouts. The "
+                        "partial save overwrites the output path, so the latest "
+                        "checkpoint is always recoverable (default: 50).")
     return p.parse_args()
 
 
@@ -300,44 +347,27 @@ def main():
             total_steps = len(all_hidden)
             print(f"  Episode {ep+1}/{args.episodes} done ({step} steps, {total_steps} total steps)")
 
+        # ---- Incremental checkpoint save ----
+        # Guards against SLURM walltime kills: if we die mid-job, the last
+        # saved checkpoint has the first K×checkpoint_every episodes.
+        if (ep + 1) % args.checkpoint_every == 0 and ep + 1 < args.episodes:
+            _save_npz(args, all_h_layers, all_c_layers, all_hidden, all_positions,
+                      all_headings, all_distance_to_goal, all_goal_positions,
+                      all_step_in_episode, all_episode_ids, all_scene_ids,
+                      all_gps, all_compass, all_local_occupancy, all_gaze_positions)
+            print(f"  [checkpoint] saved {len(all_hidden)} steps after episode {ep+1}")
+
     env.close()
-
-    # ---- Save ----
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
-
-    N = len(all_hidden)
-    save_dict = {
-        # All-layer hidden states
-        "h_layers": np.array(all_h_layers, dtype=np.float32),          # (N, n_layers, hidden)
-        "c_layers": np.array(all_c_layers, dtype=np.float32),          # (N, n_layers, hidden)
-        "hidden_states": np.array(all_hidden, dtype=np.float32),       # (N, hidden) — compat
-        # Spatial ground truth
-        "positions": np.array(all_positions, dtype=np.float32),
-        "headings": np.array(all_headings, dtype=np.float32),
-        "distance_to_goal": np.array(all_distance_to_goal, dtype=np.float32),
-        "goal_positions": np.array(all_goal_positions, dtype=np.float32),
-        # Episode metadata
-        "step_in_episode": np.array(all_step_in_episode, dtype=np.int32),
-        "episode_ids": np.array(all_episode_ids, dtype=np.int32),
-        "scene_ids": np.array(all_scene_ids, dtype=np.int32),
-    }
-    if all_gps:
-        save_dict["gps"] = np.array(all_gps, dtype=np.float32)
-    if all_compass:
-        save_dict["compass"] = np.array(all_compass, dtype=np.float32)
-    if all_local_occupancy:
-        save_dict["local_occupancy"] = np.array(all_local_occupancy, dtype=np.float32)
-        save_dict["occ_grid_size"] = np.float32(args.occ_grid_size)
-        save_dict["occ_grid_res"] = np.float32(args.occ_grid_res)
-    if all_gaze_positions:
-        # (N, 2) in [0, 1]² normalised image coordinates; only present for
-        # learned-gaze policies.
-        save_dict["gaze_positions"] = np.array(all_gaze_positions, dtype=np.float32)
 
     if _gaze_hook_handle is not None:
         _gaze_hook_handle.remove()
 
-    np.savez_compressed(args.out, **save_dict)
+    # ---- Final save ----
+    _save_npz(args, all_h_layers, all_c_layers, all_hidden, all_positions,
+              all_headings, all_distance_to_goal, all_goal_positions,
+              all_step_in_episode, all_episode_ids, all_scene_ids,
+              all_gps, all_compass, all_local_occupancy, all_gaze_positions)
+    N = len(all_hidden)
 
     print(f"\nSaved {N} steps from {args.episodes} episodes to {args.out}")
     print(f"  h_layers:      ({N}, {n_lstm_layers}, {hidden_size})")

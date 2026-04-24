@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=cs503_prb_det
-#SBATCH --time=03:00:00
+#SBATCH --time=12:00:00
 #SBATCH --account=cs-503
-#SBATCH --qos=normal
+#SBATCH --qos=cs-503
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
@@ -10,6 +10,11 @@
 #SBATCH --mem=45G
 #SBATCH --output=slurm_logs/%j.out
 #SBATCH --error=slurm_logs/%j.err
+# 12h walltime + cs-503 qos (allows up to 7.5 days). Blind det probing
+# previously hit 3h timeout at episode 410/500 because no-visual policies
+# generate very long trajectories (many 2000-step max-episode hits).
+# Incremental save in collect.py (checkpoint every 50 eps) also guards
+# against timeout losses going forward.
 
 # Re-collect probe data with deterministic=True action selection.
 # Writes to <run_name>_det.npz so we don't overwrite the stochastic
