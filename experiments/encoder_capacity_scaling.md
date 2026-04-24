@@ -62,26 +62,25 @@ parallel → all done in ~15h.
 ### Probe the trained checkpoints
 
 ```bash
-# 4 new sweep points
+# 4 new sweep points — run on friend's cluster
 for res in 32 64 96 192; do
     sbatch scripts/cluster/submit_probe_deterministic.sh \
         pointnav/ddppo_pointnav_matched${res}_gibson \
-        /path/to/checkpoints/matched${res}_gibson/ckpt.49.pth 500
+        data/checkpoints/matched${res}_gibson/ckpt.49.pth 500
 done
-
-# Plus the Izar-trained matched128 checkpoint (needs det re-probe).
-# This ckpt is at /scratch/izar/wxu/habitat_checkpoints/matched128_gibson/ckpt.49.pth
-# on the Izar cluster; sync it to friend's cluster first, or run this
-# probe on Izar directly.
-sbatch scripts/cluster/submit_probe_deterministic.sh \
-    pointnav/ddppo_pointnav_matched128_gibson \
-    /path/to/matched128_gibson/ckpt.49.pth 500
 ```
 
-Probe time: ~2–4h each on H100. 5 parallel → ~4h.
+Probe time: ~2–4h each on H100. 4 parallel → ~4h.
 
-Output: `probing_data/matched${res}_gibson_det.npz`
-        `probing_results/matched${res}_gibson_det_analysis.json`
+Output on friend's cluster:
+- `probing_data/matched${res}_gibson_det.npz`
+- `probing_results/matched${res}_gibson_det_analysis.json`
+
+**Izar separately handles matched128**: the matched128 checkpoint
+already exists on Izar (`ckpt.49.pth`); we det-probe it there, so
+friend does not need to run matched128. This keeps the scaling
+sweep split cleanly: friend does 4 new trainings+probes (32, 64,
+96, 192); Izar fills in matched128.
 
 ## Expected outcome
 
@@ -103,11 +102,12 @@ testable prediction that reviewers can verify and contest.
 
 ## Integration
 
-Friend's outputs (npz + analysis JSONs) sync into the same
-`/probing_data/` and `/probing_results/` folders as Izar's. The hero
-figure (scripts/paper_figures/make_bottleneck_figure.py) extends
-naturally to include the sweep points as additional bars or a scatter
-plot with resolution on the x-axis.
+Friend's outputs (npz + analysis JSONs for matched 32, 64, 96, 192)
+are synced back to the paper side via cloud storage (see `setup.md` §6)
+since ssh between clusters may be blocked. The hero figure
+(`scripts/paper_figures/make_bottleneck_figure.py`) extends naturally
+to include the new sweep points as a scatter plot with resolution on
+the x-axis.
 
 Paper appendix will report the scaling curve as quantitative support
 for the bottleneck hypothesis.

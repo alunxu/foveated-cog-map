@@ -17,12 +17,12 @@ Allocate accordingly:
 This keeps the long, parallelisable work on the faster hardware and
 reserves Izar for short, sequential, interactive work.
 
-## One-time setup for friend's cluster
+## First-time cluster setup
 
-Before running any of the experiment briefs, friend's cluster needs
-the Gibson dataset (~14 GB). See `data_setup.md` for three options:
-rsync from Izar, download via `habitat_sim.utils.datasets_download`,
-or use an existing install.
+If running these experiments on a cluster for the first time, follow
+`setup.md` end to end: conda environment → Habitat stack →
+Gibson dataset → repo install → sanity-check dry-run. Total time
+~30–60 min.
 
 ## Open
 
