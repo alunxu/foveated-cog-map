@@ -28,11 +28,18 @@ COND_ORDER = ["blind", "uniform", "foveated", "foveated_learned", "matched"]
 
 
 def _load(in_dir: Path, cond: str) -> dict | None:
-    # For foveated_learned, prefer the truncated (matched-distribution) analysis
-    # so numbers are comparable to the other conditions.
-    for name in ([f"{cond}_gibson_truncated_analysis.json", f"{cond}_gibson_analysis.json"]
-                 if cond == "foveated_learned"
-                 else [f"{cond}_gibson_analysis.json"]):
+    # Prefer the deterministic-rollout analysis (post-c81352e fix). Fall
+    # back to the truncated/full stochastic JSONs so this script still
+    # runs on old probing_results, but figures from those inputs need a
+    # caveat in the paper caption.
+    if cond == "foveated_learned":
+        candidates = [f"{cond}_gibson_det_analysis.json",
+                      f"{cond}_gibson_truncated_analysis.json",
+                      f"{cond}_gibson_analysis.json"]
+    else:
+        candidates = [f"{cond}_gibson_det_analysis.json",
+                      f"{cond}_gibson_analysis.json"]
+    for name in candidates:
         p = in_dir / name
         if p.exists():
             try:

@@ -50,15 +50,24 @@ COND_ORDER = ["blind", "uniform", "foveated", "foveated_learned", "matched"]
 def _load_analysis(in_dir: Path, cond: str) -> dict | None:
     """Load an analysis JSON; returns None and warns if missing or invalid.
 
-    For foveated_learned we prefer the truncated (matched-distribution)
-    analysis because its full 85k-step probe dataset covers a spatial
-    range ~40x wider than the other conditions, making direct comparison
-    of R^2 and selectivity values misleading.
+    Prefers ``{cond}_gibson_det_analysis.json`` (deterministic-rollout
+    probes, produced after the ``collect.py`` sampling-bug fix in
+    commit c81352e) and falls back to the older stochastic-rollout JSON
+    if the deterministic version is missing.  Figures built under the
+    stochastic fallback should carry a caveat in the paper caption.
+
+    For foveated_learned we additionally prefer the truncated
+    (matched-distribution) analysis because its full 85k-step probe
+    dataset covers a spatial range ~40x wider than the other
+    conditions, making direct comparison of R^2 values misleading.
     """
     candidates = (
-        [f"{cond}_gibson_truncated_analysis.json", f"{cond}_gibson_analysis.json"]
+        [f"{cond}_gibson_det_analysis.json",
+         f"{cond}_gibson_truncated_analysis.json",
+         f"{cond}_gibson_analysis.json"]
         if cond == "foveated_learned"
-        else [f"{cond}_gibson_analysis.json"]
+        else [f"{cond}_gibson_det_analysis.json",
+              f"{cond}_gibson_analysis.json"]
     )
     for name in candidates:
         path = in_dir / name

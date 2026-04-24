@@ -42,20 +42,27 @@ def _get(d: dict, path: list[str]):
     return d
 
 
-def load_one(results_dir: Path, cond: str, split: str) -> dict | None:
-    """split = 'gibson' or 'mp3d'."""
-    p = results_dir / f"{cond}_{split}_analysis.json"
+def load_one(results_dir: Path, cond: str, split: str, suffix: str = "") -> dict | None:
+    """split = 'gibson' or 'mp3d'. suffix e.g. '_det' to load det analysis."""
+    p = results_dir / f"{cond}_{split}{suffix}_analysis.json"
     if not p.exists():
-        return None
+        # Fall back to non-suffixed JSON so the script still runs on
+        # pre-fix data (the paper caption flags such figures as stale).
+        if suffix:
+            p = results_dir / f"{cond}_{split}_analysis.json"
+            if not p.exists():
+                return None
+        else:
+            return None
     with open(p) as f:
         return json.load(f)
 
 
-def fig_mp3d(results_dir: Path, out_path: Path) -> None:
+def fig_mp3d(results_dir: Path, out_path: Path, suffix: str = "") -> None:
     rows = []
     for cond, label, colour in CONDS:
-        g = load_one(results_dir, cond, "gibson")
-        m = load_one(results_dir, cond, "mp3d")
+        g = load_one(results_dir, cond, "gibson", suffix)
+        m = load_one(results_dir, cond, "mp3d", suffix)
         row = {"cond": cond, "label": label, "colour": colour, "gibson": {}, "mp3d": {}}
         for section, key, name in TARGETS:
             if g is not None:
@@ -128,10 +135,15 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--results-dir", type=Path, required=True)
     ap.add_argument("--out-dir", type=Path, required=True)
+    ap.add_argument("--suffix", type=str, default="",
+                    help="Filename suffix, e.g. '_det' to read "
+                         "'<cond>_<split>_det_analysis.json' instead of the "
+                         "default '<cond>_<split>_analysis.json'.")
     args = ap.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    fig_mp3d(args.results_dir, args.out_dir / "mp3d_generalization.pdf")
+    fig_mp3d(args.results_dir, args.out_dir / "mp3d_generalization.pdf",
+             suffix=args.suffix)
 
 
 if __name__ == "__main__":
