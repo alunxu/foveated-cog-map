@@ -352,4 +352,24 @@ To isolate the origin of the NaN gradient we re-ran training from the last clean
 Our mitigation is a minimally invasive patch to \verb|PPO.before_step| that zeroes any non-finite gradient element before clipping. A bad mini-batch becomes a no-op update rather than a catastrophic one. The patch is a no-op on clean training paths. Across the five conditions reported here, no NaN events were observed during full training after deployment, and all final checkpoints contain only finite weights. We reported the underlying issue upstream (habitat-lab issue \#2226) with a minimal reproduction and a proposed native fix.
 
 
+\section{Encoder-capacity scaling sweep}
+\label{app:scaling}
+
+\TODO{The scaling sweep trains matched-compute variants at input
+resolutions $\{32, 48, 64, 96, 128, 192\}$ alongside the existing blind
+(no encoder) and uniform $256{\times}256$ anchors. Probe results on the
+trained checkpoints will populate Figure~\ref{fig:scaling} and this
+appendix section. Hypothesis: GPS probe $R^2$ decreases monotonically
+with input resolution, from $R^2 \approx 0.95$ at no-encoder to
+$R^2 \approx 0$ at $256{\times}256$, crossing into the pass-through
+regime between $48$ and $128$ pixels.}
+
+\begin{figure}[h]
+\centering
+\fbox{\rule{0pt}{4cm}\rule{0.8\linewidth}{0pt}}
+\caption{Encoder-capacity scaling curve. \TODO{Pending data.} x-axis: input resolution in pixels; y-axis: GPS and compass probe $R^2$ (5-fold CV, mean$\pm\sigma$).}
+\label{fig:scaling}
+\end{figure}
+
+
 \end{document}
