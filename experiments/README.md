@@ -31,6 +31,12 @@ Gibson dataset → repo install → sanity-check dry-run. Total time
 | `encoder_capacity_scaling.md` | Turn the 2-point bottleneck observation (blind, matched-48) into a 7-point scaling curve by training intermediate-resolution variants (matched-{32, 64, 96, 192}). |
 | `multiseed_robustness.md` | Add seeds per condition for cross-seed error bars on the H1 ordering. Izar is already running some seeds; this doc covers only the remaining gap. |
 
+## Observations (not actively running)
+
+| File | Observation |
+|------|-------------|
+| `training_dynamics_observation.md` | Under-trained fov-fix (~115M) shows mid-regime LSTM GPS encoding (R²=0.46) while fully-trained fov-fix (~174M) is at chance. Candidate training-dynamics support for the bottleneck hypothesis; needs corroboration (multi-seed or intra-run ckpt sweep) before paper-ready. |
+
 ## Adding a new experiment
 
 One file per experiment, named by intention (`<what_it_tests>.md`).
