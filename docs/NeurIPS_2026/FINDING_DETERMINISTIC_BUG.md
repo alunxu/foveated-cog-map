@@ -1,4 +1,11 @@
-# Finding: Probe data was collected with stochastic action sampling
+# Finding: Probe data bug (stochastic sampling) + probe target misspecification
+
+**Updated with post-fix analysis**: see § "Deep-dive after the fix" below
+for the discovery that absolute GPS/compass are not reliably encoded on
+correctly-collected trajectories, but ego-relative DtG is — with a clean
+compensatory-memory signal that rescues H1.
+
+
 
 ## TL;DR
 
@@ -199,6 +206,118 @@ New:
 > episode lengths the ~40× imbalance should vanish and the cross-
 > transfer interpretation is straightforward. Expected: all pairs in
 > the same $[-2, -15]$ band, no special caveat needed.)
+
+
+## Deep-dive after the fix
+
+After re-collecting probe data with `deterministic=True`, I ran a full
+α-sweep + 5-fold CV probe on fov-fix_det and fov-learned_det to decide
+whether the negative R² is (a) a real failure of the LSTM to encode
+absolute spatial variables, or (b) a deeper probe methodology problem.
+
+### Finding 1 — Absolute GPS/compass are NOT reliably encoded
+
+5-fold CV for fov-fix_det and fov-learned_det on full det trajectories:
+
+| target | fov-fix_det | fov-lrn_det |
+|--------|-------------|-------------|
+| Absolute GPS  | 0.06 ± 0.88 | −2.43 ± 3.98 |
+| Compass       | 0.07 ± 0.69 | −1.34 ± 3.14 |
+
+Per-fold swing of ±3 in R² means the probe is fitting noise, not signal.
+The point estimates from a single train/test split (the ones that
+showed up as R² = −1.6 or R² = −10 sentinel) are **not real** — they're
+within one-sigma of chance-level.
+
+Mechanism: PointNav's LSTM does not need to encode world-frame GPS/
+heading. Both are available as per-step observations (episodic GPS and
+compass are part of the obs space), so the LSTM can simply read them
+rather than re-encode them into its latent. Nothing in the task reward
+forces the agent to maintain an absolute world-frame position trace.
+
+The earlier "R² = 0.84 for fov GPS" from the stochastic collection was
+an artefact: 4-step quasi-static trajectories have near-zero target
+variance, so any probe scores trivially high R² (total variance is
+tiny; even a terrible predictor fits within tolerance).
+
+### Finding 2 — DtG (distance-to-goal) IS robustly encoded
+
+| target | fov-fix_det | fov-lrn_det |
+|--------|-------------|-------------|
+| DtG (current) | **0.82 ± 0.09** | **0.81 ± 0.09** |
+| DtG @ lag 5   | 0.77 ± 0.13 | 0.80 ± 0.10 |
+| DtG @ lag 8   | 0.73 ± 0.16 | 0.80 ± 0.09 |
+
+Robust across folds, and the lag-k retention shows the **compensatory-
+memory signature H1 claims** — foveated-learned retains near-perfectly
+across 8 steps (decay ~1%) while foveated-fixed decays modestly
+(~11%). Same story as paper H1, but with a methodologically sound
+probe target. Other ego-relative targets (ego-frame goal-vector,
+heading-since-start, path-displacement) don't fit cleanly — DtG is the
+clean signal.
+
+### Finding 3 — Paper's H1 can be rescued by target swap
+
+The paper's lag-k probe currently decodes GPS at t−k (world-frame
+absolute position). Under det data this is essentially chance. Swapping
+the target to **DtG at t−k** gives:
+
+- Robust CV (σ ≈ 0.10, not 0.88)
+- A retention curve interpretable as compensatory memory
+- Discriminates conditions (decay rates differ)
+- Conceptually cleaner: DtG is what the agent actually tracks for
+  navigation, not world-frame coordinates
+
+This is consistent with the paper's A1 claim ("no condition stores the
+ego-to-goal direction — the PointGoal task provides it as input") —
+DtG fits the same "task-relevant ego-relative encoding" frame.
+
+### Finding 4 — Two bugs, not one
+
+1. `deterministic=False` in `collect.py` → stochastic-STOP trajectory
+   collapse → 4-step quasi-static probe data → inflated R² artefacts
+   (fixed in commit `c81352e`).
+
+2. Lag-k GPS as the compensatory-memory probe target — world-frame
+   position is not what the LSTM encodes. Swap target to lag-k DtG to
+   see the actual memory-retention signal. (To be implemented in the
+   analysis scripts + paper revision.)
+
+### Proposed next steps
+
+1. Finish re-collecting uniform_det, matched_det, blind_det
+   (running; ~1–2h remaining).
+2. Extend `extended_lag_probe.py` to probe **DtG** (and/or goal-vector
+   scalars) at lag k, not just GPS. Rerun across all 5 conditions.
+3. Compare lag-k DtG retention curves across the 5 conditions — if fov
+   > uniform retention gap holds, the H1 compensatory-memory claim
+   survives, re-grounded on a robust probe target.
+4. Re-run H3 with the same target-swap (lag-k DtG + goal-vector
+   retention) — we already have the stoch fov-learned compass 0.94
+   vs fov-fix 0.72 claim; verify it was an artefact or holds in det
+   with DtG-based targets.
+5. Paper revisions will depend on (3)/(4). Draft scenarios:
+   - **Best case** (fov > uniform in lag-k DtG under det, large gap):
+     H1 is rescued with a more elegant target framing. Only methodology
+     § needs updating; the headline findings hold.
+   - **Medium case** (H1 lag-k DtG gap survives but shrinks): soften
+     magnitude claims, add CV error bars, keep the ordering.
+   - **Worst case** (no cross-condition gap in any probe): pivot to
+     behavioral interventions (transplant + shortcut) as primary
+     evidence. The probe framing becomes supporting.
+
+### Diagnostic scripts (in `scripts/probing/`)
+
+- `fov_probe_diagnosis.py` — episode-length + action-distribution on
+  existing npz (confirmed the stochastic bug).
+- `probe_deep_diagnostic.py` — α-sweep + lag-k probe + H stats.
+- `probe_scaler_test.py` — isolates StandardScaler as a non-issue
+  (raw vs scaled give essentially the same R²).
+- `probe_alternative_targets.py` — tests DtG / ego-goal / cumulative-
+  rotation / path-displacement as targets (found DtG robust, others
+  not).
+- `probe_cv_summary.py`, `compare_det.py` — summaries of CV vs
+  single-split and stoch vs det.
 
 **Remaining uncertainty**: quantitative effect on probe R² values can only
 be measured by actually re-running. Our qualitative predictions:
