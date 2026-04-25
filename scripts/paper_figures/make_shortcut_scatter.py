@@ -67,58 +67,49 @@ def main() -> None:
             "gps_r2": gps_r2, "drop_pct": drop_pct,
         })
 
-    fig, ax = plt.subplots(figsize=(6.0, 4.2))
+    fig, ax = plt.subplots(figsize=(6.4, 4.5))
 
-    # Quadrant shading: 4 regions formed by GPS R² = 0.5 vertical line
-    # and shortcut-drop = 30% horizontal line.  Pure aesthetic to read
-    # the 2×2 dissociation off the figure.
-    ax.axvspan(0.5, 1.05, ymin=0, ymax=1.0, color="#bcd4ec",
-               alpha=0.18, zorder=0)
-    ax.axvspan(args.x_clip_min - 0.05, 0.5, ymin=0, ymax=1.0,
-               color="#dddddd", alpha=0.25, zorder=0)
-    ax.axhline(30, ls=":", color="grey", alpha=0.5, lw=0.6)
-    ax.axvline(0.5, ls=":", color="grey", alpha=0.5, lw=0.6)
+    # 2x2 quadrants formed by GPS R² = 0.4 vertical and shortcut drop
+    # = 30% horizontal. No background shading; just clean dashed lines.
+    GPS_THRESH = 0.4
+    DROP_THRESH = 30.0
+    ax.axhline(DROP_THRESH, ls="--", color="#888888", lw=0.9, zorder=1)
+    ax.axvline(GPS_THRESH, ls="--", color="#888888", lw=0.9, zorder=1)
 
     # Plot points + labels
     for r in rows:
         x = max(r["gps_r2"], args.x_clip_min)
         y = r["drop_pct"]
         clipped = r["gps_r2"] < args.x_clip_min
-        ax.scatter(x, y, s=140, c=r["colour"], edgecolor="black",
-                   linewidths=0.8, marker=r["marker"], zorder=3)
-        # Label offset to avoid marker; manual nudge per point so
-        # labels do not overlap.
+        ax.scatter(x, y, s=160, c=r["colour"], edgecolor="black",
+                   linewidths=0.9, marker=r["marker"], zorder=3)
+        # Label offset to avoid marker overlap.
         offsets = {
-            "Blind":          (-0.06, +1.0),  # left of dot, top-right area
-            "Matched (1×1)":  (-0.06, +1.5),  # left of dot
-            "Uniform":        (+0.06, +1.0),  # right of dot
-            "Foveated (fix)": (+0.06, +1.0),  # right of dot
-            "Fov-learned":    (+0.12, +0.0),  # right of clipped dot
+            "Blind":          (-0.08, +0.0),
+            "Matched (1×1)":  (-0.08, +0.0),
+            "Uniform":        (+0.08, +0.0),
+            "Foveated (fix)": (+0.08, +0.0),
+            "Fov-learned":    (+0.10, -3.5),
         }
-        dx, dy = offsets.get(r["label"], (0.06, 0.0))
+        dx, dy = offsets.get(r["label"], (0.08, 0.0))
         ha = "right" if dx < 0 else "left"
+        label = r["label"]
         if clipped:
-            ax.annotate(
-                f"{r['label']}\n(GPS $R^2$={r['gps_r2']:.1f})",
-                (x, y), xytext=(x + dx, y + dy),
-                ha=ha, va="center", fontsize=8.5,
-            )
-            # Arrow indicating x-axis was clipped
-            ax.annotate("←", (x - 0.05, y), ha="right", va="center",
-                        fontsize=11, color="darkred")
-        else:
-            ax.annotate(r["label"], (x, y), xytext=(x + dx, y + dy),
-                        ha=ha, va="center", fontsize=8.5)
+            label = f"{label} ($R^2{{=}}{r['gps_r2']:.1f}$)"
+        ax.annotate(label, (x, y), xytext=(x + dx, y + dy),
+                    ha=ha, va="center", fontsize=9, fontweight="bold")
 
-    # Background-region labels (just the column headers, no quadrant
-    # text — quadrant structure is conveyed by shading + caption.)
-    ax.text(0.755, 0.96, "has linear\nGPS code", transform=ax.transAxes,
-            ha="center", va="top", fontsize=7.5, color="#1f4e8a",
-            style="italic", alpha=0.75)
-    ax.text(0.25, 0.96, "no linear GPS",
-            transform=ax.transAxes,
-            ha="center", va="top", fontsize=7.5, color="#444",
-            style="italic", alpha=0.75)
+    # Quadrant captions (corners of the 2x2)
+    quad_kw = dict(transform=ax.transAxes, fontsize=8, color="#444",
+                   style="italic", alpha=0.85)
+    ax.text(0.97, 0.97, "has GPS,\nuses memory",
+            ha="right", va="top", **quad_kw)
+    ax.text(0.03, 0.97, "no GPS,\nuses memory",
+            ha="left", va="top", **quad_kw)
+    ax.text(0.97, 0.03, "has GPS,\nignores it",
+            ha="right", va="bottom", **quad_kw)
+    ax.text(0.03, 0.03, "no GPS,\nlow memory",
+            ha="left", va="bottom", **quad_kw)
 
     ax.set_xlabel("GPS $R^2$ (probe-readable from top-layer h, 5-fold CV)",
                   fontsize=9.5)
