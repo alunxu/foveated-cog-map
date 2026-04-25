@@ -227,10 +227,34 @@ Matched-compute  & $-10{,}621$      & $-4{,}832$ & $-4{,}984$  & $-58{,}169$  & 
 \noindent\textbf{Boundaries}\quad Our similarity tests are linear (CKA) or near-linear (t-SNE default); non-linear similarity measures could reveal higher-order shared structure. Our five sensors are diverse but not exhaustive; hybrid sensors (coarse uniform periphery + sharp fovea, depth-only inputs) might produce intermediate geometries.
 
 
-\subsection{Foveation: where it sits, and where the cleaner tests sit}
+\subsection{Foveation: convergence on H1, divergence on H2 + behaviour}
 \label{sec:foveation}
 
-The five-condition results above place our two foveated variants (foveated-fixed, foveated-learned) in the rich-encoder pass-through regime alongside uniform: under $\sigma_{\max} = 8$ Gaussian-blur foveation with the same ResNet-18 encoder stack, the LSTM does not develop a stable top-layer GPS code (Figure~\ref{fig:h1_mega}). This is itself a finding --- it bounds where a soft Gaussian-blur foveation falls on the encoder--memory race spectrum --- but it leaves three sharper questions about foveation that the present five conditions cannot resolve. We submitted controlled experiments for each; the following four sub-paragraphs describe the experimental design and what the result will mean. Numbers will populate this subsection in revision; current status is tracked in Appendix~\ref{app:foveation-status}.
+The five-condition results above place foveated-fixed and uniform in the same rich-encoder pass-through regime \emph{on the headline H1 metric} (top-layer LSTM GPS $R^2$, Figure~\ref{fig:h1_mega}a): both decode at chance under no-cap probing, both peak in the typical-episode window then fade. \emph{On every other axis we measure, however, foveated and uniform are not interchangeable}, summarised in Table~\ref{tab:fov-vs-uni}. The cross-condition memory transplant from foveated to uniform incurs $-0.10$ SPL beyond the self-transplant noise floor (Figure~\ref{fig:h2}); pairwise CKA between foveated and uniform sits at the numerical-noise floor ($<10^{-4}$); 1-NN cluster purity on pooled hidden states is $1.000$, so the two conditions occupy non-overlapping linear subspaces; the shortcut SPL drop is $21\%$ for foveated vs.\ $41\%$ for uniform; and on held-out MP3D, foveated GPS recovers to $R^2 = +0.35$ while uniform stays at $-0.36$ (Figure~\ref{fig:h1_mega}a, MP3D bars). The take-away: \emph{within the rich-encoder regime defined by H1, foveation and uniform produce internally distinct representations whose differences manifest in transplant compatibility, dataset shift, behavioural memory reliance, and pairwise similarity --- only the headline ``current-state GPS R²'' is the same}.
+
+\begin{table}[!htbp]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\caption{Foveation vs.\ uniform at $\sigma_{\max} = 8$ Gaussian blur with the same ResNet-18 encoder. Same on H1, different on H2 / behavioural / generalisation. Sources: Table~\ref{tab:summary}, Figure~\ref{fig:h2}, Figure~\ref{fig:shortcut}, Figure~\ref{fig:encoder_probe}. Data are deterministic-rollout single-seed.}
+\label{tab:fov-vs-uni}
+\begin{tabular}{lccl}
+\toprule
+Measure & Foveated (fix) & Uniform & Verdict \\
+\midrule
+LSTM GPS $R^2$ (Gibson) & $+0.06\pm 0.88$ & $-0.31\pm 0.86$ & both chance, \emph{indistinguishable} \\
+Encoder $\to$ GPS $R^2$ & $-0.65\pm 0.28$ & $-0.32\pm 0.08$ & both negative, overlapping \\
+LSTM compass $R^2$ (Gibson) & $+0.07\pm 0.69$ & $+0.36\pm 0.23$ & uniform $\sim 5\times$ better\\
+LSTM GPS $R^2$ (MP3D, held out) & $+0.35\pm 0.27$ & $-0.36\pm 1.38$ & \textbf{differ by 0.71}\\
+Shortcut SPL drop \% & $21\%$ & $41\%$ & \textbf{uniform $2\times$ more brittle}\\
+Memory-transplant cost (fov $\to$ uni) & \multicolumn{2}{c}{$-0.10$ SPL beyond self-noise} & \textbf{not interchangeable}\\
+Pairwise CKA(fov, uni) & \multicolumn{2}{c}{$< 10^{-4}$} & \textbf{near-orthogonal subspaces}\\
+1-NN purity (pooled) & \multicolumn{2}{c}{$1.000$ vs.\ chance $0.20$} & \textbf{linearly separable}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These differences place foveated meaningfully apart from uniform along the H2 / dataset-shift / behavioural axes, even though their H1 signature is identical. The four in-flight experiments described next are the cleaner causal tests of \emph{which} aspect of foveation drives these differences (sensor transform vs.\ gaze location vs.\ encoder bandwidth). Numbers from those will populate the corresponding sub-paragraphs in revision; current status is tracked in Appendix~\ref{app:foveation-status}.
 
 \noindent\textbf{Foveation strength sweep (F1--F4, in progress)}\quad We train four additional foveated agents at $\sigma_{\max} \in \{2, 4, 12, 20\}$ (alongside the existing $\sigma_{\max} = 8$), holding everything else fixed --- gaze location, encoder stack, training budget, training pool. The expected signature: at low $\sigma_{\max}$ the foveated agent should look like uniform (encoder still resolves world-frame); at high $\sigma_{\max}$ it should approach matched-compute (encoder cannot resolve world-frame, LSTM compensates). The $R^2$ vs.\ $\sigma_{\max}$ curve directly tests the encoder--memory race as a continuous lever, not a binary one.
 
@@ -249,7 +273,7 @@ The five-condition results above place our two foveated variants (foveated-fixed
 
 \noindent\textbf{Why this slot exists}\quad Our title and framing focus on foveated vision; the present five conditions place foveated-fixed and foveated-learned within a framework but do not isolate foveation-specific effects (under simple Gaussian blur both behave like uniform). The four experiments above target specific foveation-specific predictions of the encoder--memory race framework. Each is a falsifiable test, designed and submitted at the time of writing. None depends on the others to be informative.
 
-\noindent\textbf{What we can already conclude about foveation}\quad From the existing data alone (i.e.\ before F1--F4 / log-polar / fov-shifted land), four foveation findings are already supported. \emph{(a)~Behavioural placement.} Foveated-fixed solves PointGoal at $0.78$ SPL / $96\%$ success (Table~\ref{tab:summary}) and traces a near-direct path through the corridor on a typical episode (Figure~\ref{fig:setup}d, $80$ steps vs.\ blind's $231$ and matched's $146$), behaviourally indistinguishable from uniform on the same episode. \emph{(b)~Probe placement.} Top-layer LSTM GPS $R^2 = +0.06 \pm 0.88$, compass $+0.07 \pm 0.69$ --- both at chance, in the rich-encoder pass-through regime alongside uniform (Figure~\ref{fig:h1_mega}a). \emph{(c)~Encoder placement.} The encoder feature map cannot linearly decode world-frame GPS ($R^2 = -0.65$, Figure~\ref{fig:encoder_probe}) --- soft Gaussian-blur foveation does not produce a useful encoder bottleneck. \emph{(d)~Functional non-equivalence to uniform despite indistinguishable probe placement.} A foveated$\to$uniform memory transplant incurs $-0.10$ SPL beyond the self-transplant noise floor (Figure~\ref{fig:h2}), and the two conditions occupy non-overlapping linear subspaces (CKA noise floor, 1-NN purity $1.000$). \emph{Together, these establish a baseline that the in-flight experiments build on}: any genuine foveation-specific effect must show up either in (i) the strength sweep (low- vs high-$\sigma_{\max}$ behaviour), (ii) the log-polar control (spatial-sampling vs.\ blur), or (iii) the foveated-shifted control (gaze location); the present $\sigma_{\max}=8$ Gaussian-blur version does not.
+\noindent\textbf{What we can already conclude about foveation}\quad From the existing data alone (Table~\ref{tab:fov-vs-uni}), foveation under $\sigma_{\max}=8$ Gaussian blur is \emph{not a copy of uniform}. It converges with uniform on H1 but diverges from it on H2 (subspace orthogonality, 1-NN separability), behavioural memory reliance (shortcut drop $21\%$ vs.\ $41\%$), transplant compatibility ($-0.10$ SPL gap), and dataset-shift recovery ($+0.71$ R² difference on MP3D). The encoder feature-map probe additionally shows that the encoder discards linear position info regardless ($-0.65$ for foveated, $-0.32$ for uniform; Figure~\ref{fig:encoder_probe}), so the differences above cannot be attributed to encoder-level GPS preservation: \emph{whatever foveation does differently from uniform, it does it inside the LSTM, in subspaces that the linear-GPS probe cannot see}. The in-flight experiments below probe \emph{what} that ``something different'' is by varying foveation strength, sensor transform (Gaussian-blur vs.\ log-polar spatial sampling), and gaze location.
 
 
 \subsection{Gaze location as a second axis (H3)}
