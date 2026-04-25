@@ -266,36 +266,62 @@ For each figure: source, freshness, paper-section, ready-to-publish.
 
 ## 5. Open questions / TODOs
 
-### 5.1 Awaiting cluster results
-- F1: under-training control for fov-fix (current uses ckpt.36 / 174M) — does fov-fix at full 250M still match uniform pass-through?
-- F2: normaliser-invariance — was disabling RunningMeanAndVar a confound for fov-fix vs uniform comparison?
-- F3: log-polar foveation — does *strong* foveation create real encoder bottleneck?
-- F4: σ_max=20 — does blur-strength matter at all?
-- A: complete 5×5 transplant matrix — replace "the pairs we tested" with full matrix
-- H: per-step transplant — does cross-condition transplant cost grow with midpoint as predicted?
-- J: training dynamics — when in training does encoder–memory race emerge?
-- D: encoder feature-map — does matched-compute encoder output preserve position info even with 1×1 spatial collapse?
-- Pop coding: 5 conditions' rate-map gallery + sparse decoding curve + intrinsic dim
+### 5.1 Awaiting cluster results (in flight on Izar)
+
+| Code | Experiment | What it answers | Paper section affected | Submission |
+|---|---|---|---|---|
+| F1 | Foveation $\sigma_{\max}=2$ | Low-blur foveated $\to$ does it look like uniform? | §4.4.2 | submitted |
+| F2 | Foveation $\sigma_{\max}=4$ | Same gradient, lower σ | §4.4.2 | submitted |
+| F3 | Log-polar foveation | Spatial-sampling vs blur bottleneck distinction | §4.4.3 | submitted |
+| F4a | Foveation $\sigma_{\max}=12$ | High-blur foveated $\to$ approaches matched? | §4.4.2 | submitted |
+| F4b | Foveation $\sigma_{\max}=20$ | Strongest foveation in sweep | §4.4.2 | submitted |
+| F-shift | Foveated-shifted (gaze $(0.49, 0.62)$) | Gaze location as 2nd content axis (H3 causal) | §4.4.4 + §4.5 | submitted |
+| F-norm | Foveated with normaliser re-enabled | Normaliser-invariance control | §3.2 implementation note | submitted |
+| A | 5×5 transplant matrix (17 cross-pairs) | Replace "we tested 3 pairs" with complete matrix | §4.3 | jobs 2849148-64 |
+| H | Per-step transplant (12 extended midpoints) | Does mismatch cost grow with midpoint? | §4.3 | jobs 2849166-79 |
+| J | Training dynamics (5 cond × 4-5 ckpts) | When does encoder-memory race emerge in training? | §4.6 / App | submitted |
+| D | Encoder feature-map probe (matched, uniform, foveated) | Where world-frame info sits encoder vs LSTM | §4.4.4 | jobs 2849191-93 |
+| ST | Shortcut + trajectories (5 conds) | Phase B paired-episode trajectory figure for §4.5 | §4.5 | jobs 2849306-10 |
 
 ### 5.2 Awaiting friend's H100
-- F5a: fov-learned clean transform retrain (seeds 0,1,3) — replaces buggy-transform fov-lrn data
-- F5b: fov-shifted causal H3 — populates §4.4
-- F6: encoder-resolution scaling sweep — populates App D
-- F7: multi-seed gap fills
 
-### 5.3 Future / out-of-scope
-- Direct H1 mechanism test (GPS perturbation mid-rollout)
-- Transformer architecture replication
-- Length-matching ablation in TRAINING (truncate trajectories during PPO)
-- Per-unit place-cell visualisation animation across episode
-- Cross-heading probe with larger N
+| Code | Experiment | What it answers | Status |
+|---|---|---|---|
+| F5a | Fov-learned clean-transform retrain (seeds 0, 1, 3) | Replaces buggy-transform fov-lrn baseline | TODO |
+| F6  | Encoder-resolution scaling sweep ($32{\times}32$ to $192{\times}192$) | App E: resolves the matched-bottleneck-vs-low-resolution attribution; tests H1 as a continuous lever holding encoder stack fixed | TODO |
+| F7  | Multi-seed (≥3) gap fills for the 5 main conditions | Bound seed-to-seed variability of H1 numbers; needed before promoting "candidate dissociation" labels in §4.5 / §6 | TODO |
 
-### 5.4 Audit-flagged but not blocking
-- Blind Layer-1 R² dip not explained (Fig 6 caption flagged)
-- Matched-compute "channel info" — D will resolve
-- Selectivity-with-within-episode-shuffle (B2 audit, MINOR)
-- Lag-k extended to k=50, 100 (could go further)
-- Large-N 1-NN purity (current 7500, could go to ~50k)
+### 5.3 Should-have experiments — not yet planned, would strengthen claims if added
+
+For each: which paper claim is currently held by hedging that this experiment would tighten.
+
+| Code | Experiment | What it tightens | Effort estimate |
+|---|---|---|---|
+| H1-causal | Train rich-encoder agent with GPS perturbed mid-rollout; or train bottleneck agent with GPS sensor removed | "Encoder–memory race" from candidate unifying account → mechanism (currently softened in §5.1) | 2-3 retrains; ~4 days V100 each |
+| Pol-rely | Ablate GPS sensor mid-rollout at eval and measure SPL drop | Distinguishes "policy reads GPS code" from "policy reads non-GPS memory" — directly tests the matched-vs-uniform 2×2 anomaly | Eval-only; ~2 hours per cond |
+| Multi-seed-shortcut | Re-run shortcut eval on multi-seed checkpoints | Promote 2×2 dissociation (matched + uniform anomalies) from candidate to robust finding | Depends on F5a/F7 |
+| Length-match | Truncate every condition's probing data to common length, re-run probes | Eliminates "long blind episodes give artificially high R²" hypothetical confound | Eval-only; ~1 hour |
+| 1-NN-large-N | 1-NN purity at $\sim 50$k pooled samples (currently 7500) | Bounds the "1-NN purity = 1.000" finding's sample-size effect | Analysis-only; few minutes |
+| 1-NN-MP3D | 1-NN purity on MP3D-pooled hidden states | H2 robustness to dataset shift | Analysis-only; needs MP3D NPZs |
+| Cross-head-N | Cross-heading probe with larger N (was tried, returned "insufficient samples") | Heading-invariance of GPS code | Bigger probe collection job; ~4 hours |
+| Hybrid-sensor | Hybrid sensor (coarse-uniform-periphery + sharp-fovea, OR depth-only) | "Hybrid sensors might produce intermediate geometries" hint in §4.3 | New training condition; ~4 days V100 |
+| Banino-grid | Test grid-cell periodicity / hexagonal autocorrelation in LSTM units | Compare to grid-cell literature directly | Analysis-only; ~1 hour |
+| Deep-lag | Lag-$k$ probe to $k=50, 100$ | Bound the "persistent at lags ≥20" claim | Analysis-only |
+
+### 5.4 Out-of-scope (paper-time, not future-work)
+
+- **Transformer-architecture replication of all 5 conditions** — would test architecture-independence of encoder–memory race. Requires retraining every condition on a transformer backbone (≥5×4 days = month). Discussed in §5.4 Discussion as a prediction.
+- **Non-navigation embodied tasks** — would test task-independence. New environment, new training pipeline. Out of scope.
+- **Supervised visual learners (not RL)** — would test learning-objective-independence. Discussed in §5.4 as open empirical question.
+- **Per-unit place-cell visualisation animation across episode** — nice-to-have for UI / website; not load-bearing.
+- **Active-gaze with stochastic / info-seeking gaze decoder** — separate paper; explicitly disclaimed in §5.5 as architecture-specific to our minimal decoder.
+
+### 5.5 Audit-flagged side observations (not blocking)
+- Blind Layer-1 R² dip (0.61 vs Layer 0/2 ≈ 0.95) — Fig 2c notes this; not yet explained
+- Matched-compute "channel info" alone might encode position — D in flight resolves
+- Selectivity-with-within-episode-shuffle as alternative to label-permutation Hewitt-Liang (B2 audit, minor)
+- Foveated-learned MP3D compass +1.75 swing (Gibson −1.34 → MP3D +0.41) — single-seed; multi-seed would test
+- Population coding finding "rich-encoder peaked units encode position-correlated features" depends on threshold (1 bit); robustness under threshold sweep would help
 
 ---
 

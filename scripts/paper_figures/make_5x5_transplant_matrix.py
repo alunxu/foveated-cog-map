@@ -59,24 +59,41 @@ def main() -> None:
 
     n = len(CONDS)
     matrix = np.full((n, n), np.nan)
+
+    # First pass: collect per-recipient (self_transplant_spl, baseline_spl)
+    # from any cross JSON in which this condition is the recipient. The
+    # self_transplant field always refers to the recipient driving its
+    # own rollout, so it is recipient-specific not donor-specific.
+    recip_self: dict[str, float] = {}
+    recip_baseline: dict[str, float] = {}
     for i, (donor, _) in enumerate(CONDS):
-        # Self-transplant SPL (need for normalisation)
-        self_d = load_pair(args.results_dir, donor, donor)
-        if self_d is None:
-            continue
-        self_spl = self_d["self_transplant"]["mean_spl"]
-        baseline_spl = self_d["baseline"]["mean_spl"]
         for j, (recip, _) in enumerate(CONDS):
             if i == j:
-                # Diagonal: cross-transplant of self vs self = 0 by definition
-                # but we report self-transplant SPL drop vs baseline
-                matrix[i, j] = self_spl - baseline_spl
+                continue
+            pair = load_pair(args.results_dir, donor, recip)
+            if pair is None:
+                continue
+            if recip not in recip_self:
+                recip_self[recip] = pair["self_transplant"]["mean_spl"]
+                recip_baseline[recip] = pair["baseline"]["mean_spl"]
+
+    # Second pass: fill the 5×5
+    for i, (donor, _) in enumerate(CONDS):
+        for j, (recip, _) in enumerate(CONDS):
+            if i == j:
+                # Diagonal: how much SPL the recipient loses simply by
+                # being transplanted to its own state mid-episode (the
+                # rollout-divergence cost).
+                if recip in recip_self and recip in recip_baseline:
+                    matrix[i, j] = recip_self[recip] - recip_baseline[recip]
             else:
                 pair = load_pair(args.results_dir, donor, recip)
-                if pair is None:
+                if pair is None or recip not in recip_self:
                     continue
-                # Cross-self SPL gap
-                matrix[i, j] = pair["cross_transplant"]["mean_spl"] - self_spl
+                # Off-diagonal: cross-transplant SPL minus recipient's
+                # self-transplant SPL (isolated condition-mismatch effect).
+                matrix[i, j] = (pair["cross_transplant"]["mean_spl"]
+                                - recip_self[recip])
 
     # Plot heatmap
     fig, ax = plt.subplots(figsize=(6.4, 5.4))
