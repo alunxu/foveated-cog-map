@@ -225,6 +225,10 @@ For each figure: source, freshness, paper-section, ready-to-publish.
 
 **Restructure 2026-04-25**: figure budget went from 8 main + 2 tables → 4 main + 2 tables. Old standalone figures (h1_bottleneck, temporal_probe_evolution, layerwise_decay, mp3d_generalization, h3_content, place_cells, goal_vector_probe) consolidated or moved to appendix.
 
+**Fig 2 simplified again 2026-04-25 (afternoon)**: H1 mega-figure went from 4 panels (panel a was itself 3 sub-bar-charts for GPS / Compass / DtG) → 3 cleaner panels: (a) grouped GPS bars × {Gibson, MP3D}, (b) temporal probe, (c) per-layer. Compass + DtG referenced via Table 1 + appendix supp figs. Total Fig 2 sub-axes: 6 → 3.
+
+**Population coding 2026-04-25**: pulled `population_coding_det.json` + summary figure from Izar (job 2849188 done). Replaced broken `place_cells.pdf` with `population_coding_summary.pdf` in App A; updated §4.6 paragraph. **Data correctness flag**: old `place_cells.pdf` was showing impossible per-unit info (mean $\bar s = 65$ bits/unit, max 150) — but a 20×20 grid is bounded at $\log_2(400) \approx 8.6$ bits per unit. The new analysis (capped at ~2 bits max) is correct. The old figure's qualitative ordering (bottleneck > rich-encoder for n_above_1bit) was also REVERSED by the corrected analysis: rich-encoder conditions actually have MORE high-info units (16-18 vs blind's 1), but those units don't decode GPS — they encode position-correlated features. New paper §4.6 reflects this: blind has compressed broad spatial code, rich-encoder has higher-dim representations with peaked landmark-like units that don't translate to GPS readout. This is consistent with the encoder-memory race story (rich-encoder uses encoder for landmarks, doesn't compress to position).
+
 ### Main figures (after restructure)
 | Filename | Source | Freshness | Section | Status |
 |---|---|---|---|---|
