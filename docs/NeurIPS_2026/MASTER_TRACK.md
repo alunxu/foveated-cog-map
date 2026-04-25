@@ -146,6 +146,43 @@ Status legend:
 - 🆕 New finding from in-flight experiments; needs integration once data lands
 - ❌ Not yet supported
 
+### 3.0 Single-seed claim audit (2026-04-26 pass)
+
+Every cross-condition number in the paper is currently single-seed. The
+multi-seed retrains in flight (uniform/foveated cs-503 jobs, blind/matched/
+fov-learned normal-QOS jobs 2850374-76) will land seed=2 within ~3 days.
+The table below lists which paper claims become falsifiable on multi-seed.
+Hedging in the paper has been tightened (commit pending) to flag every
+quantitative claim as single-seed; if multi-seed lands, switch hedges to
+"replicated across N=2 seeds" / "varies across seeds: needs N=3".
+
+| Claim | Where | Single-seed risk | Multi-seed gates |
+|---|---|---|---|
+| Top-layer GPS $R^2$ ordering (blind +0.95, matched +0.78, uniform −0.31, fov +0.06, fov-lrn −2.43) | §4.2, Fig 2a, Table 1 | Variance bars on rich-encoder huge; ordering itself robust | ✓ ordering survives; magnitudes shift |
+| Long-tail decay step-bin (rich-encoder $R^2$ negative at $800+$ bin only) | §4.2, Fig 2b | Bin variance is wide | step at which the code dissipates may shift ±100 |
+| Per-layer GPS profile (L0 high all, L2 low rich-encoder) | §4.2, Fig 2c | Single fit per condition | profile shape stable; ordering at L2 stable |
+| LSTM gain numbers (matched +3.9, fov +0.7, uniform $\sim$0) | §4.4, Fig 2d | Single point estimates | ordering robust; precise gap may move |
+| MP3D foveated GPS $R^2 = +0.35$ (recovery from chance) | §4.2, Fig 2a | Single-seed cross-dataset shift; could be noise | replicate or retract |
+| MP3D fov-learned compass $-1.34 \to +0.41$ swing | Table 1 + §4.2 | Single-seed cross-dataset shift; could be noise | replicate or retract |
+| Probe-transfer $R^2 \ll -800$ off-diagonal | Fig 3 left | Single fit per cell | sign + order-of-magnitude robust; precise value moves |
+| 5×5 transplant asymmetry (blind→uni −0.38 vs uni→blind +0.02) | Fig 3 right | Single-seed; matched-recipient column unmeasured | ✓ asymmetry survives; precise gaps move |
+| 1-NN purity 1.000 across 7500 pooled states | §4.3 | Pooled across one seed each | likely robust (N is large) |
+| Shortcut SPL drop % (blind 52, uni 41, fov 21, matched 18, fov-lrn 15) | §4.5 | Single seed × 200 paired episodes | ordering should survive |
+| 2×2 dissociation (matched + uniform off-diagonal) | §4.5 Fig 4 | Two interpretive labels on 5 single-seed points | hedged in paper as "candidate dissociations"; multi-seed gates the "anomaly" framing |
+| Lock-onto-old: uniform margin +1.83 m at $n=46$ | §4.5 Fig 5 right | Single seed; one paired-episode protocol | ordering (uniform >> others) likely survives; +1.83 magnitude may move |
+| Fov-learned margin +2.30 at $n=5$ | §4.5 Fig 5 right | Tiny n + single seed | flagged as "low confidence" in paper |
+
+### 3.0a Mechanism claims explicitly NOT supported by current data
+
+Listed here so we don't drift into asserting them:
+- **Direct causal test of encoder-memory race** (mid-rollout visual ablation in rich-encoder agents → does top-layer GPS code re-emerge?). Not run. Listed as TODO in §4.2 "Proposed mechanism".
+- **"Spatial-feature variety per step" as the trigger**, vs. competing accounts (input resolution; encoder spatial output dim; encoder channel capacity). Resolution scaling sweep (App E, friend's H100) is the clean test; until it lands the framing is interpretation.
+- **Architecture independence** of the principle (transformers, supervised learners, non-navigation). Untested. Hedged as such in paper.
+- **Foveation specifically diverging from uniform "in subspaces invisible to a linear-GPS probe"** — this is a description of what we observed, not a tested claim. Subspace structure of the divergence is unprobed.
+- **Foveated-shifted control predicts H3 effect** — the test is in training (H100-A); the prediction is open.
+
+
+
 ### Abstract
 | Claim | Status | Backed by |
 |---|---|---|
