@@ -14,6 +14,17 @@
 \usepackage{xcolor}
 \usepackage{microtype}
 \usepackage{multirow}
+\usepackage{placeins}  % \FloatBarrier to keep figures with their text
+
+% Loosen LaTeX float placement: allow figures to take more of a page
+% and require less text per page so figures don't all defer to the end.
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.92}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.7}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
 
 % Visible placeholder macro for numbers pending experiment completion.
 % Final submission: audit \TODO and replace each with real values.
@@ -38,7 +49,7 @@ What shapes the content of a recurrent navigation agent's learned internal state
 
 Recurrent navigation agents trained with deep RL build internal states that support memory, planning, and generalisation, and the content of those internal states is at least as interesting as the task metrics they drive. A natural question is what \emph{determines} that content: architecture, objective, training budget, or visual input? Wijmans et al.~\citep{wijmans2023emergence} showed that map-like spatial representations emerge from task pressure alone, even in blind agents that receive only goal displacement and proprioception; Dwivedi et al.~\citep{dwivedi2022isee} probed sighted agents for related concepts; Banino et al.~\citep{banino2018grid} and Cueva \& Wei~\citep{cueva2018grid} demonstrated grid-cell-like structure in path-integration networks. Together these results establish that \emph{some} spatial structure is learned without being designed in. They leave open the complementary question that we take up here: within agents that all achieve high task success, how much of \emph{what} recurrent memory encodes is determined by the structure of the visual input rather than by the task? In biology the answer is clear --- primate hippocampal cells code joint place--view--action state because primates sample the scene with a foveated sensor~\citep{wirth2017gaze,rolls2024why}, and the same bat produces non-overlapping hippocampal populations in vision versus echolocation~\citep{geva2016remapping}. We investigate the analogous question in a controlled agent setting where the only free variables are the visual input structure and the gaze that directs it.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
 \begin{minipage}{\linewidth}\centering
 \begin{minipage}{0.30\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_blind.png}\\{\footnotesize (a) Blind}\end{minipage}\hfill
@@ -127,7 +138,7 @@ We complement probe-based analysis with two interventions directly on the LSTM s
 
 Table~\ref{tab:summary} collects the headline per-condition numbers this section returns to. All sighted conditions solve PointGoal at $96$--$99\%$ success; blind reaches $93\%$ at a longer training budget, reproducing Wijmans et al.~\citep{wijmans2023emergence}. Success is tightly bunched, so ``the agents differ in what they do'' is an unlikely explanation for the encoded-content gap we report (it does not strictly rule it out). The probe machinery itself is calibrated: distance-to-goal decodes robustly across all five conditions ($R^2 \in [0.81, 0.90]$; Appendix~\ref{app:supp_figs} for the companion plot), confirming that Ridge has the capacity to fit high-$R^2$ scalars when the hidden state contains them; and Hewitt--Liang label-permutation selectivity is high in the conditions where the GPS code itself is high (blind GPS / compass selectivity $+0.95 / +0.81$; matched $+0.72 / +0.56$), consistent with a genuine signal rather than label memorisation. Two training-stability caveats are disclosed in full in Appendix~\ref{app:training-stability}: foveated-fixed uses ckpt.36 at $\sim$174M frames (last clean checkpoint before a silent NaN-gradient corruption at $\approx\!182$M); and matched-compute's $1{\times}1$ feature-map collapse, originally noticed as a training quirk, is what makes matched-compute a useful test of the encoder-bottleneck framing (we cannot from one condition alone fully separate the $1{\times}1$ feature-map effect from the lower input resolution; see §\ref{sec:visual-conditions} and §\ref{sec:foveation}).
 
-\begin{table}[t]
+\begin{table}[!htbp]
 \centering
 \small
 \setlength{\tabcolsep}{6pt}
@@ -150,7 +161,7 @@ Fov-learned           & 250M  & 0.82          & 0.98          & $-$2.43$\pm$3.98
 \subsection{Encoder--memory race: a temporal-stability claim (H1)}
 \label{sec:h1}
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth]{fig/h1_mega.pdf}
 \caption{H1 evidence in three panels. \emph{(a)}~GPS $R^2$ (5-fold CV, Ridge $\alpha=10$, full-length deterministic rollouts) on Gibson and held-out MP3D (300 episodes/condition; same checkpoints, no re-training). Blind and matched-compute (bottleneck conditions, blue background) decode world-frame GPS robustly on both datasets; uniform / foveated / foveated-learned (rich-encoder, grey background) do not, except for foveated recovering to a mild positive ($R^2 = +0.35$) on MP3D. The Compass and DtG numbers are in Table~\ref{tab:summary} (compass shows the same ordering at smaller magnitude; DtG decodes everywhere because every agent must track it; Appendix~\ref{app:supp_figs} for the companion bar plots). \emph{(b)}~Top-layer GPS $R^2$ binned by step-in-episode (out-of-fold prediction): all five conditions encode top-layer GPS in the typical-episode window (steps $\sim 25$--$200$); the rich-encoder conditions then \emph{overwrite} the code (negative $R^2$ in the long-tail $800+$ bin), while bottleneck conditions hold $R^2 > 0.7$ to step $800+$. The headline ``rich-encoder $\approx$ chance'' in panel (a) is therefore primarily long-tail behaviour. \emph{(c)}~Per-LSTM-layer GPS $R^2$ (single-fit on top-layer hidden states): all five conditions have GPS at Layer 0 (where the GPS sensor embedding enters the LSTM input vector --- this lower-bound is at least partly a sensor-pass-through effect, not the network ``computing'' position); the divergence is at Layer~2, the policy readout.}
@@ -177,7 +188,7 @@ Fov-learned           & 250M  & 0.82          & 0.98          & $-$2.43$\pm$3.98
 \subsection{Format-level divergence across conditions (H2)}
 \label{sec:h2}
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
 \begin{minipage}{0.32\linewidth}\centering
 \includegraphics[width=\linewidth]{fig/h2_cka_heatmap.pdf}
@@ -189,7 +200,7 @@ Fov-learned           & 250M  & 0.82          & 0.98          & $-$2.43$\pm$3.98
 \label{fig:h2}
 \end{figure}
 
-\begin{table}[t]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Probe-transfer GPS $R^2$ on deterministic-rollout hidden states: train on row condition, test on column. Self-accuracy diagonal is $0.89$--$0.99$; every cross-condition transfer is catastrophically negative ($R^2 \ll -800$, often $\ll -10^4$), reflecting that a probe trained on one condition's hidden-state geometry does not just degrade on another --- it predicts off-manifold values.}
@@ -241,7 +252,7 @@ H1 and H2 identify sensor structure as one axis on representational content. H3 
 
 \noindent\textbf{Gaze-location test (foveated-shifted, in progress)}\quad Both rich-encoder foveated variants sit in the pass-through regime under current-state probing (Table~\ref{tab:summary}), so the H3 test is whether \emph{within} the pass-through regime, gaze location shifts content along other axes --- non-spatial feature usage, behavioural memory-reliance (shortcut, Figure~\ref{fig:shortcut}), or transplant compatibility. To isolate gaze location from training-dynamics confounds, we train a foveated-shifted control: an agent identical to foveated-fixed except gaze is hardcoded at $(0.49, 0.62)$ instead of $(0.5, 0.5)$ --- matching foveated-learned's collapsed gaze position but with no learned-gaze module in the optimisation path. \TODO{Training in progress at submission; results will populate this paragraph.}
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.62\linewidth]{fig/shortcut_scatter.pdf}
 \caption{Probe-readable GPS (H1) vs.\ behavioural memory reliance (shortcut). The shortcut experiment runs paired episodes in the same scene with fresh goals and compares second-episode SPL under \emph{reset} (LSTM zeroed) vs.\ \emph{persistent} memory; larger drop $=$ more memory-reliant policy. \emph{x-axis:} GPS $R^2$ (5-fold CV mean) from Figure~\ref{fig:h1_mega}a. \emph{y-axis:} relative shortcut SPL drop (\%). 20 Gibson scenes $\times$ 10 paired episodes per condition. Fov-learned's $R^2 = -2.43$ is clipped at $-1.5$ (arrow). The 5 conditions populate a 2$\times$2 dissociation: blind ``has GPS code, uses memory''; foveated-fixed and foveated-learned ``no linear GPS, ignores memory''; \textbf{matched} and \textbf{uniform} are the two opposite anomalies (matched: ``has GPS but ignores memory''; uniform: ``no linear GPS yet still memory-reliant'').}
@@ -261,6 +272,7 @@ H1 and H2 identify sensor structure as one axis on representational content. H3 
 \noindent\textbf{Per-unit spatial information and population structure}\quad A population coding analysis (Appendix~\ref{app:supp_figs}, Figure~\ref{fig:supp_pop_coding}) sharpens the H1 picture in a direction we did not expect. Per-unit spatial information~\citep{banino2018grid}: rich-encoder conditions have a few units with \emph{higher} peak spatial information ($\approx 2$ bits) than blind ($\approx 1$ bit max). What separates conditions is what those units actually encode --- a sparse-decoding curve (probe GPS using only the top-$k$ spatial-info units) reveals that blind reaches $R^2 \approx 1.0$ at $k=512$, matched climbs to $R^2 \approx 0.5$, and the three rich-encoder networks fail to decode GPS at any $k$. The peaked units in rich-encoder conditions therefore appear to encode features correlated with position (visual landmarks, trajectory-phase markers) rather than position itself, while blind's flatter, lower-peak distribution is what actually carries the linear position code. Intrinsic dimension via PCA-95\% confirms this: blind's representation is the most compressed (180 dimensions), matched intermediate (271), and rich-encoder networks the highest (291--303). \emph{Caveat:} the spatial-info computation depends on the per-scene grid resolution and we do not claim a sharp dissociation between ``population code'' and ``few dedicated cells''; the qualitative direction (peak per-unit info $\neq$ population GPS readout) is what we report.
 
 
+\FloatBarrier
 \section{Discussion}
 \label{sec:discussion}
 
