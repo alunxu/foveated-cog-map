@@ -236,13 +236,7 @@ Pairwise CKA(fov, uni) & \multicolumn{2}{c}{$< 10^{-4}$} & \textbf{near-orthogon
 \end{tabular}
 \end{table}
 
-The four in-flight experiments below test \emph{which} aspect of foveation drives these differences --- sensor transform strength, spatial-sampling vs.\ blur, gaze location, or encoder feature-map representation. Numbers will populate the sub-paragraphs in revision; current status in Appendix~\ref{app:foveation-status}.
-
-\noindent\textbf{Foveation strength sweep (F1--F4, in progress)}\quad We train four additional foveated agents at $\sigma_{\max} \in \{2, 4, 12, 20\}$ (alongside the existing $\sigma_{\max} = 8$), holding everything else fixed --- gaze location, encoder stack, training budget, training pool. The expected signature: at low $\sigma_{\max}$ the foveated agent should look like uniform (encoder still resolves world-frame); at high $\sigma_{\max}$ it should approach matched-compute (encoder cannot resolve world-frame, LSTM compensates). The $R^2$ vs.\ $\sigma_{\max}$ curve directly tests the encoder--memory race as a continuous lever, not a binary one.
-
-\noindent\textbf{Spatial sampling vs.\ blur (F3 log-polar control, in training)}\quad Gaussian blur removes high-frequency content but preserves \emph{spatial layout}: a $\sigma_{\max}=8$ foveated image still feeds the encoder $256{\times}256$ pixels, so the ResNet-18 stack still produces an $8{\times}8$ spatial feature map. A log-polar foveation~\citep{strasburger2011peripheral,rosenholtz2016peripheral} resamples the image with a non-uniform retinal grid (e.g.\ $64{\times}64$): the encoder's spatial output drops to $\sim 2{\times}2$, much closer to matched-compute's $1{\times}1$ than to uniform's $8{\times}8$. This is the architectural commitment ``foveated vision'' makes in biology, and it isolates the variable our sharpened H1 mechanism (§\ref{sec:foveation}, encoder feature-map paragraph) identifies as the trigger: \emph{spatial-feature variety in the encoder output}.
-
-\emph{Predictions, falsifiable.} If the encoder--memory race is driven by encoder spatial output dimensionality (not by ``bottleneck of any kind''), then log-polar should produce an LSTM GPS $R^2$ \emph{between} matched-compute (current $+0.78$) and uniform (current $\approx 0$), likely $\geq 0.3$, with corresponding behavioural shifts (longer paths than uniform, larger shortcut SPL drop closer to blind / matched). If instead log-polar matches uniform's near-chance H1 readout, the mechanism is not pure encoder-output-dimensionality and we need to reframe (e.g.\ allow the encoder to learn task-useful features from any spatial layout, rendering ``bandwidth'' the wrong axis). Either outcome is informative; F3 is in training (\textasciitilde 14M / 250M frames at submission, ETA 2--3 days). Numbers will populate this paragraph in revision; the prediction was written before the result was available.
+Four in-flight experiments target specific predictions of the encoder--memory race within the foveation slot (designs in Appendix~\ref{app:foveation-status}). One result has landed and is pivotal:
 
 \begin{figure}[!htbp]
 \centering
@@ -253,11 +247,7 @@ The four in-flight experiments below test \emph{which} aspect of foveation drive
 
 \noindent\textbf{Encoder feature-map probe: where world-frame info actually sits}\quad Probing the visual encoder's output directly (post ResNet-18, pre-LSTM, via forward-hook on the compression layer) gives a striking result: \emph{none of the three sighted encoders linearly decode GPS} (Figure~\ref{fig:encoder_probe}). Compass also fails or is well below ceiling. \emph{This sharpens the H1 mechanism}: the divergence happens inside the LSTM (or at the GPS-sensor pass-through entering Layer 0), not at the visual encoder. Bottleneck conditions integrate the GPS-sensor input across time because their visual stream gives the LSTM minimal feature variety to substitute; rich-encoder conditions have richer (though still position-blind) visual features that the LSTM uses instead, overwriting the Layer-0 GPS code as the episode progresses. Foveated does not differ from uniform on this measure (overlapping uncertainty), so its pass-through behaviour is consistent with ``rich-encoder'' rather than a foveation-specific effect at the encoder level.
 
-\noindent\textbf{Foveated-shifted (gaze location, in progress)}\quad Gaze location is treated separately as H3 (§\ref{sec:h3}), but the foveated-shifted control directly informs the foveation slot too: training a foveated agent with hardcoded static gaze at $(0.49, 0.62)$ matches foveated-learned's collapsed gaze location while removing the learned-gaze module from the optimisation path. If foveated-shifted does \emph{not} reproduce foveated-learned's specific behaviours (Gibson--MP3D compass swing, transplant ranking), those behaviours can be attributed to the optimisation-path interaction and not to the static gaze location alone.
-
-\noindent\textbf{Why this slot exists}\quad Our title and framing focus on foveated vision; the present five conditions place foveated-fixed and foveated-learned within a framework but do not isolate foveation-specific effects (under simple Gaussian blur both behave like uniform). The four experiments above target specific foveation-specific predictions of the encoder--memory race framework. Each is a falsifiable test, designed and submitted at the time of writing. None depends on the others to be informative.
-
-\noindent\textbf{What we already conclude}\quad From existing data (Table~\ref{tab:fov-vs-uni}), foveation under $\sigma_{\max}=8$ Gaussian blur is \emph{not a copy of uniform}: it converges with uniform on H1 but diverges on H2 (subspace orthogonality, 1-NN separability), behavioural memory reliance (shortcut drop), transplant compatibility, and dataset-shift recovery. The encoder feature-map probe further shows the encoder discards linear position regardless of condition --- so \emph{whatever foveation does differently from uniform, it does it inside the LSTM in subspaces invisible to a linear-GPS probe}. The in-flight experiments below probe \emph{what} that ``something different'' is.
+\noindent\textbf{What we already conclude}\quad Foveation under $\sigma_{\max}=8$ Gaussian blur is \emph{not a copy of uniform}: it converges on H1 but diverges on H2 / behaviour / dataset-shift (Table~\ref{tab:fov-vs-uni}). The encoder feature-map probe further shows the encoder discards linear GPS regardless of condition, so \emph{whatever foveation does differently from uniform, it does it inside the LSTM in subspaces invisible to a linear-GPS probe}. The four in-flight experiments (Appendix~\ref{app:foveation-status}) test \emph{what} that ``something different'' is. F3 log-polar in particular has a falsifiable prediction: log-polar's $\sim 2{\times}2$ encoder spatial output should produce LSTM GPS $R^2 \geq 0.3$ (between matched's $+0.78$ and uniform's $\approx 0$); if instead it matches uniform, the encoder-spatial-output mechanism would need reframing.
 
 
 \subsection{Gaze location as a second axis (H3)}
@@ -453,7 +443,7 @@ Our mitigation is a minimally invasive patch to \verb|PPO.before_step| that zero
 \section{Foveation experiments: status and design}
 \label{app:foveation-status}
 
-This appendix documents the four controlled foveation experiments described in §\ref{sec:foveation}. All four were submitted to the cluster at the time of writing; the table below tracks their state. Numbers will populate the corresponding paragraphs in §\ref{sec:foveation} in revision.
+This appendix details the four controlled foveation experiments referenced from §\ref{sec:foveation}. All four are submitted; numbers will populate §\ref{sec:foveation} in revision as they land.
 
 \begin{table}[h]
 \centering
@@ -466,13 +456,19 @@ Experiment & Tests & Status \\
 \midrule
 F1--F4 strength sweep ($\sigma_{\max} \in \{2, 4, 12, 20\}$) & encoder--memory race as continuous lever & in training \\
 F3 log-polar foveation                                       & spatial-sampling vs.\ blur bottleneck    & in training \\
-Encoder feature-map probe (matched / uniform / foveated)     & where position information is held       & in probing \\
+Encoder feature-map probe (matched / uniform / foveated)     & where position information is held       & \textbf{landed; see §\ref{sec:foveation}} \\
 Foveated-shifted (gaze $(0.49, 0.62)$)                       & gaze-location axis (links to H3)         & in training \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent\textbf{Why disclose this rather than wait.}\quad The four experiments are designed to falsify or refine specific predictions of the encoder--memory race framework, and each has a falsifiable signature. We disclose the design openly so that (i)~the present submission is honest about what foveation-specific evidence already exists vs.\ what is in flight, and (ii)~any reader can identify which result would change the paper's interpretation. The current evidence already places foveation-fixed and foveation-learned within the framework; the experiments above sharpen the ``foveation'' part of the story specifically.
+\noindent\textbf{Foveation strength sweep (F1--F4)}\quad We train four additional foveated agents at $\sigma_{\max} \in \{2, 4, 12, 20\}$ alongside the existing $\sigma_{\max} = 8$, holding gaze location, encoder stack, training budget, and training pool fixed. Expected signature: at low $\sigma_{\max}$ the foveated agent should look like uniform; at high $\sigma_{\max}$ it should approach matched-compute. The $R^2$ vs.\ $\sigma_{\max}$ curve directly tests the encoder--memory race as a continuous lever rather than a binary one.
+
+\noindent\textbf{Spatial sampling vs.\ blur (F3 log-polar)}\quad Gaussian blur removes high-frequency content but preserves \emph{spatial layout}: a $\sigma_{\max}=8$ foveated image still feeds the encoder $256{\times}256$ pixels, so the ResNet-18 stack still produces an $8{\times}8$ spatial feature map. A log-polar foveation~\citep{strasburger2011peripheral,rosenholtz2016peripheral} resamples with a non-uniform retinal grid (e.g.\ $64{\times}64$): the encoder spatial output drops to $\sim 2{\times}2$, much closer to matched's $1{\times}1$ than to uniform's $8{\times}8$. This isolates the variable our sharpened H1 mechanism identifies as the trigger: \emph{spatial-feature variety in the encoder output}. Falsifiable prediction (written before result available): log-polar should produce LSTM GPS $R^2 \geq 0.3$, between matched's $+0.78$ and uniform's $\approx 0$, with corresponding behavioural shifts. If instead log-polar matches uniform, the encoder-spatial-output-dimensionality mechanism is wrong. F3 in training (\textasciitilde 14M / 250M frames at submission, ETA 2--3 days).
+
+\noindent\textbf{Foveated-shifted (gaze location)}\quad Training a foveated agent with hardcoded static gaze at $(0.49, 0.62)$ matches foveated-learned's collapsed gaze location while removing the learned-gaze module from the optimisation path. If foveated-shifted does \emph{not} reproduce foveated-learned's specific behaviours (Gibson--MP3D compass swing, transplant ranking), those behaviours can be attributed to the optimisation-path interaction rather than to gaze location alone. Links to H3 (§\ref{sec:h3}).
+
+\noindent\textbf{Why disclose this rather than wait.}\quad Each experiment has a falsifiable signature; we disclose the designs openly so (i)~the submission is honest about what foveation-specific evidence already exists vs.\ what is in flight, and (ii)~the reader can identify which incoming result would change the paper's interpretation.
 
 
 \section{Encoder-capacity scaling sweep}
