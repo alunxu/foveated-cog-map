@@ -33,14 +33,18 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Hand-selected (cond, scene, ep_idx) tuples chosen for dramatic contrast:
-# reset succeeds (SPL > 0.5, steps < 100) while persistent fails
-# (SPL < 0.2, steps > 30 so the trajectory has substance to plot).
+# Hand-selected (cond, scene, ep_idx) tuples chosen to ILLUSTRATE the
+# THREE distinct persistent-memory failure modes. Selection criterion:
+# reset SPL > 0.5, persistent SPL < 0.2, persistent steps > 30, same-floor
+# old-vs-new goal (|Δy|<0.5m). Among those, pick the most representative:
+# - blind: most negative (avg-traj → new goal closer than → old goal): tries new, can't reach.
+# - uniform: most positive: locks onto old goal location.
+# - foveated: ~0 margin: wanders, locks onto neither goal.
 PANELS = [
     # (cond_key, label, scene, ep_idx, colour)
-    ("blind",            "Blind",          "Adairsville", 6, "#444444"),
-    ("uniform",          "Uniform",        "Allensville", 9, "#4daf4a"),
-    ("foveated",         "Foveated (fix)", "7y3sRwLe3Va", 8, "#e41a1c"),
+    ("blind",            "Blind",          "8WUmhLawc2A", 6, "#444444"),  # margin -6.91m: tries new
+    ("uniform",          "Uniform",        "8WUmhLawc2A", 8, "#4daf4a"),  # margin +15.59m: LOCKED ONTO OLD
+    ("foveated",         "Foveated (fix)", "1pXnuDYAj8r", 8, "#e41a1c"),  # margin -0.61m: wanders
 ]
 
 

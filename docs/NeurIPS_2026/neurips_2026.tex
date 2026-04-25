@@ -271,11 +271,29 @@ H1 and H2 identify sensor structure as one axis on representational content. H3 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth]{fig/shortcut_paired_traj.pdf}
-\caption{Persistent-memory failure made visual: trajectories from one paired-episode run per condition where reset memory succeeds and persistent memory fails. Same scene, same start position, same goal between the two memory conditions; the only difference is whether the LSTM is zeroed (reset) or carries over from the previous episode (persistent). Blind (left) shows the cleanest interpretation of the shortcut SPL drop: persistent agent oscillates around the \emph{old} goal location (light star, $N{-}1$) instead of going to the new one (gold star, $N$), consistent with the ``LSTM still encodes previous task'' reading. Uniform (centre) and foveated (right) persistent runs wander more diffusely without obviously locking onto the old goal --- consistent with their hidden state encoding scene-history / visual features rather than a position-readable memory of the previous task. The contrast in trajectory length is also informative (blind reset $65$ steps vs.\ persistent $443$; uniform $38$ vs.\ $2000$ max; foveated $55$ vs.\ $2000$).}
+\caption{Three distinct persistent-memory failure modes (one paired-episode case per condition; reset succeeds, persistent fails; same start, same goals, same-floor old-vs-new). \emph{Blind} (left): persistent agent attempts the new goal, loops, gives up at $443$ steps without reaching it. \emph{Uniform} (middle): persistent agent stays \emph{at} the old-goal location for the full $2000$-step cap, never moving toward the new goal. \emph{Foveated} (right): persistent agent loops chaotically in a region distant from both goals.}
 \label{fig:shortcut_paired_traj}
 \end{figure}
 
-Figure~\ref{fig:shortcut_paired_traj} shows the failure modes qualitatively differ across regimes: blind's persistent trajectory clusters around the previous-episode goal (literal ``locked onto old position''); uniform and foveated wander diffusely (``locked onto old visual context'' would fit). The visualisation cannot itself distinguish position-locked from context-locked failure but is consistent with the 2$\times$2 dissociation. \TODO{Both anomalies rest on single-seed runs; multi-seed replication is in progress and would promote the dissociation from candidate to robust. A direct ``policy GPS reliance'' test (ablating the GPS sensor mid-rollout) would distinguish ``policy reads the GPS code'' from ``policy reads non-GPS memory'' --- the matched anomaly predicts a small SPL drop, the uniform anomaly a large one.}
+The three regimes have qualitatively distinct failure modes that quantify across all paired episodes (same-floor only; Table~\ref{tab:lock-onto-old}). \emph{Uniform's persistent-memory hidden state pulls the agent toward the previous-episode goal location} (avg-trajectory distance to old goal $6.45$m vs.\ new goal $8.28$m, $n{=}46$). Blind's persistent agent does the opposite: it stays closer to the new goal on average ($7.10$m vs.\ $7.48$m to old) but cannot reach it. Foveated wanders without locking to either goal. This is consistent with the 2$\times$2 reading: \emph{uniform's memory is a visual / scene-history anchor} that locks the agent in place, whereas \emph{blind's spatial GPS code interferes via a different channel} (e.g.\ the recurrent state mis-reporting current position to a goal-direction integrator). \TODO{Single-seed; multi-seed replication in progress.}
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Persistent-memory failure: where the agent ends up. Same-floor paired-episode failures (reset SPL $>0.5$, persistent SPL $<0.2$, persistent steps $\geq 30$, $|\Delta y_\text{goal}| < 0.5$m). \emph{Closer-to} column: which goal the persistent trajectory's average position is closer to. Bold marks ``locked onto old goal'' --- the only condition that shows it is uniform.}
+\label{tab:lock-onto-old}
+\begin{tabular}{lcccccc}
+\toprule
+Condition & $n$ & avg dist $\to$ old (m) & avg dist $\to$ new (m) & margin (m) & Closer to & Reading \\
+\midrule
+Blind            & 27 & 7.48 & 7.10 & $-0.38$ & new & tries new, fails \\
+Matched          & 35 & 6.29 & 5.72 & $-0.57$ & new & tries new, fails \\
+\textbf{Uniform} & 46 & \textbf{6.45} & 8.28 & $\mathbf{+1.83}$ & \textbf{old} & \textbf{LOCKS onto old} \\
+Foveated (fix)   & 16 & 7.01 & 6.42 & $-0.59$ & new & wanders \\
+Fov-learned      &  5 & 3.89 & 6.19 & $+2.30$ & old & (only $n{=}5$, low confidence) \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
 \subsection{Boundaries and additional probes}
