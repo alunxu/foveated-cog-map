@@ -57,12 +57,21 @@ def main() -> None:
         heading_from_quaternion,
     )
 
-    cfg = load_habitat_config(args.config_name, split="val")
-    policy, env = load_policy(cfg, args.ckpt)
-    policy.eval()
+    # train split matches the existing probing data (collect.py default).
+    cfg = load_habitat_config(
+        args.config_name, str(args.ckpt),
+        overrides=["habitat.dataset.split=train",
+                   "habitat.environment.iterator_options.shuffle=False"],
+    )
+    import habitat
+    env = habitat.Env(config=cfg.habitat)
+    _ = env.reset()  # needed to materialise observation_space
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    policy.to(device)
+    policy, hidden_size, num_recurrent_layers, rnn_is_lstm = load_policy(
+        cfg, env, str(args.ckpt), device,
+    )
+    policy.eval()
 
     # Hook the encoder's compression layer (the final 1x1 conv that
     # produces the output flattened into the LSTM input vector).
@@ -87,7 +96,7 @@ def main() -> None:
     obs = env.reset()
     n_eps_done = 0
     rnn_hidden = torch.zeros(
-        1, policy.net.num_recurrent_layers, policy.net.hidden_size,
+        1, num_recurrent_layers, hidden_size,
         device=device,
     )
     prev_action = torch.zeros(1, 1, dtype=torch.long, device=device)
@@ -113,9 +122,9 @@ def main() -> None:
                     obs_batch, rnn_hidden, prev_action, masks,
                     deterministic=True,
                 )
-            action = action_data.actions
             rnn_hidden = action_data.rnn_hidden_states
-            prev_action = action
+            prev_action = action_data.actions
+            action_int = action_data.env_actions[0].item()
 
             # Feature captured by hook
             if captured:
@@ -134,7 +143,7 @@ def main() -> None:
             all_scene_ids.append(str(scene_id))
             all_step_in_episode.append(step)
 
-            obs = env.step({"action": int(action.item())})
+            obs = env.step(action_int)
             masks = torch.ones(1, 1, dtype=torch.bool, device=device)
 
         n_eps_done += 1

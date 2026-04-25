@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/E9uDoFAP3SH/E9uDoFAP3SH.glb",
+  "episode_id": "40422",
+  "start_position": [
+    7.181447505950928,
+    -5.955618858337402,
+    6.406893730163574
+  ],
+  "goal_position": [
+    2.381321907043457,
+    -5.955618858337402,
+    -2.2214622497558594
+  ],
+  "topdown_height": 1024,
+  "topdown_width": 1387,
+  "world_lower_bound": [
+    -21.677579879760742,
+    -6.755619049072266,
+    -11.671199798583984
+  ],
+  "world_upper_bound": [
+    20.789960861206055,
+    7.987000942230225,
+    19.668161392211914
+  ],
+  "map_resolution": 1024
+}
