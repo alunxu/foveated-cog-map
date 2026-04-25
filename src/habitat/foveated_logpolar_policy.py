@@ -83,8 +83,49 @@ class FoveatedLogPolarResNetEncoder(ResNetEncoder):
                 rho_min=rho_min,
                 rho_max=rho_max,
             )
+
+            # The parent ``ResNetEncoder.__init__`` computed
+            # ``self.output_shape`` assuming a 128x128 (post avg-pool)
+            # backbone input.  Log-polar foveation reshapes to
+            # (n_rho, n_theta), so the downstream backbone receives a
+            # different spatial size and produces a different output.
+            # Recompute by running a zero forward through the post-
+            # foveation pipeline.
+            self._recompute_output_shape(n_rho, n_theta, observation_space)
         else:
             self.foveation = None
+
+    def _recompute_output_shape(
+        self, n_rho: int, n_theta: int, observation_space: spaces.Dict
+    ) -> None:
+        """Patch ``self.output_shape`` after foveation has been installed."""
+        # Total channels = sum of channels across visual_keys (e.g. RGB=3,
+        # depth=1).  We read this from the observation space rather than
+        # from the backbone (whose internal structure varies across
+        # habitat-baselines versions).
+        in_channels = sum(
+            observation_space.spaces[k].shape[2]
+            for k in self.visual_keys
+        )
+        was_training = self.training
+        self.eval()
+        with torch.no_grad():
+            # First parameter just for device/dtype detection.
+            try:
+                p0 = next(self.backbone.parameters())
+                device, dtype = p0.device, p0.dtype
+            except StopIteration:
+                device, dtype = torch.device("cpu"), torch.float32
+            dummy = torch.zeros(
+                1, in_channels, n_rho, n_theta,
+                device=device, dtype=dtype,
+            )
+            z = self.running_mean_and_var(dummy)
+            z = self.backbone(z)
+            z = self.compression(z)
+            self.output_shape = tuple(z.shape[1:])
+        if was_training:
+            self.train()
 
     def forward(
         self,
