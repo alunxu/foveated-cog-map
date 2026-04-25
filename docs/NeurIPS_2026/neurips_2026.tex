@@ -1,493 +1,398 @@
 \documentclass{article}
 
-% if you need to pass options to natbib, use, e.g.:
-%     \PassOptionsToPackage{numbers, compress}{natbib}
-% before loading neurips_2026
+% Double-blind main-track submission.
+\usepackage[preprint]{neurips_2026}
 
-% The authors should use one of these tracks.
-% Before accepting by the NeurIPS conference, select one of the options below.
-% 0. "default" for submission
-\usepackage{neurips_2026}
-% the "default" option is equal to the "main" option, which is used for the Main Track with double-blind reviewing.
-% 1. "main" option is used for the Main Track
-%  \usepackage[main]{neurips_2026}
-% 2. "position" option is used for the Position Paper Track
-%  \usepackage[position]{neurips_2026}
-% 3. "eandd" option is used for the Evaluations & Datasets Track
- % \usepackage[eandd]{neurips_2026}
- % if you need to opt-in for a single-blind submission in the E&D track:
- %\usepackage[eandd, nonanonymous]{neurips_2026}
-% 4. "creativeai" option is used for the Creative AI Track
-%  \usepackage[creativeai]{neurips_2026}
-% 5. "sglblindworkshop" option is used for the Workshop with single-blind reviewing
- % \usepackage[sglblindworkshop]{neurips_2026}
-% 6. "dblblindworkshop" option is used for the Workshop with double-blind reviewing
-%  \usepackage[dblblindworkshop]{neurips_2026}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{multirow}
 
-% After being accepted, the authors should add "final" behind the track to compile a camera-ready version.
-% 1. Main Track
- % \usepackage[main, final]{neurips_2026}
-% 2. Position Paper Track
-%  \usepackage[position, final]{neurips_2026}
-% 3. Evaluations & Datasets Track
- % \usepackage[eandd, final]{neurips_2026}
-% 4. Creative AI Track
-%  \usepackage[creativeai, final]{neurips_2026}
-% 5. Workshop with single-blind reviewing
-%  \usepackage[sglblindworkshop, final]{neurips_2026}
-% 6. Workshop with double-blind reviewing
-%  \usepackage[dblblindworkshop, final]{neurips_2026}
-% Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote.
-% For workshops (5., 6.), the authors should add the name of the workshop, "\workshoptitle" command is used to set the workshop title.
-% \workshoptitle{WORKSHOP TITLE}
+% Visible placeholder macro for numbers pending experiment completion.
+% Final submission: audit \TODO and replace each with real values.
+\newcommand{\TODO}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
 
-% "preprint" option is used for arXiv or other preprint submissions
- % \usepackage[preprint]{neurips_2026}
-
-% to avoid loading the natbib package, add option nonatbib:
-%    \usepackage[nonatbib]{neurips_2026}
-
-\usepackage[utf8]{inputenc} % allow utf-8 input
-\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
-\usepackage{hyperref}       % hyperlinks
-\usepackage{url}            % simple URL typesetting
-\usepackage{booktabs}       % professional-quality tables
-\usepackage{amsfonts}       % blackboard math symbols
-\usepackage{nicefrac}       % compact symbols for 1/2, etc.
-\usepackage{microtype}      % microtypography
-\usepackage{xcolor}         % colors
-
-% Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
-\title{Formatting Instructions For NeurIPS 2026}
-
-
-% The \author macro works with any number of authors. There are two commands
-% used to separate the names and addresses of multiple authors: \And and \AND.
-%
-% Using \And between authors leaves it to LaTeX to determine where to break the
-% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
-% authors names on the first line, and the last on the second line, try using
-% \AND instead of \And before the third author name.
-
+\title{How Foveated Vision Shapes Cognitive Maps in Navigation Agents}
 
 \author{%
-  David S.~Hippocampus\thanks{Use footnote for providing further information
-    about author (webpage, alternative address)---\emph{not} for acknowledging
-    funding agencies.} \\
-  Department of Computer Science\\
-  Cranberry-Lemon University\\
-  Pittsburgh, PA 15213 \\
-  \texttt{hippo@cs.cranberry-lemon.edu} \\
-  % examples of more authors
-  % \And
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
-  % \AND
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
-  % \And
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
-  % \And
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
+  Anonymous authors\\
+  Paper under double-blind review\\
 }
 
-
 \begin{document}
-
-
 \maketitle
 
-
 \begin{abstract}
-  The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on both the left- and right-hand margins. Use 10~point type, with a vertical spacing (leading) of 11~points. The word \textbf{Abstract} must be centered, bold, and in point size 12. Two line spaces precede the abstract. The abstract must be limited to one paragraph.
+What shapes the content of a recurrent navigation agent's learned internal state --- the task, the architecture, or the structure of the visual input? Prior work has shown that blind PointNav agents spontaneously develop cognitive-map-like representations in their recurrent state under task pressure alone~\citep{wijmans2023emergence}. We show that the blind result is a special case of a broader principle: \emph{the visual encoder's information capacity determines whether the LSTM has to carry world-frame spatial structure}. Holding task, optimiser, and LSTM backbone identical and varying only the visual pathway (no vision; a resolution-collapsed encoder; uniform vision; foveated vision at a fixed gaze; foveated vision with a learned gaze), we probe the recurrent state for world-frame position and heading. All five conditions encode top-layer GPS in their LSTM in the typical-episode window. What separates conditions is what happens \emph{later}: when the visual encoder cannot resolve world-frame structure (blind, a resolution-collapsed encoder), the LSTM \emph{maintains} a persistent, integration-capable code across episode duration; when it can (full-resolution encoders), the LSTM \emph{overwrites} the GPS code as visual features take over. We call this the \emph{encoder--memory race}; it recasts the ``cognitive maps emerge without vision'' story as ``cognitive maps emerge — and persist — when the visual pathway cannot resolve the map on its own.'' A second finding cuts across conditions: five agents that solve the task equally well develop recurrent representations in essentially orthogonal linear subspaces, and cross-condition memory transplants incur task cost well above transplant mechanics --- sensor structure shapes representational \emph{format}, not only strength. A third question --- whether static gaze location within a rich-encoder regime acts as a second content axis --- is tested by a foveated-shifted causal control whose training is in progress. The H1 ordering reproduces on a held-out MP3D evaluation, consistent with an agent-internal rather than Gibson-specific mechanism. Three implications, each scoped to the recurrent PointNav setting we study. \textbf{(i)}~Encoder capacity correlates inversely with linear, top-layer LSTM spatial encoding; \emph{if} the correlation reflects causation (which the encoder-resolution scaling sweep, in progress, tests directly), it would also be a practical training-time lever for inducing cognitive-map-like internal representations. \textbf{(ii)}~``More pixels, richer memory'' is the wrong intuition within this setup; the relationship across our five conditions is inverse. \textbf{(iii)}~The pattern parallels independent animal-navigation findings --- enhanced hippocampal coupling in congenitally blind humans, the disruption of rodent grid-cell firing in the dark (with navigation nonetheless preserved), cross-modality hippocampal remapping in bats --- without depending on their biophysics, suggestive of a sensor--memory coupling principle whose generality across architectures (transformers, non-RL learners, non-navigation tasks) we do not test here.
 \end{abstract}
 
 
+\section{Introduction}
 
-\section{Submission of papers to NeurIPS 2026}
+Recurrent navigation agents trained with deep RL build internal states that support memory, planning, and generalisation, and the content of those internal states is at least as interesting as the task metrics they drive. A natural question is what \emph{determines} that content: architecture, objective, training budget, or visual input? Wijmans et al.~\citep{wijmans2023emergence} showed that map-like spatial representations emerge from task pressure alone, even in blind agents that receive only goal displacement and proprioception; Dwivedi et al.~\citep{dwivedi2022isee} probed sighted agents for related concepts; Banino et al.~\citep{banino2018grid} and Cueva \& Wei~\citep{cueva2018grid} demonstrated grid-cell-like structure in path-integration networks. Together these results establish that \emph{some} spatial structure is learned without being designed in. They leave open the complementary question that we take up here: within agents that all achieve high task success, how much of \emph{what} recurrent memory encodes is determined by the structure of the visual input rather than by the task? In biology the answer is clear --- primate hippocampal cells code joint place--view--action state because primates sample the scene with a foveated sensor~\citep{wirth2017gaze,rolls2024why}, and the same bat produces non-overlapping hippocampal populations in vision versus echolocation~\citep{geva2016remapping}. We investigate the analogous question in a controlled agent setting where the only free variables are the visual input structure and the gaze that directs it.
 
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.7\linewidth}
+\centering
+\begin{minipage}{0.31\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_blind.png}\\{\footnotesize (a) Blind}\end{minipage}\hfill
+\begin{minipage}{0.31\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_uniform.png}\\{\footnotesize (b) Uniform}\end{minipage}\hfill
+\begin{minipage}{0.31\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_foveated.png}\\{\footnotesize (c) Foveated (fixed gaze)}\end{minipage}\\[4pt]
+\includegraphics[width=\linewidth]{fig/fig_topdown.png}\\
+{\footnotesize (d) Bird's-eye navigation map: trajectory (blue) vs.\ geodesic shortest path (green).}
+\end{minipage}
+\caption{The five visual conditions differ only in what reaches the agent's encoder. (a) Blind: no visual input; only the non-visual sensor stack (goal-in-start-frame, GPS, compass, close-to-goal scalar) --- the Wijmans~\citep{wijmans2023emergence} configuration. (b) Uniform: $256\times 256$ full-resolution RGB. (c) Foveated (fixed gaze): eccentricity-dependent Gaussian blur centred on the image middle ($\sigma_{\max}=8$, quadratic falloff). The two additional conditions not shown are \emph{matched-compute} (a down-sampled uniform view with the same total pixel budget as foveated) and \emph{foveated (learned gaze)}, which adds a learned $(x,y)$ gaze offset to~(c). (d)~All conditions solve PointGoal navigation in the same Habitat Matterport3D / Gibson scenes; the top-down view is shown for reference only and is not available to the agent.}
+\label{fig:setup}
+\end{figure}
 
-Please read the instructions below carefully and follow them faithfully.
+Our five-condition design isolates three degrees of freedom: sensor type (blind / uniform / foveated), encoder capacity (uniform's full ResNet-18 vs.\ matched-compute's $1{\times}1$-collapsed feature map), and gaze location (fixed vs.\ learned). Every condition uses the same DD-PPO learner, the same Gibson-0$+$MP3D training pool, the same LSTM backbone, and the same non-visual sensor stack (Figure~\ref{fig:setup}). We adopt the LSTM architecture from Wijmans et al.~\citep{wijmans2023emergence} deliberately: the emergent-map literature we build on is recurrent, and matching that architecture lets our findings be interpretable as statements about \emph{the structure of the task-shaped memory} rather than about the recurrent-versus-transformer design choice. We discuss in §\ref{sec:discussion} whether the logic plausibly extends to transformer-backed or non-navigation systems --- an empirical question we do not settle here.
 
+We test three hypotheses. \textbf{H1 (encoder--memory race).} Agents whose visual encoder cannot resolve world-frame position or heading should develop these quantities in their recurrent state; agents with a rich visual encoder should not. Signature: current-state GPS / compass probe $R^2$ tracks visual-encoder information content monotonically across the five conditions, with persistent decoding at lags of $\geq 10$ time-steps. \textbf{H2 (sensor structure $\to$ format divergence).} Different sensor conditions should produce internal representations in distinct linear subspaces, not scaled versions of a common code. Signature: pairwise CKA near zero, probe weights fail to transfer across conditions while within-condition probes succeed, and cross-condition memory transplants degrade task performance beyond same-condition self-transplants. \textbf{H3 (gaze location $\to$ orthogonal content lever).} Where a foveated sensor is centred should act as a representational-content axis independent of the sensor transform. We test this with a foveated-shifted control in which gaze is hardcoded to a different image location from the default central gaze; same foveation transform, same training budget, different gaze target. Our minimal learned-gaze module collapsed to a static output (Appendix~\ref{app:gaze_diversity}), so we use that collapsed location for the shifted-gaze control rather than as evidence about active gaze; the foveated-shifted training is in progress (§\ref{sec:h3}). Each hypothesis has a direct analog in the animal-navigation literature~\citep{kupers2014blind,chen2016grid,geva2016remapping,jutras2013saccades,najemnik2005optimal}, which we return to in Discussion as evidence that the effects reflect general sensor--memory coupling principles rather than architectural artefacts.
 
-\subsection{Style}
+\noindent\textbf{Findings}\quad H1 is supported by a clean monotonic effect at the level of \emph{temporal stability} of the top-layer GPS code. All five conditions encode GPS in the LSTM in the typical-episode window (steps 50--200, $R^2 \in [0.6, 0.95]$); the bottleneck conditions then \emph{maintain} that code across episode duration (blind $R^2 = 0.92$ even at step $800+$; matched $R^2 = 0.68$), while rich-encoder conditions \emph{overwrite} it as visual-encoder features take over (uniform / foveated / foveated-learned all collapse to chance or below by step 400--800). Aggregated across full-length episodes (Table~\ref{tab:summary}, no step cap), this presents as $R^2 = 0.95 / 0.78$ for blind / matched-compute and $R^2 \in [-2.4, +0.06]$ for the rich-encoder conditions. Bottleneck conditions' code is persistent at lags $\geq 20$ time-steps. The same ordering reproduces on a held-out MP3D evaluation, confirming an agent-internal mechanism. H2 is supported by four independent measures of cross-condition divergence: pairwise CKA at the noise floor ($<10^{-4}$), catastrophic probe-transfer failure ($R^2 \ll -800$ in every off-diagonal cell), perfect 1-NN cluster purity ($1.000$ across $7500$ pooled hidden states, vs.\ chance $0.20$), and behaviourally costly cross-condition memory transplants (SPL drops $0.19$--$0.21$ between rich-encoder pairs, well above the self-transplant noise floor). H3 asks whether gaze location is a second content axis \emph{within} the rich-encoder regime; the clean causal test (foveated-shifted control) is in training at submission and will populate §\ref{sec:h3}. A non-linear (MLP) probe recovers position from the rich-encoder \emph{top-layer} hidden states ($R^2 \in [0.51, 0.73]$), sharpening rather than weakening H1. We interpret this together with the per-layer probes (Figure~\ref{fig:place_cells} right): every condition has linearly-decodable GPS at LSTM Layer~0 (where the GPS sensor embedding enters the input vector --- so this is at least partly a sensor-pass-through effect, not a network ``computation''); the divergence is what happens through Layers~1--2. Bottleneck conditions retain linearly-accessible GPS to the top layer used by DD-PPO's linear action head; rich-encoder conditions do not. The MLP recovery at the top layer is consistent with position information persisting in a non-linear subspace, though we cannot from this alone rule out MLP exploitation of position-correlated features (wall distance, scene identifiers) rather than position itself --- a question the encoder-resolution scaling sweep (Appendix~\ref{app:scaling}, in progress) will help resolve. H1 is most precisely stated as a claim about \emph{linear, top-layer, policy-accessible} GPS encoding.
 
+\noindent\textbf{Contributions}\quad (i)~A controlled five-condition ablation that decouples ``no vision'' from ``visual-encoder bottleneck'' via the matched-compute condition, making the encoder--memory race claim falsifiable. (ii)~Convergent evidence (linear probes, MLP probes, CKA, probe transfer, 1-NN purity, memory transplant, shortcut discovery, MP3D generalisation, per-layer probes) for two of the three hypotheses, with a clean methodology disclosure including the deterministic-rollout protocol that fixes a probe-collection confound documented in §\ref{sec:methods-probing}. (iii)~A mechanistic re-reading of Wijmans et al.'s blind-agent finding: cognitive maps emerge not because vision is absent but because the visual encoder cannot resolve the map, predicting an encoder-capacity scaling curve we begin to test in Appendix~\ref{app:scaling}.
 
-Papers to be submitted to NeurIPS 2026 must be prepared according to the
-instructions presented here. Papers may only be up to {\bf nine} pages long, including figures. \textbf{Papers that exceed the page limit will not be reviewed (or in any other way considered) for presentation at the conference.}
-Additional pages \emph{containing acknowledgments, references, checklist, and optional technical appendices} do not count as content pages. 
 
+\section{Related Work}
 
-The margins in 2026 are the same as those in previous years.
+\noindent\textbf{Cognitive maps in RL navigation agents}\quad Wijmans et al.~\citep{wijmans2023emergence} demonstrated that map-like representations emerge in the recurrent memories of DD-PPO agents even without visual input; Dwivedi et al.~\citep{dwivedi2022isee} probed sighted agents for related spatial concepts; Banino et al.~\citep{banino2018grid} and Cueva \& Wei~\citep{cueva2018grid} found grid-cell-like units in recurrent networks trained on path integration; Gornet \& Thomson~\citep{gornet2024cognitive} extended this via visual predictive coding. Hennig et al.~\citep{hennig2023belief} showed that RL under partial observability can induce belief-state-like representations without explicit probabilistic objectives. Ramakrishnan et al.~\citep{ramakrishnan2025space} examined spatial cognition in frontier models. All these studies use either absent or spatially uniform perception; none vary input quality spatially, and none test whether different sensors produce different representational formats.
 
+\noindent\textbf{Foveated vision and gaze policies in deep learning}\quad Foveated rendering~\citep{strasburger2011peripheral,rosenholtz2016peripheral} exploits eccentricity-dependent acuity falloff for efficiency. Learned glimpse policies appear in recurrent attention models~\citep{mnih2014attention}; Atanov et al.~\citep{atanov2024photoreceptor} showed that sensor layout changes downstream task performance. Pourrahimi \& Bashivan~\citep{pourrahimi2025foveated} probed a foveated visual-search model for neuroscience-predicted features; Shang \& Ryoo~\citep{shang2023sugarl} jointly learned gaze and motor policies following the Sprague \& Ballard~\citep{sprague2003eyemovements} framework. These address visual search or task performance; none asks how sensor structure reshapes the learned spatial memory of a downstream navigation policy.
 
-Authors are required to use the NeurIPS \LaTeX{} style files obtainable at the NeurIPS website as indicated below. Please make sure you use the current files and not previous versions. Tweaking the style files may be grounds for desk rejection.
+\noindent\textbf{Probing neural representations}\quad Belinkov~\citep{belinkov2022probing} surveys probing classifiers; Hewitt \& Liang~\citep{hewitt2019control} introduced control tasks to distinguish genuine structure from probe memorisation; Kornblith et al.~\citep{kornblith2019cka} introduced linear CKA for cross-model similarity. We adopt linear probing, the Hewitt--Liang selectivity metric, and unaligned linear CKA, and complement them with two behavioural interventions directly on the recurrent state (memory transplant and shortcut discovery) to validate the probe-based findings outside the linear-probe framework.
 
+\noindent\textbf{Biological precedent}\quad Our hypotheses and framing draw on three threads of animal-navigation research. (i)~Primate hippocampal cells code joint place--view--action state~\citep{wirth2017gaze,rolls2023viewcells}; Rolls~\citep{rolls2024why} argues that primate \emph{spatial-view cells} and rodent \emph{place cells} reflect the different sampling statistics of foveated versus near-panoramic vision. (ii)~The same bat in the same environment produces non-overlapping hippocampal populations when it switches between vision and echolocation~\citep{geva2016remapping}---format-level divergence across sensor modalities within a single animal. (iii)~In primates, each saccade resets hippocampal 3--8 Hz rhythms and the reliability of the reset predicts subsequent memory~\citep{jutras2013saccades}; only overt (not covert) attention automatically writes to visual working memory~\citep{tas2016overt}. Gaze targets themselves are selected in an information-gain-maximising fashion consistent with ideal-observer predictions~\citep{najemnik2005optimal,gottlieb2013information,hayhoe2018control}. We use these results only to frame our ML predictions and interpret our findings; our contribution is the controlled ablation in a learned agent that cross-species and cross-modality biological comparisons cannot cleanly supply.
 
-\subsection{Retrieval of style files}
+\noindent\textbf{What is new here}\quad Three things distinguish this work from the studies above. (i)~A \emph{controlled} five-condition ablation with everything but the visual pathway held identical, including the matched-compute condition that decouples ``no vision'' from ``visual encoder bottleneck'' --- the lever that makes the encoder--memory race claim falsifiable. (ii)~A protocol-corrected probing methodology: deterministic action selection at probe time (the policy used by every other component of our eval pipeline) rather than stochastic sampling, which we found inflates probe $R^2$ for high-entropy policies via a 4-step quasi-static-trajectory artefact (§\ref{sec:methods-probing}, Sampling protocol). (iii)~Convergent behavioural validation of the probe-based H1 and H2 findings via memory transplant and shortcut discovery, both of which sit \emph{outside} the linear-probe framework.
 
 
-The style files for NeurIPS and other conference information are available on the website at
-\begin{center}
-  \url{https://neurips.cc}.
-\end{center}
-% The file \verb+neurips_2026.pdf+ contains these instructions and illustrates the various formatting requirements your NeurIPS paper must satisfy.
+\section{Methods}
 
+\subsection{Agent Architecture and Training}
 
-The only supported style file for NeurIPS 2026 is \verb+neurips_2026.sty+, rewritten for \LaTeXe{}. \textbf{Previous style files for \LaTeX{} 2.09,  Microsoft Word, and RTF are no longer supported.}
+All agents are trained on PointGoal navigation in Habitat~\citep{savva2019habitat} using DD-PPO~\citep{wijmans2020ddppo} on a merged pool of Gibson-0+~\citep{xia2018gibson} (411 scenes) and Matterport3D train (61 scenes), totalling 472 training scenes. Evaluation uses 18 held-out MP3D test scenes (1008 episodes).
 
+All agents share an identical 3-layer LSTM (512-d) backbone and the Wijmans non-visual sensor stack: goal-in-start-frame, GPS, compass, and a close-to-goal scalar, each projected to 32-d and concatenated with a 32-d previous-action embedding. All sighted conditions are trained for a target of 250\,M environment frames; the blind baseline is trained to 342\,M frames to allow slower convergence from proprioception alone.
 
-The \LaTeX{} style file contains three optional arguments: 
-\begin{itemize}
-\item \verb+final+, which creates a camera-ready copy, 
-\item \verb+preprint+, which creates a preprint for submission to, e.g., arXiv, \item \verb+nonatbib+, which will not load the \verb+natbib+ package for you in case of package clash.
-\end{itemize}
+We observed silent weight corruption in a pilot DD-PPO run caused by NaN gradients flowing through \verb|clip_grad_norm_| into \verb|optimizer.step()|; we mitigate this with a gradient-sanitisation patch to \verb|PPO.before_step|, described in Appendix~\ref{app:training-stability}.
 
+\subsection{Visual Conditions}
+\label{sec:visual-conditions}
 
-\paragraph{Preprint option}
-If you wish to post a preprint of your work online, e.g., on arXiv, using the NeurIPS style, please use the \verb+preprint+ option. This will create a nonanonymized version of your work with the text ``Preprint. Work in progress.'' in the footer. This version may be distributed as you see fit, as long as you do not say which conference it was submitted to. Please \textbf{do not} use the \verb+final+ option, which should \textbf{only} be used for papers accepted to NeurIPS.
+Five conditions vary only the visual input (Figure~\ref{fig:setup}):
+\begin{enumerate}
+\itemsep 1pt
+    \item \emph{Blind:} no visual input; non-visual sensor stack only, replicating Wijmans et al.~\citep{wijmans2023emergence}.
+    \item \emph{Uniform:} full-resolution $256\times 256$ RGB encoded by ResNet-18.
+    \item \emph{Foveated (fixed):} eccentricity-dependent Gaussian blur ($\sigma_{\max}=8$, quadratic falloff) with gaze locked at image centre; same ResNet-18 encoder.
+    \item \emph{Matched-compute:} $48{\times}48$ uniform RGB. At this resolution, ResNet-18's 32-fold spatial downsampling collapses the feature map to $1{\times}1$, removing the spatial dimensions of the encoder's output (channel information is preserved as a flat 512-d vector). \TODO{Verify whether channel info alone in matched-compute encodes any usable position signal --- a small probe on the encoder feature map (not LSTM state) would settle this.}
+    \item \emph{Foveated (learned):} same blur model, but gaze centre predicted by a lightweight MLP trained end-to-end with the navigation policy.
+\end{enumerate}
+The matched-compute condition is central to H1: its $1{\times}1$ encoder feature map provides a visual observation while leaving the encoder unable to resolve world-frame position from the current frame, separating the ``no vision'' account from the ``encoder bottleneck'' account. We attribute its strong LSTM GPS encoding to the feature-map collapse specifically, but the $48{\times}48$ input also has lower spatial resolution than uniform's $256{\times}256$, so we cannot from this single condition fully separate ``$1{\times}1$ feature-map collapse'' from ``low input resolution.'' The encoder-resolution scaling sweep (Appendix~\ref{app:scaling}, in progress) varies input resolution at fixed encoder stack to test this attribution directly.
 
+\noindent\textbf{Implementation note}\quad The foveated conditions (fixed, shifted, learned) disable the running-mean-and-variance input normaliser used by uniform and matched-compute, to avoid an in-place autograd conflict along the gaze-decoder gradient path. All reported results were obtained with this setting; we have not directly verified that re-enabling the normaliser would leave the H1 ordering unchanged. \TODO{Verify normaliser invariance: rerun foveated-fixed with the normaliser re-enabled (the autograd conflict is gaze-decoder-specific, so feasible for fov-fix), and confirm the H1 GPS R² does not move.}
 
-At submission time, please omit the \verb+final+ and \verb+preprint+ options. This will anonymize your submission and add line numbers to aid review. Please do \emph{not} refer to these line numbers in your paper as they will be removed during generation of camera-ready copies.
+\subsection{Probing Methodology}
+\label{sec:methods-probing}
 
+After training, we freeze all weights and collect per-step LSTM hidden states (top-layer $\mathbf{h}$, 512-d) paired with ground-truth spatial labels from $n{=}500$ Gibson held-out validation episodes (the split not used in training). Rollouts use \emph{deterministic} (argmax) action selection, matching the eval protocol of our shortcut-discovery, memory-transplant, and standard habitat-baselines evaluators. Under this protocol the rollout lengths span roughly $\sim$100--400 mean steps depending on condition (longer for blind, shorter for high-SPL conditions), so we use 5-fold episode-level CV to keep the train/test splits balanced per scene rather than length-matching across conditions. \TODO{A controlled length-matching ablation (truncate every condition to a common length, re-run probes) is left for follow-up; we expect it to leave the H1 ordering unchanged because the bottleneck conditions decode at high $R^2$ even at the smallest sub-sample, but have not verified it.} We train Ridge regression probes ($\alpha=10$) with episode-level 5-fold cross-validation, reporting mean $\pm\sigma$ across folds, and verify probe specificity with Hewitt--Liang label-permutation selectivity~\citep{hewitt2019control}.
 
-The file \verb+neurips_2026.tex+ may be used as a ``shell'' for writing your paper. All you have to do is replace the author, title, abstract, and text of the paper with your own.
+Probed variables: GPS position (episodic), compass heading (episodic), distance-to-goal, lag-$k$ path history (target value at $t-k$ decoded from $\mathbf{h}_t$, $k\in\{0,\ldots,20\}$), visited-region occupancy, full occupancy grid ($20\times 20$), per-unit spatial information (place-cell analysis), and the ego-frame goal vector $\mathbf{R}(-\theta)(\mathbf{g}-\mathbf{p})$ decomposed into scalar goal-distance and 2-D direction.
 
+\noindent\textbf{Sampling protocol}\quad An earlier draft of this work used stochastic (policy-distribution) action selection for probe rollouts. Under stochastic sampling, conditions with higher action-entropy (specifically the rich-encoder conditions foveated, uniform, matched, blind under their trained stochastic policies) sampled the STOP action early with probability $\sim\!0.25$ per step, producing mean episode lengths of $\sim\!4$ steps and target variance two orders of magnitude below the episodic range. The resulting probe $R^2$ values were trivially high across all conditions (any predictor fits a near-constant target). This confounded cross-condition comparisons, and we switched to the deterministic protocol used here and elsewhere in the probe/eval pipeline. All results in this paper use the deterministic protocol.
 
-The formatting instructions contained in these style files are summarized in Sections \ref{gen_inst}, \ref{headings}, and \ref{others} below.
+For foveated-fixed, all reported analyses (probes, behavioural, eval) use checkpoint ckpt.36 at $\sim$174M frames, the last clean intermediate before the silent-corruption window (Appendix~\ref{app:training-stability}).
 
+\subsection{Cross-Condition Analysis}
 
-\section{General formatting instructions}
-\label{gen_inst}
+To test H2, we employ two complementary methods. \emph{Linear CKA}~\citep{kornblith2019cka} measures representational similarity between conditions by comparing the geometry of hidden-state activations. Values near 1 indicate identical geometry; near 0 indicates unrelated representations. \emph{Probe transfer:} we train a GPS probe on one condition's hidden states and evaluate on another's. If spatial information is encoded in a shared linear subspace, cross-condition transfer should succeed. Catastrophic failure indicates fundamentally different encoding formats. A third test proposed in our original plan --- cross-heading generalisation (train on heading $A$, test on opposite heading) --- was implemented but returned an ``insufficient samples'' sentinel at our probe sizes; we discuss this in §\ref{sec:limitations}.
 
+\subsection{Behavioural Probes}
+\label{sec:methods-behav}
+We complement probe-based analysis with two interventions directly on the LSTM state. \emph{Memory transplant:} for each donor--recipient pair, the donor drives the first $30$ steps of an episode and its top-layer hidden state is copied into the recipient at that step; the recipient's policy then drives the remaining steps. We compare \emph{baseline} (recipient alone, full episode), \emph{self-transplant} (recipient as its own donor, controls for transplant mechanics), and \emph{cross-transplant} (different donor). Midpoint $30$ was chosen because Gibson PointNav episodes average $\sim$100--120 steps; a later midpoint left too few steps after transplant. We use $150$ episodes per pair per condition, sampled uniformly from the held-out Gibson validation split. \emph{Shortcut discovery:} for each condition, we run episodes in pairs of two using the same scene but different goals, sampling $20$ scenes with $10$ paired episodes per scene ($200$ paired runs per condition per setting). Per-condition SPL is reported as the mean of the $20$ scene-level mean SPLs (prevents high-episode-count scenes from dominating). We compare \emph{reset} (LSTM zeroed between the two episodes) vs.\ \emph{persistent} (LSTM state carried over) on the second-episode SPL. A reduction under the persistent setting measures how tightly the stored representation is locked to the previous goal. For the foveated-fixed condition, all probes and behavioural runs use the ckpt.36 checkpoint ($\sim$174M frames, the last clean intermediate before the silent-corruption window, §\ref{sec:results}).
 
-The text must be confined within a rectangle 5.5~inches (33~picas) wide and
-9~inches (54~picas) long. The left margin is 1.5~inch (9~picas).  Use 10~point
-type with a vertical spacing (leading) of 11~points.  Times New Roman is the
-preferred typeface throughout, and will be selected for you by default.
-Paragraphs are separated by \nicefrac{1}{2}~line space (5.5 points), with no
-indentation.
 
+\section{Results}
+\label{sec:results}
 
-The paper title should be 17~point, initial caps/lower case, bold, centered
-between two horizontal rules. The top rule should be 4~points thick and the
-bottom rule should be 1~point thick. Allow \nicefrac{1}{4}~inch space above and
-below the title to rules. All pages should start at 1~inch (6~picas) from the
-top of the page.
+\subsection{Summary of Conditions and Key Metrics}
+\label{sec:summary}
 
+Table~\ref{tab:summary} collects the per-condition numbers this section returns to. All sighted conditions solve PointGoal at $96$--$99\%$ success; blind reaches $93\%$ at a longer budget, reproducing Wijmans et al.~\citep{wijmans2023emergence}. The narrow success-rate spread makes ``the agents differ in what they do'' an unlikely explanation for the encoded-content gap we report (though it does not strictly rule it out). The probe machinery itself is calibrated: distance-to-goal decodes robustly across all five conditions ($R^2 \in [0.81, 0.90]$), confirming that Ridge has the capacity to fit high-$R^2$ scalars when the hidden state contains them; and Hewitt--Liang label-permutation selectivity is high in the conditions where the GPS code itself is high (blind GPS / compass selectivity $+0.95 / +0.81$; matched $+0.72 / +0.56$), consistent with a genuine signal rather than label memorisation. The headline pattern previewed in the table is monotonic in visual-encoder information: conditions with no encoder (blind) or a $1{\times}1$-collapsed encoder (matched) robustly encode world-frame GPS and compass in LSTM hidden state (GPS $R^2 = 0.95, 0.78$; compass $R^2 = 0.81, 0.64$); conditions with a full-resolution encoder (uniform, foveated, foveated-learned) do not (GPS $R^2 \in [-2.4, +0.06]$ with CV $\sigma \in [0.7, 4.0]$, i.e.\ chance). We develop this as H1. Two training-stability caveats are disclosed in full in Appendix~\ref{app:training-stability}: foveated-fixed uses ckpt.36 at $\sim$174M frames (last clean checkpoint before a silent NaN-gradient corruption at $\approx\!182$M), and matched-compute's $1{\times}1$ feature-map collapse, originally noticed as a training quirk, is what makes matched-compute a useful test of the encoder-bottleneck framing (though we cannot from one condition alone fully separate the $1{\times}1$ feature-map effect from the lower input resolution; see §\ref{sec:visual-conditions} and Appendix~\ref{app:scaling}).
 
-For the final version, authors' names are set in boldface, and each name is
-centered above the corresponding address. The lead author's name is to be listed
-first (left-most), and the co-authors' names (if different address) are set to
-follow. If there is only one co-author, list both author and co-author side by
-side.
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3.5pt}
+\caption{Per-condition summary. Ridge $\alpha=10$ probes on hidden states collected under deterministic argmax-action rollouts ($n{=}500$ held-out Gibson episodes per condition). Probe $R^2$ columns report mean $\pm$ std across 5-fold episode-level CV \emph{on the full-length trajectories} (no per-episode step cap). The GPS / Compass entries for rich-encoder conditions therefore reflect long-episode-tail behaviour; in the typical-episode window (steps 50--200) all five conditions decode top-layer GPS at $R^2 \in [0.6, 0.95]$ — the bottleneck-vs-rich-encoder gap is in temporal \emph{stability} of the code, not its mid-episode existence (Figure~\ref{fig:temporal_probe}). \emph{GPS} and \emph{Compass} are world-frame; \emph{DtG} is ego-relative distance-to-goal. Lag-$5$ GPS $R^2$ reports stability of the GPS code across $5$ time-steps (persistent-integration signature). Bold entries mark the top within the H1-relevant ordering (blind $>$ matched $\gg$ others).}
+\label{tab:summary}
+\begin{tabular}{lccc@{\hspace{10pt}}ccc@{\hspace{8pt}}cc@{\hspace{8pt}}c@{\hspace{8pt}}c}
+\toprule
+ & \multicolumn{3}{c}{Training} & \multicolumn{3}{c}{Current-state probes ($R^2$)} & H1 & H3 & Shortcut & MP3D \\
+ \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-8} \cmidrule(lr){9-9} \cmidrule(lr){10-10} \cmidrule(lr){11-11}
+Condition & Frames & SPL & Succ.\ & GPS & Compass & DtG & lag-5 GPS & goal-dir $R^2$ & rel.\ drop\,\% & $\Delta$GPS \\
+\midrule
+Blind                 & 342M  & 0.59  & 0.93  & \textbf{$+$0.95$\pm$0.02} & \textbf{$+$0.81$\pm$0.08} & $+$0.90$\pm$0.03 & \textbf{$+$0.95$\pm$0.02} & $-$0.06 & 52 & $-$0.02 \\
+Matched-compute       & 250M  & 0.67  & 0.98  & \textbf{$+$0.78$\pm$0.10} & \textbf{$+$0.64$\pm$0.10} & $+$0.85$\pm$0.12 & \textbf{$+$0.78$\pm$0.10} & $-$0.03 & 18 & $-$0.07 \\
+Uniform               & 250M  & \textbf{0.85} & \textbf{0.99} & $-$0.31$\pm$0.86 & $+$0.36$\pm$0.23 & $+$0.86$\pm$0.09 & $-$0.27$\pm$0.85 & $-$0.03 & 41 & $-$0.04 \\
+Foveated (fix)        & 174M  & 0.78          & 0.96          & $+$0.06$\pm$0.88 & $+$0.07$\pm$0.69 & $+$0.82$\pm$0.09 & $+$0.04$\pm$0.93 & $-$0.08 & 21 & $+$0.30 \\
+Fov-learned           & 250M  & 0.82  & 0.98  & $-$2.43$\pm$3.98 & $-$1.34$\pm$3.14 & $+$0.81$\pm$0.09 & $-$3.60$\pm$6.20 & \TODO{H3} & 15 & $+$1.65 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
-Please pay special attention to the instructions in Section \ref{others}
-regarding figures, tables, acknowledgments, and references.
+\subsection{H1: Visual Encoder Bottleneck \texorpdfstring{$\to$}{->} LSTM Spatial Compensation}
+\label{sec:h1}
 
-\section{Headings: first level}
-\label{headings}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig/h1_bottleneck.pdf}
+\caption{Current-state probe $R^2$ (5-fold CV, episode-level splits, Ridge $\alpha=10$ on deterministic-rollout hidden states) across five conditions. \emph{GPS} (world-frame position) and \emph{compass} (world-frame heading) show a clean monotonic ordering tracking visual-encoder information content: blind (no visual input) and matched-compute ($48{\times}48$ RGB $\to$ $1{\times}1$ feature map) develop rich world-frame representations in their recurrent state; uniform, foveated, and foveated-learned (full $256{\times}256$ RGB) do not. \emph{DtG} (distance-to-goal, an ego-relative task quantity) decodes robustly in \emph{all} conditions because every agent must track it to navigate. Error bars: $\pm 1\sigma$ across 5 episode-level CV folds.}
+\label{fig:bottleneck}
+\end{figure}
+
+\noindent\textbf{Finding}\quad Visual-encoder capacity inversely tracks LSTM spatial-encoding content across our five conditions. Blind agents encode current GPS in the recurrent state at $R^2=0.95\pm 0.02$; matched-compute agents ($48{\times}48$ RGB input, $1{\times}1$ encoder feature map) at $R^2=0.78\pm 0.10$; all three full-resolution-encoder conditions (uniform, foveated, foveated-learned) decode GPS at chance ($R^2 \in [-2.4, +0.06]$ with CV $\sigma \in [0.7, 4.0]$). Compass shows the same monotonic ordering at a smaller effect size ($0.81\to 0.64\to 0.36\to 0.07\to -1.3$). DtG decodes robustly everywhere ($R^2\in[0.81, 0.90]$). Figure~\ref{fig:bottleneck} visualises the pattern. \TODO{Whether this correlation reflects causation (encoder capacity \emph{drives} LSTM encoding) is what the encoder-resolution scaling sweep, Appendix~\ref{app:scaling}, tests directly. Multi-seed runs of the existing five conditions are also in progress to bound seed-to-seed variability.}
+
+\noindent\textbf{Integration signature at lag $k$}\quad The bottleneck conditions' GPS encoding is \emph{persistent}, not an instantaneous readout. Decoding $\mathrm{GPS}_{t-k}$ from $\mathbf{h}_t$ yields $R^2=0.95$ at $k{=}0, 2, 5, 10$ for blind and $R^2=0.78$ at every $k$ up to $10$ for matched (Table~\ref{tab:summary}). Pushing $k$ further on a separate run, blind GPS still decodes at $R^2=0.92$ at $k=20$; matched holds above $R^2=0.50$ at $k=20$ (with smaller $n_\text{test}$ as short episodes drop out at high lag). The rich-encoder conditions decode at chance at every $k\leq 10$. Compass decays steadily with $k$ in both bottleneck conditions ($0.81\to 0.19$ over $10$ steps for blind; $0.64\to -0.16$ for matched) but never becomes available in rich-encoder conditions. This is the integration signature of a compensatory cognitive-map code: the LSTM maintains a stable world-frame position representation across many time steps, precisely because the visual encoder cannot do so on its own.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig/temporal_probe_evolution.pdf}
+\caption{Top-layer GPS / compass code stability across episode duration. Out-of-fold 5-fold-CV Ridge probe ($\alpha=10$) on the deterministic-rollout hidden states; samples are binned by step-in-episode and $R^2$ is computed per bin. \emph{All five conditions} encode top-layer GPS in the typical-episode window (steps $\sim 25$--$200$, $R^2 \in [0.6, 0.95]$). Bottleneck conditions (blind, matched) maintain that code stably out to step $800+$ ($R^2 > 0.7$); rich-encoder conditions (uniform, foveated, foveated-learned) peak at steps 100--200 and then collapse, going to chance at steps 400--800 and to deeply negative $R^2$ in the long-tail $800+$ bin. The headline ``rich-encoder $\approx$ chance'' GPS R² in Table~\ref{tab:summary} is therefore primarily about long-episode behaviour. The early bin $[0, 25)$ is a low-target-variance regime: position values are still small (close to start) and probe $R^2$ is low for all conditions.}
+\label{fig:temporal_probe}
+\end{figure}
 
-
-All headings should be lower case (except for first word and proper nouns),
-flush left, and bold.
-
-
-First-level headings should be in 12-point type.
-
-
-\subsection{Headings: second level}
-
-
-Second-level headings should be in 10-point type.
-
-
-\subsubsection{Headings: third level}
-
-
-Third-level headings should be in 10-point type.
-
-
-\paragraph{Paragraphs}
-
-
-There is also a \verb+\paragraph+ command available, which sets the heading in
-bold, flush left, and inline with the text, with the heading followed by 1\,em
-of space.
-
-
-\section{Citations, figures, tables, references}
-\label{others}
-
-
-These instructions apply to everyone.
-
-
-\subsection{Citations within the text}
-
-
-The \verb+natbib+ package will be loaded for you by default.  Citations may be
-author/year or numeric, as long as you maintain internal consistency.  As to the
-format of the references themselves, any style is acceptable as long as it is
-used consistently.
-
-
-The documentation for \verb+natbib+ may be found at
-\begin{center}
-  \url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
-\end{center}
-Of note is the command \verb+\citet+, which produces citations appropriate for
-use in inline text.  For example,
-\begin{verbatim}
-   \citet{hasselmo} investigated\dots
-\end{verbatim}
-produces
-\begin{quote}
-  Hasselmo, et al.\ (1995) investigated\dots
-\end{quote}
-
-
-If you wish to load the \verb+natbib+ package with options, you may add the
-following before loading the \verb+neurips_2026+ package:
-\begin{verbatim}
-   \PassOptionsToPackage{options}{natbib}
-\end{verbatim}
-
-
-If \verb+natbib+ clashes with another package you load, you can add the optional
-argument \verb+nonatbib+ when loading the style file:
-\begin{verbatim}
-   \usepackage[nonatbib]{neurips_2026}
-\end{verbatim}
-
-
-As submission is double blind, refer to your own published work in the third
-person. That is, use ``In the previous work of Jones et al.\ [4],'' not ``In our
-previous work [4].'' If you cite your other papers that are not widely available
-(e.g., a journal paper under review), use anonymous author names in the
-citation, e.g., an author of the form ``A.\ Anonymous'' and include a copy of the anonymized paper in the supplementary material.
-
-
-\subsection{Footnotes}
-
-
-Footnotes should be used sparingly.  If you do require a footnote, indicate
-footnotes with a number\footnote{Sample of the first footnote.} in the
-text. Place the footnotes at the bottom of the page on which they appear.
-Precede the footnote with a horizontal rule of 2~inches (12~picas).
-
-
-Note that footnotes are properly typeset \emph{after} punctuation
-marks.\footnote{As in this example.}
-
-
-\subsection{Figures}
-
-
-\begin{figure}
-  \centering
-  \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
-  \caption{Sample figure caption. Explain what the figure shows and add a key take-away message to the caption.}
+\noindent\textbf{Temporal stability across episode duration}\quad A no-cap probe (the headline R² in Table~\ref{tab:summary}) does not separate ``does the LSTM ever encode GPS'' from ``does the LSTM maintain that encoding as the episode lengthens.'' We test the temporal version directly with a step-binned out-of-fold probe (Figure~\ref{fig:temporal_probe}; OOF prediction so each bin's R² is from a probe never trained on that bin's episode). The picture sharpens as follows. \emph{All five conditions} encode top-layer GPS in the typical-episode window (steps 50--200, $R^2 = 0.6$--$0.95$); rich-encoder conditions are not at chance at this scale. They diverge from the bottleneck conditions in what happens \emph{later}. Blind and matched-compute hold $R^2 > 0.7$ across all step bins out to 800$+$. Uniform / foveated / foveated-learned peak at steps 100--200, then decay: by step 400--800 they are at or near chance, and in the long-tail $800+$ bin they are catastrophically negative ($-0.37$ to $-5.67$). The ``rich-encoder $\approx$ chance'' headline in Table~\ref{tab:summary} is therefore predominantly long-tail behaviour. \emph{H1 is most precisely a claim about the temporal stability of the linearly-decodable top-layer GPS code, not its existence at any moment.}
+
+\noindent\textbf{Proposed mechanism}\quad We \emph{propose} the following account, consistent with the data but not directly tested. In PointNav, GPS and compass are observations that the policy reads each step; the recurrent state need only re-encode them if it cannot rely on the visual stream to do so. A full-resolution RGB encoder can re-derive position and heading from the current frame --- so as the episode progresses and the rich-encoder LSTM accumulates other task-relevant features (visual landmarks, scene history, goal-direction integration), it has no incentive to keep refreshing the GPS code, and the top-layer state drifts off it. An impoverished encoder cannot re-derive position from vision alone; the LSTM has to keep the GPS code linearly readable for the policy throughout the episode, and the top-layer code stays stable. Blind and matched-compute bracket this picture: blind has \emph{no} visual encoder (pure compensation); matched has a \emph{collapsed} $1{\times}1$ encoder (partial compensation); foveated, uniform, and foveated-learned all have full encoders (pass-through). Task success is tightly bunched ($0.59$--$0.85$ SPL), so a skill-gap artefact is unlikely to explain the encoding gap. The temporal dynamic in Figure~\ref{fig:temporal_probe} (rich-encoder GPS code emerging early then decaying) is the direct fingerprint of this account. \TODO{A direct causal test of the proposed mechanism --- e.g., training a rich-encoder agent with GPS perturbed mid-rollout, or training a bottleneck agent with the GPS sensor removed --- is left for future work.}
+
+\noindent\textbf{Relation to Wijmans et al.}\quad Wijmans et al.~\citep{wijmans2023emergence} showed that blind PointNav agents develop spatial representations in LSTM memory. Our blind result ($R^2=0.95$) replicates this; matched-compute extends it beyond the blind special case to a condition that has visual input but cannot resolve world-frame structure from it. We interpret this as evidence that the relevant trigger is the visual encoder's information capacity, not the binary presence/absence of vision. Appendix~\ref{app:scaling} reports an encoder-resolution sweep ($32{\times}32$ to $256{\times}256$; in progress) which tests the trigger directly as a scaling curve.
+
+\noindent\textbf{Bio parallel}\quad The pattern parallels the animal-navigation literature without depending on its mechanisms: congenitally blind humans develop enhanced hippocampal coupling and outperform sighted controls on non-visual spatial tasks~\citep{kupers2014blind}; rodent grid cells lose their hexagonal periodicity in darkness even with head-direction input intact~\citep{chen2016grid}, yet the animal still navigates --- so spatial bookkeeping that the (vision-dependent) grid code can no longer carry has to come from somewhere else. We use these only as analogy: in both cases visual-pathway absence shifts spatial bookkeeping into a non-visual substrate, the same qualitative direction we measure in LSTM hidden states. We do not claim the agent and biological mechanisms are the same.
+
+
+\subsection{H2: Sensor Structure \texorpdfstring{$\to$}{->} Format-Level Divergence}
+\label{sec:h2}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.55\linewidth]{fig/h2_cka_heatmap.pdf}
+\caption{Unaligned linear CKA~\citep{kornblith2019cka} between top-layer LSTM hidden states ($n{=}95{,}640$ steps per condition under deterministic-rollout probes). Every off-diagonal is below $10^{-4}$; cross-condition similarity is at the numerical-noise floor. Within-condition split-half CKA (not shown) is $\approx 1$, confirming the near-zero off-diagonals reflect representational divergence, not estimator noise.}
+\label{fig:cka}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\small
+\caption{Probe-transfer GPS $R^2$ on deterministic-rollout hidden states: train on row condition, test on column. Self-accuracy diagonal is $0.89$--$0.99$; every cross-condition transfer is catastrophically negative ($R^2 \ll -800$, often $\ll -10^4$), reflecting that a probe trained on one condition's hidden-state geometry does not just degrade on another --- it predicts off-manifold values.}
+\label{tab:transfer}
+\begin{tabular}{lccccc}
+\toprule
+Train $\backslash$ Test & Blind & Uniform & Fov-fix & Fov-lrn & Matched-compute \\
+\midrule
+Blind            & \textbf{$+$0.99} & $-$844    & $-11{,}301$  & $-10{,}731$  & $-55{,}706$ \\
+Uniform          & $-1{,}383$       & \textbf{$+$0.90} & $-7{,}046$  & $-3{,}305$   & $-110{,}317$ \\
+Fov-fix          & $-2{,}091$       & $-2{,}792$ & \textbf{$+$0.92} & $-1{,}263$  & $-39{,}100$ \\
+Fov-lrn          & $-6{,}722$       & $-2{,}423$ & $-6{,}205$  & \textbf{$+$0.89} & $-38{,}842$ \\
+Matched-compute  & $-10{,}621$      & $-4{,}832$ & $-4{,}984$  & $-58{,}169$  & \textbf{$+$0.96} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Finding}\quad Five agents that solve the same task at the same success rate do not share a spatial representation. Pairwise linear similarity (CKA) sits at the noise floor for every condition pair (Figure~\ref{fig:cka}; off-diagonals all $<10^{-4}$); a GPS probe trained on one condition's hidden states and evaluated on another's does not just degrade --- it predicts wildly off-manifold values, with cross-condition transfer $R^2 \ll -800$ in every cell (Table~\ref{tab:transfer}). In plain terms: what each agent calls "position" is written in a different linear subspace. Visual input type shapes \emph{format}, not just strength.
+
+\noindent\textbf{Ruling out alternatives}\quad Self-probes succeed for every condition, so probe capacity is not the bottleneck. CKA is computed on a common-sample truncation, ruling out sample-size asymmetry. Task competence is tightly bunched ($96$--$99\%$ success across sighted conditions), so the divergence is not a skill difference. And transfer fails symmetrically (both directions), which rules out the possibility that one condition's code simply embeds another's.
+
+A t-SNE projection of pooled hidden states confirms the CKA result visually (Appendix~\ref{app:supp_figs}): the five conditions occupy non-overlapping regions of a 2-D manifold. We quantify this with 1-NN purity: pooling 1500 random top-layer hidden states from each of the five conditions and asking whether each sample's nearest neighbour (Euclidean, full 512-d state) comes from the same condition, the answer is yes for $7500/7500$ of them in our sample ($1$-NN purity $= 1.000$, vs.\ a chance baseline of $0.20$). Within this 7500-sample test, the five hidden-state subspaces are not just probe-distinguishable: they are linearly separable to single-nearest-neighbour granularity. \TODO{Whether this $1.000$ holds at much larger sample size or under domain shift (MP3D-pooled, fov-shifted-pooled when available) is a further-investigate item.}
+
+\noindent\textbf{Boundaries}\quad Our similarity tests are linear (CKA) or near-linear (t-SNE default); non-linear similarity measures could reveal higher-order shared structure. Our five sensors are diverse but not exhaustive; hybrid sensors (coarse uniform periphery + sharp fovea, depth-only inputs) might produce intermediate geometries.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{fig/transplant_sweep.pdf}
+\caption{Memory transplant across a midpoint sweep $\{0,15,30,60,90\}$ steps ($n=100$--$150$ episodes/cell). \emph{(a)}~Baseline, self-transplant, and cross-transplant SPL per donor$\rightarrow$recipient pair and per midpoint. At $t=0$ the donor has accumulated no information yet, so self- and cross-transplant reduce to a protocol-noise floor (self $\approx-0.03$, cross $\approx-0.06$ SPL vs.\ baseline). Self-transplant SPL drops monotonically with increasing midpoint: the recipient's own past recurrent state genuinely diverges from the state it would have occupied had it driven the rollout from step 0. \emph{(b)}~Cross minus self (the isolated condition-mismatch component, with both protocol noise and rollout divergence subtracted) is roughly stable across midpoints $t\geq 15$: foveated-learned$\rightarrow$foveated is the most behaviourally incompatible pair at every midpoint tested ($-0.17$ SPL on average), even though all pairwise CKA values are at the noise floor. Probe-based similarity is uninformative at this scale; transplant is what reveals the functional gap.}
+\label{fig:transplant}
+\end{figure}
+
+\noindent\textbf{Memory transplant}\quad Probe-based similarity measures could still miss \emph{functional} equivalence: two representations with low CKA might still be interchangeable if the downstream policy reads them the same way. We test this with memory transplant --- paste a donor's mid-episode hidden state into the recipient's policy at step $t$, let the recipient drive the rest of the episode. The isolated condition-mismatch cost (cross-transplant SPL $-$ self-transplant SPL, which subtracts both a small $t{=}0$ protocol-noise floor and the rollout-divergence cost of re-initialising a recurrent state mid-episode) is stable across midpoints $t\geq 15$ and carries a clear ranking (Figure~\ref{fig:transplant}b): foveated-learned$\to$foveated incurs the largest drop ($-0.17$ SPL), foveated$\to$uniform a smaller one ($-0.10$), and foveated$\to$blind is essentially neutral ($-0.02$). (The raw cross-transplant drop vs.\ baseline is correspondingly $0.19$--$0.21$ for the first two pairs; self-transplant contributes a $0.02$--$0.04$ SPL overhead that accounts for the difference.) The striking piece is the ranking itself: pairs that look identically near-zero in CKA differ markedly under transplant. Higher probe-based similarity is uninformative at this scale --- representations that look the same to a linear similarity measure are not interchangeable in policy terms. (CKA and probe transfer use common-sample truncation for fair cross-condition comparison; transplant uses full on-policy rollouts because the task is not truncatable. The two measurement scopes are deliberate, and their conclusions are consistent.) Together with CKA, probe transfer, and t-SNE, transplant provides a fourth convergent signal of format-level divergence on the pairs we tested (foveated$\to$blind, foveated$\to$uniform, foveated-learned$\to$foveated). \TODO{The remaining cross-condition transplant pairs (e.g., blind$\to$matched, matched$\to$uniform) are not yet measured; running them would let us state the format-divergence finding as a complete $5{\times}5$ behavioural matrix rather than a representative subset.}
+
+
+\subsection{H3: Gaze Location as an Orthogonal Content Lever}
+\label{sec:h3}
+
+H1 and H2 identify sensor structure as one axis on representational content. H3 asks whether gaze \emph{location} --- where the foveated window is centred --- is a second, dissociable axis. We test the two forms described in §\ref{sec:methods-probing} and previewed in the Introduction: an active-gaze form (the minimal learned-gaze module should move its gaze to task-useful locations), and a gaze-location form (two foveated agents whose gaze is centred at \emph{different static} locations should produce different content). The active-gaze form is out of scope of our minimal gaze decoder and we do not claim anything about it; the gaze-location form is what our controlled experiments test.
+
+\noindent\textbf{The learned-gaze module collapses}\quad Our minimal learned-gaze implementation (deterministic sigmoid MLP, slow-gaze updates once per 128-step rollout segment; Appendix~\ref{app:gaze_diversity}) does not produce active gaze: after 250M frames the gaze output is frozen at $(0.49, 0.62)$ with per-dimension std $\leq 2.5\times 10^{-4}$ (numerical noise). Two anti-collapse regularisers (Appendix~\ref{app:gaze_diversity}) restore gaze variance only at the cost of task performance. We explicitly do not claim this shows active gaze cannot be learned --- our gaze decoder is minimal by design (to be a controlled variable, not a model of active vision), and richer architectures (stochastic gaze, information-seeking intrinsic reward, attention-based token selection) would need separate investigation. What the collapse gives us for free is an opportunity to test the gaze-location form: after training, we have an agent that is \emph{effectively foveated with a static gaze $30$ pixels below image centre}.
+
+\noindent\textbf{Gaze-location test (in progress)}\quad Both rich-encoder foveated variants sit in the pass-through regime under current-state probing (Table~\ref{tab:summary}), so the H3 test is whether \emph{within} the pass-through regime, gaze location shifts content along other axes --- non-spatial feature usage, behavioural memory-reliance (shortcut, Figure~\ref{fig:h3_content}b), or transplant compatibility. To isolate gaze location from training-dynamics confounds, we train a foveated-shifted control: an agent identical to foveated-fixed except gaze is hardcoded at $(0.49, 0.62)$ instead of $(0.5, 0.5)$ --- matching foveated-learned's collapsed gaze position but with no learned-gaze module in the optimisation path. \TODO{Training in progress at submission; results will populate this paragraph.}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig/h3_content.pdf}
+\caption{H3 content evidence. (a)~Goal-vector probe $R^2$ (deterministic-rollout hidden states): goal \emph{distance} decodes strongly across conditions, while goal \emph{direction} and the full 2-D ego-to-goal vector are at chance or negative for every condition --- no condition stores the goal vector explicitly (PointGoal provides it as a per-step input, so the policy has no incentive to re-encode it). What differs across conditions is the integrated trajectory and scene-history content each recurrent state accumulates. (b)~Shortcut discovery: persistent vs.\ reset memory on the second of two paired same-scene/different-goal episodes. 20 Gibson scenes $\times$ 10 paired episodes each, bar height is the mean of the 20 scene-level mean SPLs (not a flat 200-sample mean, to prevent high-episode-count scenes from dominating). Conditions are ordered by relative SPL drop (\%). Blind loses most; foveated-learned loses least.}
+\label{fig:h3_content}
+\end{figure}
+
+\noindent\textbf{Shortcut discovery (behavioural memory-reliance)}\quad We separately measure how tightly each policy couples action choice to integrated recurrent memory: run paired episodes in the same scene with fresh goals, compare second-episode SPL under \emph{reset} (LSTM zeroed between episodes) vs.\ \emph{persistent} (state carried over) memory. Larger relative SPL drop $=$ more brittle memory coupling (Figure~\ref{fig:h3_content}b): blind loses $52\%$, uniform $41\%$, foveated $21\%$, matched $18\%$, foveated-learned $15\%$. The blind ranking is consistent with H1: blind has the strongest top-layer GPS code of the five conditions and is also the most brittle when that memory is stale; the three rich-encoder conditions, which decode GPS at chance from the top-layer state, are correspondingly less perturbed. \emph{Note that ``decodable from h'' and ``policy uses for decision-making'' are not the same construct} --- a probe shows what is \emph{readable} from the state, not what the policy actually \emph{relies on}; the shortcut experiment is the closer behavioural test of the latter. \TODO{A direct measurement of ``policy GPS reliance'' (e.g., ablating GPS sensor input mid-rollout and measuring the SPL drop) would complement the shortcut signal; left for follow-up.} \emph{Anomaly: the matched-compute drop ($18\%$) is lower than its strong GPS encoding might predict.} A literal reading is that \emph{using} a cognitive map for policy decisions is a separate property from \emph{having} one --- matched has the code but weights it less in policy output --- but this rests on a single-seed shortcut run; we mark it as a candidate dissociation pending multi-seed replication of both the GPS probe and the shortcut measurement before drawing the ``having vs.\ using'' conclusion.
+
+
+\subsection{Additional Analyses}
+\label{sec:addl}
+
+\noindent\textbf{Controls}\quad Two probes fail to discriminate between conditions and so define the boundary of our claims. Coarse occupancy (``have I visited this region?'') decodes above chance in every condition, so one-bit spatial working memory is ubiquitous and not part of the H1--H3 story. Metric $20{\times}20$ occupancy reconstruction fails everywhere, consistent with the SPACE benchmark's finding that fine-grained layout requires non-linear probes or longer horizons~\citep{ramakrishnan2025space}: our claims are about representational \emph{format} and \emph{content}, not about high-resolution metric layout.
+
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.38\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig/place_cells.pdf}
+\end{minipage}\hfill
+\begin{minipage}{0.60\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig/layerwise_decay.pdf}
+\end{minipage}
+\caption{\emph{Left}: LSTM units with $>1$\,bit spatial information per condition~\citep{banino2018grid}; mean bits $\bar s$ shown inside bars. \emph{Right}: Per-LSTM-layer GPS / compass probe $R^2$ across the three layers, all five conditions, on deterministic-rollout hidden states. All five conditions have linearly-decodable GPS at Layer 0 ($R^2 > 0.91$); Layer 0 is also where the GPS sensor embedding enters the LSTM input vector, so this lower-bound is at least partly a sensor-pass-through effect rather than ``the network computing position.'' What differs across conditions is what the LSTM does with this signal through Layers 1--2: bottleneck conditions (blind, matched) retain it to the top-layer policy readout, while rich-encoder conditions (uniform, foveated, foveated-learned) discard it (top-layer $R^2$ catastrophically negative). Some non-monotonicity in blind's per-layer trace (Layer 1 lower than Layer 0 or Layer 2) is not yet explained.}
+\label{fig:place_cells}
+\end{figure}
+
+\noindent\textbf{Per-unit spatial information and multi-layer depth}\quad Two further analyses sharpen the H1 picture (Figure~\ref{fig:place_cells}). \emph{Per-unit:} bottleneck conditions distribute spatial information broadly across LSTM units in the Banino et al.~\citep{banino2018grid} sense (many units each carrying $>1$\,bit) rather than concentrating it in a few dedicated ``place neurons,'' consistent with a population code. \emph{(Caveat: this depends on the chosen $1$-bit threshold and the per-scene grid resolution; we do not claim a sharp dissociation between ``population code'' and ``few dedicated cells.'')} \emph{Multi-layer:} probing every LSTM layer (not just the top) shows that all five conditions have linearly-decodable GPS at Layer~0 ($R^2 > 0.91$), where the GPS sensor embedding enters the LSTM input --- so Layer~0 is at least partly a sensor-pass-through artefact, not by itself evidence that the network ``computes'' position. The interesting signal is the per-layer trajectory: bottleneck conditions \emph{retain} the GPS code through Layers 1--2 to the top-layer policy readout, while rich-encoder conditions discard it (uniform Layer~2 GPS $R^2 = -1.56$, foveated $-1.64$, foveated-learned $-10$). An MLP probe on the same top-layer state recovers position from rich-encoder networks (foveated $R^2 = 0.51$, foveated-learned $R^2 = 0.73$), \emph{consistent with} the position information persisting in a non-linear subspace --- though we cannot from this alone exclude MLP exploitation of position-correlated features (wall distance, scene identifiers) rather than position itself. \emph{(A non-linear-position-encoding test that holds the input-resolution constant while varying encoder capacity is the encoder-resolution scaling sweep, Appendix~\ref{app:scaling}, in progress.)} What is robust on current evidence: ``linearly decodable at the top-layer policy readout'' is the precise meaning of H1, and bottleneck and rich-encoder conditions diverge sharply on this metric. \emph{(Side observation, not yet explained: blind Layer~1 GPS R² is lower (0.61) than at Layer~0 (0.99) or Layer~2 (0.95); the LSTM does not pass GPS through monotonically. We flag this as an artefact-or-mechanism question to be resolved in follow-up.)}
+
+\noindent\textbf{Generalisation to MP3D}\quad The H1 bottleneck ordering is preserved on a held-out MP3D evaluation (300 episodes per condition, deterministic-rollout protocol; same trained checkpoints, no re-training). Blind GPS $R^2$ moves from $0.95$ on Gibson to $0.93$ on MP3D ($\Delta=-0.02$); matched moves from $0.78$ to $0.71$ ($\Delta=-0.07$); the three rich-encoder conditions (uniform, foveated, foveated-learned) remain at chance or sub-chance on both datasets (Figure~\ref{fig:mp3d}). The bottleneck-vs-pass-through partition is therefore not specific to Gibson scene statistics. \emph{Anomaly:} fov-learned compass moves from $-1.34$ on Gibson to $+0.41$ on MP3D --- a $+1.75$ swing on a single-seed checkpoint. We do not yet have a confirmed account; possibilities include Gibson-specific feature use by the fov-learned encoder, single-seed noise, or an interaction between fov-learned's collapsed gaze location and MP3D scene statistics. We mark this as an open observation requiring multi-seed replication and the fov-shifted causal control before claiming any specific mechanism. The bottleneck-vs-pass-through partition itself is unaffected.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{fig/mp3d_generalization.pdf}
+\caption{Probe generalisation from Gibson evaluation (unshaded) to held-out MP3D evaluation (hatched), $300$ episodes per condition under the deterministic-rollout protocol. Same trained checkpoints; no re-training. The H1 bottleneck ordering --- blind and matched-compute decode world-frame GPS robustly while uniform, foveated, and foveated-learned do not --- is preserved across the dataset shift. Foveated-learned compass shows the largest cross-dataset shift (Gibson $-1.34$ $\rightarrow$ MP3D $+0.41$); we report this as an open anomaly requiring multi-seed replication before attributing it to a specific mechanism. The qualitative bottleneck partition is unaffected.}
+\label{fig:mp3d}
 \end{figure}
 
 
-All artwork must be neat, clean, and legible. Lines should be dark enough for
- reproduction purposes. The figure number and caption always appear after the
-figure. Place one line space before the figure caption and one line space after
-the figure. The figure caption should be lower case (except for the first word and proper nouns); figures are numbered consecutively.
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Two orthogonal axes: sensor structure and gaze location}
+
+Our findings unify under a single mechanism: the \emph{encoder--memory race}. Whether the LSTM \emph{maintains} a linearly-decodable world-frame spatial code at the top layer depends on whether the visual encoder can resolve that information from the current frame. When the encoder cannot --- blind (no encoder) or matched-compute ($1{\times}1$ feature map) --- the LSTM keeps the GPS code stable across episode duration (H1, §\ref{sec:h1}; Figure~\ref{fig:temporal_probe}). When the encoder can --- uniform, foveated, foveated-learned all use full-resolution ResNet-18 encoders --- the LSTM still encodes top-layer GPS in mid-episode (steps 50--200), but \emph{overwrites} the code as visual-encoder features accumulate, leaving long-tail steps at chance or below. The encoder--memory race is therefore best read as a temporal-stability claim, not an existence claim. The Layer-0 finding (Figure~\ref{fig:place_cells} right) is consistent: all conditions have GPS at Layer 0 (where the sensor embedding enters); the divergence is at Layers 1--2 \emph{and} as the episode progresses. H2 (§\ref{sec:h2}) cuts orthogonally: \emph{what} the LSTM encodes is in different linear subspaces across conditions even where current-state position decodes at chance, and that linear difference matters for downstream behaviour (cross-condition memory transplants drop SPL more than transplant mechanics alone). H3 (§\ref{sec:h3}) asks whether, \emph{within} the rich-encoder pass-through regime, gaze location is a second representational-content axis; the clean foveated-shifted causal control that answers this is in training at submission time. The same encoder-capacity axis that collapses the original ``foveated vs.\ uniform'' question (both sit in the pass-through regime) surfaces a clean scaling prediction: GPS decodability should fall monotonically with encoder resolution, which we begin to test in Appendix~\ref{app:scaling}.
+
+\subsection{Why this, not alternative accounts}
+
+We rule out four alternative explanations.
+
+\emph{Task-competence differences.} Every condition solves PointGoal at $93$--$99\%$ success, so the encoded-content gap cannot be attributed to differences in navigation skill (Table~\ref{tab:summary}).
+
+\emph{Probe-capacity / probe-fitting artefacts.} DtG decodes robustly across all five conditions ($R^2 \geq 0.81$), demonstrating that Ridge has the capacity to fit high-$R^2$ scalars when the hidden state contains them. Where GPS does decode (blind, matched), Hewitt--Liang label-permutation selectivity is correspondingly high; where GPS is at chance, selectivity is also at chance because real and control probes face the same near-zero target-information ceiling. The chance-level GPS/compass $R^2$ for rich-encoder conditions is therefore a property of the hidden state, not of the probe.
+
+\emph{Sample-size / trajectory-distribution artefacts.} CV $\sigma$ spans come from the same 500-episode pool with $\sim\!100$--$400$-step rollouts under identical deterministic evaluation; the protocol confound that haunted an earlier draft (4-step quasi-static trajectories under stochastic sampling) is documented and retired in §\ref{sec:methods-probing}.
+
+\emph{Linear-probe artefacts.} Two complementary checks address this. \emph{(a)~Behavioural:} the memory-transplant intervention (§\ref{sec:h2}) goes outside the probe framework and reproduces the bottleneck-vs-pass-through ordering, with cross-condition transplants dropping SPL by $0.19$--$0.21$ between rich-encoder pairs. \emph{(b)~Non-linear probe:} a 2-layer MLP on the same top-layer hidden states recovers $R^2 \in [0.51, 0.73]$ from the rich-encoder conditions where Ridge sees chance. We interpret this as consistent with position information persisting in a non-linear subspace at the top layer, but emphasise the limits: an MLP probe can also exploit features merely \emph{correlated} with position (wall distance, scene identifiers, episode-phase markers), so this number alone cannot disentangle ``non-linear position code'' from ``MLP regressing through position-correlated features.'' What it does establish is that the bottleneck-vs-pass-through divergence is not just about whether \emph{any} probe can recover position --- it is specifically about whether a \emph{linear} top-layer probe can. Since the standard DD-PPO action head is a linear projection from $\mathbf{h}_2$, the linear-probe metric is precisely what the policy itself can use --- so the H1 distinction maps directly onto policy-accessible encoding regardless of how the MLP-probe interpretation resolves. The encoder-resolution scaling sweep (Appendix~\ref{app:scaling}, in progress) tests the bottleneck framing more directly by varying input resolution while holding everything else fixed.
+
+\subsection{Biological precedent as convergent evidence}
+
+Each of our three findings has a parallel in the animal-navigation literature, which we take as one piece of convergent (not conclusive) evidence that the effects are not specific to a single LSTM architecture. Compensatory memory under reduced sensory access is documented in congenitally blind humans, who develop enhanced hippocampal coupling and outperform sighted controls on non-visual spatial-working-memory tasks~\citep{kupers2014blind}, and in rodents whose grid-cell periodicity collapses in darkness despite intact head-direction inputs~\citep{chen2016grid}---both format-level, not just strength-level, effects. Sensor-dependent representational format is observed in bats whose hippocampi remap when the same animal switches between vision and echolocation~\citep{geva2016remapping} and at longer evolutionary scales in the primate-vs-rodent view-cell/place-cell contrast~\citep{rolls2024why}, which Rolls attributes specifically to differences in foveated vs.\ near-panoramic sampling statistics. Gaze as a memory-encoding axis is mechanised in the saccade-gated hippocampal theta reset whose reliability predicts subsequent memory~\citep{jutras2013saccades} and in the overt-vs-covert dissociation that identifies the physical act of directing gaze as the encoding mechanism~\citep{tas2016overt}. We do not claim our agents implement these biological mechanisms, nor that the parallel structure settles the generality question; we do claim that the parallels make a pure single-architecture artefact less likely, and that the controlled agent setting complements biological comparisons where sensor type, architecture, and training objective cannot be independently manipulated.
+
+\subsection{Implications for ML practice and architectural scope}
+
+Within the recurrent PointNav setting we study, three implications follow. (i)~\emph{Encoder capacity correlates inversely with linear, top-layer, policy-accessible LSTM spatial encoding} across our five conditions. If the correlation reflects causation in this setting --- which the encoder-resolution scaling sweep (Appendix~\ref{app:scaling}, in progress) tests directly --- it would also be a practical training-time lever for inducing cognitive-map-like internal representations: impose an encoder bottleneck. We do not yet claim this generalises beyond PointNav with our specific architecture and training regime. (ii)~\emph{``More pixels'' is not the right lens within this setting:} the linear top-layer GPS code is non-monotonic in raw pixel count --- uniform $256{\times}256$ (full encoder) lacks it; $48{\times}48$ with the same encoder stack (matched-compute, $1{\times}1$ feature map) has a strong one. We attribute this to encoder-preserved spatial information, with the scaling sweep needed to confirm. (iii)~\emph{Attention policy (H3, pending):} within the rich-encoder regime, we predict that shifting the static gaze location alters what the LSTM encodes; the foveated-shifted causal control is in training at submission time and will test this directly (§\ref{sec:h3}).
+
+\noindent\textbf{Beyond the recurrent setting (untested)}\quad We use a Wijmans-style recurrent (LSTM) backbone for direct comparability with the emergent-map literature. The three implications above are established only in this setting, but we speculate about where they plausibly extend. Transformer-based embodied agents build their internal state by accumulating information via learned attention, which is structurally similar to our gaze location in the sense that it selects which observation content is read into the representation; our H3 finding therefore suggests a testable prediction for transformer navigators---strong constraints on attended tokens should produce content-level dissociations of the sort we observe---but the prediction has not been verified and is left for future work. The sensor-structure axis (H1, H2) is a claim specifically about RL recurrent navigation agents trained under partial observability; whether equivalent representational-content effects arise in supervised visual learners, non-visual modalities, or multimodal systems is an open empirical question that the present experiments do not resolve.
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+(i)~\emph{Intermediate checkpoint for foveated-fixed:} all foveated-fixed analyses use ckpt.36 at $\sim$174M, the last checkpoint before the silent-corruption window (Appendix~\ref{app:training-stability}); the other four conditions use the final converged checkpoint. (ii)~\emph{Minimal learned-gaze architecture.} Our learned-gaze module is a deterministic sigmoid MLP with slow-gaze rollout updates, chosen for computational compatibility with DD-PPO rollouts and simplicity as a controlled variable, not as a competitive active-gaze model. Its collapse under pure task supervision is specific to this architecture (and so far to a single seed; multi-seed replication is in progress); richer gaze mechanisms (stochastic gaze with entropy bonus, information-seeking intrinsic reward, attention-based token selection) would need separate investigation. We therefore do not claim that implicit task pressure cannot produce active gaze in general; we claim only that our minimal decoder collapsed, and we use the collapsed-gaze position as an empirical starting point for the gaze-location test (foveated-shifted control, §\ref{sec:h3}) --- a test whose logic does not depend on the gaze decoder working. (iii)~\emph{Cross-heading probe:} the proposal included a cross-heading generalisation probe (train on heading $A$, test on opposite heading). Our implementation returned ``insufficient samples'' sentinels at our probe sizes and does not appear in our results. (iv)~\emph{Foveation model:} Gaussian blur with quadratic falloff is a simplification; log-polar or multi-scale pyramid models may behave differently. (v)~\emph{Linear probes only:} non-linear probes might reveal structure Ridge regression misses, particularly for occupancy maps. (vi)~\emph{Architecture scope:} we use a recurrent (LSTM) backbone to remain comparable with the emergent-map literature we build on. The core claims (sensor structure and gaze location as representational-content axes) should hold for transformer-based navigation agents whose internal state is built by learned attention, but directly verifying this requires re-running the five-condition ablation on a transformer backbone and is left for future work; see §\ref{sec:discussion} for the specific predictions.
 
 
-You may use color figures.  However, it is best for the figure captions and the
-paper body to be legible if the paper is printed in either black/white or in
-color.
+\section{Conclusion}
+
+We ran a controlled five-condition ablation isolating the effect of visual-input structure on the recurrent representations learned by an otherwise-identical DD-PPO navigation agent. Three findings emerge.
+
+\emph{(1)~Encoder--memory race.} LSTM top-layer world-frame GPS encoding is \emph{temporally stable} when the visual encoder cannot resolve world-frame structure on its own, and \emph{transient} when it can. All five conditions encode top-layer GPS in the typical-episode window (steps 50--200, $R^2 \in [0.6, 0.95]$). Blind and matched-compute then maintain that code across episode duration (blind $R^2 = 0.92$ at step $800+$; matched $R^2 = 0.68$); uniform / foveated / foveated-learned overwrite it (long-tail $R^2$ at chance or below). The headline ``rich-encoder $\approx$ chance'' GPS R² in Table~\ref{tab:summary} is therefore primarily a long-tail statistic, not a mid-episode property. Per-layer probing additionally shows all five conditions have linearly-decodable GPS at Layer 0 (where the sensor embedding enters), and an MLP probe at Layer 2 still recovers position from rich-encoder conditions ($R^2 \in [0.51, 0.73]$); we cannot from MLP recovery alone exclude exploitation of position-correlated features. H1 is most precisely a claim about what a \emph{linear, top-layer, late-episode} probe can read --- which is also what the standard DD-PPO action head reads.
+
+\emph{(2)~Condition-specific representational format.} Even where rich-encoder LSTMs are spatially pass-through, their hidden-state subspaces are perfectly disjoint: pairwise CKA at the noise floor ($<10^{-4}$), cross-condition probe transfer catastrophically negative ($R^2 \ll -800$), 1-NN purity $1.000$ across pooled samples, and cross-condition memory transplants that drop SPL by $0.19$--$0.21$ between rich-encoder pairs (isolation metric up to $-0.17$). Whatever non-spatial task-relevant features each LSTM carries, it carries them in its own linear subspace --- so much so that a probe trained on one condition predicts off-manifold values on another.
+
+\emph{(3)~Gaze-location test (pending).} Whether gaze location is a second representational-content axis \emph{within} the rich-encoder regime is what H3 asks; the cleanest test (foveated-shifted training with hardcoded gaze at the learned-gaze module's collapsed location) is in progress at submission and will report in §\ref{sec:h3}.
+
+The pattern parallels three threads of animal-navigation research --- enhanced hippocampal coupling in congenitally blind humans, the disruption of rodent grid-cell firing in darkness with navigation nonetheless preserved, and cross-modality hippocampal remapping in bats. We use these as analogy only: the convergent direction across systems is suggestive of a sensor--memory coupling principle, but our experiments do not test architectures other than LSTM, so we do not claim the principle is architecture-independent. Open questions: (i)~whether the encoder-bottleneck ordering extends to finer-grained resolution sweeps (Appendix~\ref{app:scaling}); (ii)~whether H3 stands on the clean causal test; (iii)~whether transformer-based navigation agents reproduce the encoder--memory race; (iv)~whether equivalent effects shape representations in non-navigation embodied tasks; (v)~multi-seed replication of all five conditions to bound seed-to-seed variability of the H1 numbers.
 
 
-\subsection{Tables}
-
-
-All tables must be centered, neat, clean, and legible.  The table number and
-title always appear before the table.  See Table~\ref{sample-table}.
-
-
-Place one line space before the table title, one line space after the
-table title, and one line space after the table. The table title must
-be lower case (except for the first word and proper nouns); tables are
-numbered consecutively.
-
-
-Note that publication-quality tables \emph{do not contain vertical rules}. We
-strongly suggest the use of the \verb+booktabs+ package, which allows for
-typesetting high-quality, professional tables:
-\begin{center}
-  \url{https://www.ctan.org/pkg/booktabs}
-\end{center}
-This package was used to typeset Table~\ref{sample-table}.
-
-
-\begin{table}
-  \caption{Sample table caption. Explain what the table shows and add a key take-away message to the caption.}
-  \label{sample-table}
-  \centering
-  \begin{tabular}{lll}
-    \toprule
-    \multicolumn{2}{c}{Part}                   \\
-    \cmidrule(r){1-2}
-    Name     & Description     & Size ($\mu$m) \\
-    \midrule
-    Dendrite & Input terminal  & $\approx$100     \\
-    Axon     & Output terminal & $\approx$10      \\
-    Soma     & Cell body       & up to $10^6$  \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\subsection{Math}
-Note that display math in bare TeX commands will not create correct line numbers for submission. Please use LaTeX (or AMSTeX) commands for unnumbered display math. (You really shouldn't be using \$\$ anyway; see \url{https://tex.stackexchange.com/questions/503/why-is-preferable-to} and \url{https://tex.stackexchange.com/questions/40492/what-are-the-differences-between-align-equation-and-displaymath} for more information.)
-
-\subsection{Final instructions}
-
-Do not change any aspects of the formatting parameters in the style files.  In
-particular, do not modify the width or length of the rectangle the text should
-fit into, and do not change font sizes. Please note that pages should be
-numbered.
-
-
-\section{Preparing PDF files}
-
-
-Please prepare submission files with paper size ``US Letter,'' and not, for
-example, ``A4.''
-
-
-Fonts were the main cause of problems in the past years. Your PDF file must only
-contain Type 1 or Embedded TrueType fonts. Here are a few instructions to
-achieve this.
-
-
-\begin{itemize}
-
-
-\item You should directly generate PDF files using \verb+pdflatex+.
-
-
-\item You can check which fonts a PDF files uses.  In Acrobat Reader, select the
-  menu Files$>$Document Properties$>$Fonts and select Show All Fonts. You can
-  also use the program \verb+pdffonts+ which comes with \verb+xpdf+ and is
-  available out-of-the-box on most Linux machines.
-
-
-\item \verb+xfig+ ``patterned'' shapes are implemented with bitmap fonts.  Use
-  "solid" shapes instead.
-
-
-\item The \verb+\bbold+ package almost always uses bitmap fonts.  You should use
-  the equivalent AMS Fonts:
-\begin{verbatim}
-   \usepackage{amsfonts}
-\end{verbatim}
-followed by, e.g., \verb+\mathbb{R}+, \verb+\mathbb{N}+, or \verb+\mathbb{C}+
-for $\mathbb{R}$, $\mathbb{N}$ or $\mathbb{C}$.  You can also use the following
-workaround for reals, natural and complex:
-\begin{verbatim}
-   \newcommand{\RR}{I\!\!R} %real numbers
-   \newcommand{\Nat}{I\!\!N} %natural numbers
-   \newcommand{\CC}{I\!\!\!\!C} %complex numbers
-\end{verbatim}
-Note that \verb+amsfonts+ is automatically loaded by the \verb+amssymb+ package.
-
-
-\end{itemize}
-
-
-If your file contains type 3 fonts or non embedded TrueType fonts, we will ask
-you to fix it.
-
-
-\subsection{Margins in \LaTeX{}}
-
-
-Most of the margin problems come from figures positioned by hand using
-\verb+\special+ or other commands. We suggest using the command
-\verb+\includegraphics+ from the \verb+graphicx+ package. Always specify the
-figure width as a multiple of the line width as in the example below:
-\begin{verbatim}
-   \usepackage[pdftex]{graphicx} ...
-   \includegraphics[width=0.8\linewidth]{myfile.pdf}
-\end{verbatim}
-See Section 4.4 in the graphics bundle documentation
-(\url{http://mirrors.ctan.org/macros/latex/required/graphics/grfguide.pdf})
-
-
-A number of width problems arise when \LaTeX{} cannot properly hyphenate a
-line. Please give LaTeX hyphenation hints using the \verb+\-+ command when
-necessary.
-
-\begin{ack}
-Use unnumbered first level headings for the acknowledgments. All acknowledgments
-go at the end of the paper before the list of references. Moreover, you are required to declare
-funding (financial activities supporting the submitted work) and competing interests (related financial activities outside the submitted work).
-More information about this disclosure can be found at: \url{https://neurips.cc/Conferences/2026/PaperInformation/FundingDisclosure}.
-
-
-Do {\bf not} include this section in the anonymized submission, only in the final paper. You can use the \texttt{ack} environment provided in the style file to automatically hide this section in the anonymized submission.
-\end{ack}
-
-\section*{References}
-
-
-References follow the acknowledgments in the camera-ready paper. Use unnumbered first-level heading for
-the references. Any choice of citation style is acceptable as long as you are
-consistent. It is permissible to reduce the font size to \verb+small+ (9 point)
-when listing the references.
-Note that the Reference section does not count towards the page limit.
-\medskip
-
-
-{
-\small
-
-
-[1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms for
-connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and T.K.\ Leen
-(eds.), {\it Advances in Neural Information Processing Systems 7},
-pp.\ 609--616. Cambridge, MA: MIT Press.
-
-
-[2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS: Exploring
-  Realistic Neural Models with the GEneral NEural SImulation System.}  New York:
-TELOS/Springer--Verlag.
-
-
-[3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of learning and
-recall at excitatory recurrent synapses and cholinergic modulation in rat
-hippocampal region CA3. {\it Journal of Neuroscience} {\bf 15}(7):5249-5262.
-}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\appendix
-
-\section{Technical appendices and supplementary material}
-Technical appendices with additional results, figures, graphs, and proofs may be submitted with the paper submission before the full submission deadline (see above). You can upload a ZIP file for videos or code, but do not upload a separate PDF file for the appendix. There is no page limit for the technical appendices. 
-
-Note: Think of the appendix as ``optional reading'' for reviewers. The paper must be able to stand alone without the appendix; for example, adding critical experiments that support the main claims to an appendix is inappropriate. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliographystyle{plainnat}
+\bibliography{literature}
 
 \newpage
-\input{checklist.tex}
+\input{checklist}
+
+\newpage
+\appendix
+
+\section{Supplementary visualisations}
+\label{app:supp_figs}
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.52\linewidth}\centering
+\includegraphics[width=\linewidth]{fig/training_curves.pdf}\\
+{\footnotesize (a) Training curves (TensorBoard event-file scalars). All four sighted conditions converge to SPL $0.82$--$0.85$ and success $>97\%$ by $\sim$100M frames; blind converges to SPL $\sim$0.50 over a longer horizon. The glitch at frame~$\approx 228$M (fov-learned) is a resume-boundary artefact in the scalar log.}
+\end{minipage}\hfill
+\begin{minipage}{0.44\linewidth}\centering
+\includegraphics[width=\linewidth]{fig/h2_hidden_embedding_tsne.pdf}\\
+{\footnotesize (b) t-SNE projection of top-layer LSTM hidden states (deterministic-rollout probes), pooled across all five conditions (perplexity 30). The five conditions occupy non-overlapping regions of the 2-D embedding --- a visual confirmation of the near-zero CKA result (§\ref{sec:h2}).}
+\end{minipage}
+\caption{Supplementary visualisations referenced from the main text.}
+\label{fig:supp_figs}
+\end{figure}
+
+
+\section{Gaze-Diversity Auxiliary Loss (H3 Ablation)}
+\label{app:gaze_diversity}
+
+\noindent\textbf{Motivation}\quad In the first foveated-learned training run the gaze decoder collapsed (per-dimension std $\approx 5\times 10^{-4}$). We attribute this to two mechanisms: (i)~once the sigmoid output saturates, its derivative $\sigma'(x)\to 0$ attenuates gradient signal; (ii)~consistent-gaze views yield more predictable visual features, so the reward-gradient path has no explicit incentive for variety.
+
+\noindent\textbf{Target-variance hinge}\quad We add $\mathcal{L}_\text{div} = \lambda \cdot \text{relu}(\sigma^2_\text{target} - \text{Var}_\text{batch}[g])$ where $g \in [0,1]^2$, $\text{Var}_\text{batch}$ averaged over the two gaze dimensions, $\sigma^2_\text{target}=0.01$ (std $\approx 0.1$), $\lambda = 0.01$. The hinge disappears once variance exceeds the target. We also evaluated an un-capped $-\lambda\cdot\text{Var}[g]$ variant as a negative control.
+
+\noindent\textbf{Pilot 1 (uncapped, job 2840256)}\quad After 10\,M frames, gaze variance exceeded that of a uniform distribution over $[0,1]^2$ (std $[0.43, 0.42]$ vs.\ theoretical max $0.289$): gaze was essentially random. Task performance collapsed: SPL plateaued at $0.05$, running-mean metrics transitioned to NaN at $\sim 8$\,M frames. The uncapped regulariser destroyed the consistent-foveation signal the policy needs.
+
+\noindent\textbf{Pilot 2 (hinge, job 2842288)}\quad Gaze converged to an extreme corner of image space: mean $(0.001, 0.998)$ with std $[0.020, 0.023]$ --- well below the target std of $0.1$ and therefore with the hinge active throughout. Task SPL plateaued at $0.05$ as in pilot 1. The policy apparently found the minimum-task-cost gaze that partially satisfies the diversity pressure: a sigmoid saturated at one corner, producing a constant image-corner view.
+
+\noindent\textbf{Interpretation}\quad Both pilots argue that in our deterministic sigmoid-MLP gaze architecture with slow-gaze rollouts, gaze collapse is a pre-requisite for task learning rather than an accident. Task signal alone does not spontaneously produce informative fixation, and an exogenous anti-collapse regulariser moves gaze toward whatever region reduces regulariser loss fastest, which is generically \emph{not} the task-useful region. A genuine H3 test likely requires (i)~a stochastic gaze location with entropy bonus, so diversity is sampled at rollout time rather than enforced on a deterministic output; or (ii)~a task-aligned intrinsic reward (e.g., information gain about goal-relative position); or (iii)~an architectural change separating gaze generation from visual-feature extraction (e.g., attention-based gaze).
+
+
+\section{Training Stability: Silent Weight Corruption in DD-PPO}
+\label{app:training-stability}
+
+During an initial foveated training run we observed a failure mode that did not manifest as a crash but as slow, silent corruption of the learned weights. After $\approx$170M frames of stable progress (reward $\approx 10$, SPL $\approx 0.83$), one mini-batch on one DDP worker produced a NaN gradient. Because \verb|torch.nn.utils.clip_grad_norm_| does not sanitise non-finite gradients---the global norm becomes NaN, the clip coefficient becomes NaN, and \verb|grad *= NaN| remains NaN---the subsequent \verb|optimizer.step()| wrote NaN into every parameter. DDP all-reduce propagated the corruption across workers. The training loop did not raise: it continued for 2.5 days with reward$=$NaN and SPL$=0$ until \verb|torch.multinomial| finally rejected the NaN probability tensor. All checkpoints saved during this window were unrecoverable (90 of 97 parameter tensors entirely NaN).
+
+To isolate the origin of the NaN gradient we re-ran training from the last clean checkpoint with \verb|torch.autograd.set_detect_anomaly(True)| and per-module forward-output hooks. The anomaly traceback pinned the failure to \verb|MseLossBackward0|, i.e.\ the backward pass of the value-head loss $\tfrac{1}{2}(V(s) - R)^2$; rare return-vs-value discrepancies overflowed float32 in the squaring step, producing non-finite gradients downstream.
+
+Our mitigation is a minimally invasive patch to \verb|PPO.before_step| that zeroes any non-finite gradient element before clipping. A bad mini-batch becomes a no-op update rather than a catastrophic one. The patch is a no-op on clean training paths. Across the five conditions reported here, no NaN events were observed during full training after deployment, and all final checkpoints contain only finite weights. We reported the underlying issue upstream (habitat-lab issue \#2226) with a minimal reproduction and a proposed native fix.
+
+
+\section{Encoder-capacity scaling sweep}
+\label{app:scaling}
+
+\TODO{The scaling sweep trains matched-compute variants at input
+resolutions $\{32, 48, 64, 96, 128, 192\}$ alongside the existing blind
+(no encoder) and uniform $256{\times}256$ anchors. Probe results on the
+trained checkpoints will populate Figure~\ref{fig:scaling} and this
+appendix section. Hypothesis: GPS probe $R^2$ decreases monotonically
+with input resolution, from $R^2 \approx 0.95$ at no-encoder to
+$R^2 \approx 0$ at $256{\times}256$, crossing into the pass-through
+regime between $48$ and $128$ pixels.}
+
+\begin{figure}[h]
+\centering
+\fbox{\rule{0pt}{4cm}\rule{0.8\linewidth}{0pt}}
+\caption{Encoder-capacity scaling curve. \TODO{Pending data.} x-axis: input resolution in pixels; y-axis: GPS and compass probe $R^2$ (5-fold CV, mean$\pm\sigma$).}
+\label{fig:scaling}
+\end{figure}
 
 
 \end{document}

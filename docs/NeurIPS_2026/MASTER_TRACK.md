@@ -274,10 +274,56 @@ For each figure: source, freshness, paper-section, ready-to-publish.
 ## 6. Decision log (chronological, why we did what)
 
 ### 2026-04-22 to 04-24: Pre-fix work and bug discoveries
-- Discovered `collect.py deterministic=False` → 4-step quasi-static trajectories → R² inflation. Fixed (commit c81352e); re-collected all det probes.
-- Discovered B1 (analyze.py per-scene step-level split leakage). Fixed; re-analyzed (numbers within 0.02 R² of pre-fix).
-- Discovered E2 (foveation max_dist static instead of per-sample). Fixed; affects shifted-gaze conditions. Decided to retrain affected conditions on friend's H100.
-- Wrote audit findings (`AUDIT_FINDINGS.md`).
+
+**The deterministic-sampling bug (root cause of original H1 reversal)**
+- `scripts/probing/collect.py` hardcoded `deterministic=False` while every other
+  eval script in the codebase uses `deterministic=True` with explicit
+  "deterministic for eval" comments.  Under stochastic sampling, conditions
+  with higher action entropy (fov-fix, uniform, matched, blind under their
+  trained stochastic policies) sampled the STOP action with probability
+  $\sim 0.25$/step → mean episode length $\sim 4$ steps → target variance two
+  orders of magnitude below the episodic range → trivially high probe $R^2$
+  across all conditions (any predictor fits a near-constant target).
+- Fixed in commit `c81352e` (default to `True`, expose `--deterministic` flag).
+  Re-collected all 5 conditions' det probes.  Numbers used in paper Table 1
+  are all from the post-fix data.
+
+**Original-vs-fixed claim status (after deterministic re-collection)**
+| Original claim | Status | Evidence under det |
+|---|---|---|
+| H1: foveated > uniform compensatory memory | ❌ REVERSED | Both ~0 GPS R² |
+| "More pixels ≠ better decoding" | ✅ Stronger | Matched 1×1 R²=0.78 vs uniform R²≈0 |
+| H2: representational format divergence | ✅ Survives | CKA / transplant / transfer all behavioural-grade |
+| H3: fov-learned compass 0.94 | ❌ Bug artefact | Det CV R² = -1.34 ± 3.14 |
+| "LSTM learns cognitive map" | ✅ Strengthened | Blind 0.95, matched 0.78 |
+
+**The TRUE finding** (replacing the original claim):
+"Visual encoder capacity inversely determines linear top-layer LSTM spatial
+encoding."  Decoupled cleanly via the matched-compute condition (visual
+input present, but encoder feature map is 1×1 — bottleneck without "no
+vision").
+
+**Other audit-found bugs (categorised in former AUDIT_FINDINGS.md, all
+fixed in commits 79c2db1, b7513d9, etc.)**
+- **B1 (per-scene step-level split leakage)** in `analyze.py`: probe split
+  was step-level within scene, leaking between train/test for episodes
+  straddling the split.  Fix: episode-level split within each scene.
+  Re-analysed (numbers within 0.02 R² of pre-fix) — claim unaffected.
+- **G1 (shortcut figure caption mis-states aggregation)**: caption claimed
+  `n=200` per bar (flat average), code does mean-of-20-scene-means.  Fixed
+  caption.
+- **G4 (transplant episode pinning)**: `env._current_episode = ep` not
+  guaranteed to pin episode in all habitat-lab versions.  Fix: use
+  `env._episode_iterator = iter([ep])` + assertion.  Aggregate SPL deltas
+  (0.19-0.21) unaffected because averaged over 150 random eps.
+- **E2 (foveation `_max_dist` static instead of per-sample)**: affects
+  shifted-gaze conditions, off-centre gaze over-saturates peripheral
+  eccentricity.  Fix: per-sample dynamic max_dist.  **Centred-gaze
+  conditions (fov-fix, blind, matched, uniform) unaffected; fov-learned
+  and fov-shifted require retrain (delegated to friend's H100,
+  `foveation_transform_fix_retrain.md`)**.
+- **G3, B2, B3, B5, C3, C4, D5, etc.**: minor / documentation-only fixes,
+  no claim impact, all addressed in commits.
 
 ### 2026-04-24: Paper reframe
 - Original H1 ("foveated > uniform compensatory memory") busted under deterministic data. Reframed to encoder–memory race using matched-compute as decoupling condition.
@@ -311,7 +357,7 @@ Useful one-liners to refresh state:
 ssh izar "squeue -u wxu --format='%.10i %.20j %.5T %.10q %.10M'"
 
 # Recent commits affecting paper
-git log --oneline -10 -- docs/NeurIPS_2026/main.tex
+git log --oneline -10 -- docs/NeurIPS_2026/neurips_2026.tex
 
 # Figure freshness (date-sorted)
 ls -la docs/NeurIPS_2026/fig/*.pdf | sort -k 6,8

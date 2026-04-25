@@ -117,4 +117,4 @@ ${PY} "${PROJECT_DIR}/scripts/paper_figures/make_training_curves.py" \
 
 echo ""
 echo "=== All figures regenerated into ${FIG_OUT} at $(date) ==="
-echo "Re-compile the paper: cd docs/NeurIPS_2026 && pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex"
+echo "Re-compile the paper: cd docs/NeurIPS_2026 && pdflatex neurips_2026.tex && bibtex neurips_2026 && pdflatex neurips_2026.tex && pdflatex neurips_2026.tex"
