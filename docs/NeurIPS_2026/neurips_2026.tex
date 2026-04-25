@@ -40,15 +40,14 @@ Recurrent navigation agents trained with deep RL build internal states that supp
 
 \begin{figure}[t]
 \centering
-\begin{minipage}{0.7\linewidth}
-\centering
-\begin{minipage}{0.31\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_blind.png}\\{\footnotesize (a) Blind}\end{minipage}\hfill
-\begin{minipage}{0.31\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_uniform.png}\\{\footnotesize (b) Uniform}\end{minipage}\hfill
-\begin{minipage}{0.31\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_foveated.png}\\{\footnotesize (c) Foveated (fixed gaze)}\end{minipage}\\[4pt]
-\includegraphics[width=\linewidth]{fig/fig_topdown.png}\\
-{\footnotesize (d) Bird's-eye navigation map: trajectory (blue) vs.\ geodesic shortest path (green).}
+\begin{minipage}{\linewidth}\centering
+\begin{minipage}{0.30\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_blind.png}\\{\footnotesize (a) Blind}\end{minipage}\hfill
+\begin{minipage}{0.30\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_uniform.png}\\{\footnotesize (b) Uniform}\end{minipage}\hfill
+\begin{minipage}{0.30\linewidth}\centering\includegraphics[width=\linewidth]{fig/fig_foveated.png}\\{\footnotesize (c) Foveated (fixed gaze)}\end{minipage}\\[6pt]
+\includegraphics[width=0.95\linewidth]{fig/trajectory_overlay.pdf}\\[2pt]
+{\footnotesize (d) The 5 conditions on the same Gibson val episode (scene 92, ep 414), each chosen so that all 5 SPLs sit within $\pm 0.10$ of their respective per-condition median --- i.e.\ all five are typical successful runs. Bottleneck conditions (blind 231 steps, matched 146) take winding paths consistent with planning from an integrated map; rich-encoder conditions (uniform / foveated / fov-learned, 77--80 steps) take near-direct paths.}
 \end{minipage}
-\caption{The five visual conditions differ only in what reaches the agent's encoder. (a) Blind: no visual input; only the non-visual sensor stack (goal-in-start-frame, GPS, compass, close-to-goal scalar) --- the Wijmans~\citep{wijmans2023emergence} configuration. (b) Uniform: $256\times 256$ full-resolution RGB. (c) Foveated (fixed gaze): eccentricity-dependent Gaussian blur centred on the image middle ($\sigma_{\max}=8$, quadratic falloff). The two additional conditions not shown are \emph{matched-compute} (a down-sampled uniform view with the same total pixel budget as foveated) and \emph{foveated (learned gaze)}, which adds a learned $(x,y)$ gaze offset to~(c). (d)~All conditions solve PointGoal navigation in the same Habitat Matterport3D / Gibson scenes; the top-down view is shown for reference only and is not available to the agent.}
+\caption{The five visual conditions differ only in what reaches the agent's encoder, but produce visibly different navigation behaviours. \emph{Inputs:} (a) Blind: no visual input; only the non-visual sensor stack (goal-in-start-frame, GPS, compass, close-to-goal scalar) --- the Wijmans~\citep{wijmans2023emergence} configuration. (b) Uniform: $256\times 256$ full-resolution RGB. (c) Foveated (fixed gaze): eccentricity-dependent Gaussian blur centred on the image middle ($\sigma_{\max}=8$, quadratic falloff). Two additional conditions not pictured: \emph{matched-compute} (a down-sampled uniform view at $48\times 48$, whose total pixel budget matches foveated and whose ResNet-18 encoder produces a $1{\times}1$ feature map) and \emph{foveated (learned gaze)}, which adds a learned $(x,y)$ gaze offset to (c). \emph{Behaviour:} (d) all five conditions solve the same PointGoal navigation task; the trajectory shape and length differ systematically, previewing the encoder--memory race finding (§\ref{sec:h1}).}
 \label{fig:setup}
 \end{figure}
 
