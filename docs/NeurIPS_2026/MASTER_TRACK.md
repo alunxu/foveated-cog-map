@@ -272,7 +272,7 @@ For each figure: source, freshness, paper-section, ready-to-publish.
 |---|---|---|---|---|
 | F1 | Foveation $\sigma_{\max}=2$ | Low-blur foveated $\to$ does it look like uniform? | §4.4.2 | submitted |
 | F2 | Foveation $\sigma_{\max}=4$ | Same gradient, lower σ | §4.4.2 | submitted |
-| F3 | Log-polar foveation | Spatial-sampling vs blur bottleneck distinction | §4.4.3 | submitted |
+| F3 | Log-polar foveation | Spatial-sampling vs blur bottleneck distinction; predict LSTM GPS R² ≥ 0.3 (encoder 2×2 spatial output, between matched 1×1 and uniform 8×8) | §4.4.3 | training (14M/250M, ETA 2-3 days). **At ~125M (1.5 days) do early probe to check trend** |
 | F4a | Foveation $\sigma_{\max}=12$ | High-blur foveated $\to$ approaches matched? | §4.4.2 | submitted |
 | F4b | Foveation $\sigma_{\max}=20$ | Strongest foveation in sweep | §4.4.2 | submitted |
 | F-shift | Foveated-shifted (gaze $(0.49, 0.62)$) | Gaze location as 2nd content axis (H3 causal) | §4.4.4 + §4.5 | submitted |
