@@ -353,6 +353,11 @@ For each: which paper claim is currently held by hedging that this experiment wo
 - Foveated-learned MP3D compass +1.75 swing (Gibson −1.34 → MP3D +0.41) — single-seed; multi-seed would test
 - Population coding finding "rich-encoder peaked units encode position-correlated features" depends on threshold (1 bit); robustness under threshold sweep would help
 
+### 5.6 Mined-from-existing-data side observations (single-seed; verify with multi-seed)
+- **Persistent-failure terminal locations** (Table 4 in §4.5, commit `fab08b3`): only uniform's persistent-memory failures cluster around the previous-episode goal location (margin +1.83m); blind/matched/foveated terminal positions are closer to the new goal but not at it (n=27/35/16 same-floor failures). This refines the "having-vs-using" 2×2 dissociation: uniform's memory anchors on visual landmarks; blind's memory interferes through position-mis-reporting rather than location-anchor.
+- **LSTM gain** (mentioned in §4.4, commit `2a4b9fe`): LSTM top-layer GPS R² minus encoder feature-map GPS R² is +3.9 for matched, +0.0 for uniform, +0.7 for foveated. Mid-magnitude foveated gain is consistent with foveation supplying less navigation-useful visual structure than uniform.
+- **Failure-episode asymmetry** (NOT YET in paper, low confidence at n=12, single seed): 98 episodes uniquely fail in bottleneck conditions (rich-encoder succeeds), but only 12 episodes uniquely fail in rich-encoder conditions (bottleneck succeeds). Of the 12, scene 91 contributes 3, suggesting at least one "rich-encoder-unfriendly" scene. 6 of the 12 are short-geodesic ($<7$m), so failure isn't path-length-driven. Worth re-checking post multi-seed; if pattern holds, indicates rich-encoder agents have a small but non-zero failure mode that bottleneck doesn't share — visual landmark misreading on specific scene types.
+
 ---
 
 ## 6. Decision log (chronological, why we did what)
