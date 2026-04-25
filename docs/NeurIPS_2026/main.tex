@@ -110,8 +110,6 @@ Probed variables: GPS position (episodic), compass heading (episodic), distance-
 
 For foveated-fixed, all reported analyses (probes, behavioural, eval) use checkpoint ckpt.36 at $\sim$174M frames, the last clean intermediate before the silent-corruption window (Appendix~\ref{app:training-stability}).
 
-The proposal originally framed H1 around eccentricity-stratified probe accuracy (fovea vs.\ periphery). We replaced that target with the temporal-lag path-history probe because eccentricity in image coordinates is not well-defined for the blind condition and because the lag-$k$ probe directly operationalises \emph{compensatory memory}: longer retention of past positions is what a compensatory trace would produce.
-
 \subsection{Cross-Condition Analysis}
 
 To test H2, we employ two complementary methods. \emph{Linear CKA}~\citep{kornblith2019cka} measures representational similarity between conditions by comparing the geometry of hidden-state activations. Values near 1 indicate identical geometry; near 0 indicates unrelated representations. \emph{Probe transfer:} we train a GPS probe on one condition's hidden states and evaluate on another's. If spatial information is encoded in a shared linear subspace, cross-condition transfer should succeed. Catastrophic failure indicates fundamentally different encoding formats. A third test proposed in our original plan --- cross-heading generalisation (train on heading $A$, test on opposite heading) --- was implemented but returned an ``insufficient samples'' sentinel at our probe sizes; we discuss this in §\ref{sec:limitations}.
