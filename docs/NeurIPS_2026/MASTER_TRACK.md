@@ -163,23 +163,32 @@ Status legend:
 | Foveation conditions disable normaliser (F2 will verify) | ⚠️ — F2 result pending |
 | Behavioural probes (transplant, shortcut) | ✅ |
 
-### §4 Results
+### §4 Results — RESTRUCTURED 2026-04-25 (commit pending)
+
+New 6-section structure (was 5; foveation slot is new):
+- §4.1 Five conditions, same task — slim summary table (5 cols)
+- §4.2 Encoder–memory race (H1) — consolidated, mega-figure
+- §4.3 Format-level divergence (H2) — transplant-led
+- §4.4 Foveation: where it sits, where the cleaner tests sit — NEW SLOT for in-flight foveation experiments
+- §4.5 Gaze location (H3) — kept independent
+- §4.6 Boundaries and additional probes — short
+
 | Sub | Claim | Status |
 |---|---|---|
-| §4.1 | Per-condition summary table | ✅ (caption flagged "no-cap"; temporal nuance pointed out) |
-| §4.2 | H1 finding | ✅ (deterministic data, lag-k, temporal probe) |
-| §4.2 | Temporal stability sub-finding | ✅ (commit 6408d6c integrated Fig temporal_probe) |
-| §4.2 | Layer 0 has GPS for all conditions | ✅ |
-| §4.2 | MLP probe partially recovers position from rich-encoder | ✅ + hedge about position-correlated features |
+| §4.1 | Per-condition summary table (5 cols: cond / frames / SPL / succ / GPS R² / Compass R²) | ✅ slimmed |
+| §4.2 | H1 finding + temporal stability + Layer-0 disambiguation + MLP probe + MP3D | ✅ all consolidated into §4.2 with single mega-figure (`fig:h1_mega`) |
 | §4.2 | Proposed mechanism (encoder–memory race) | ✅ + TODO for direct causal test |
-| §4.3 | H2 format divergence (CKA, transfer, 1-NN, transplant) | ✅ |
-| §4.3 | "Pairs we tested" caveat | ⚠️ — A 5×5 transplant matrix will eliminate |
-| §4.4 | H3 learned-gaze collapse | ✅ |
-| §4.4 | H3 fov-shifted causal control | ⚠️ TODO (friend's H100) |
-| §4.5 | Place cells + multilayer | ✅ + 🆕 will be expanded with population coding analysis |
-| §4.5 | Generalisation to MP3D | ✅ |
-| §4.6 | Population coding sub-section | 🆕 PLANNED — pop coding analysis (job 2849188) |
-| §4.6 | Training dynamics sub-section | 🆕 PLANNED — training dynamics probes (J) |
+| §4.3 | H2 format divergence (transplant lead, then CKA / transfer / 1-NN) | ✅ |
+| §4.3 | "Pairs we tested" caveat for transplant | ⚠️ — 5×5 matrix in flight (jobs 2849148-79) |
+| §4.4 | Foveated-fix / fov-learned current placement (rich-encoder regime under σ_max=8 Gaussian blur) | ✅ |
+| §4.4 | F1-F4 strength sweep design + signature | 🆕 PLANNED — disclosed; in training |
+| §4.4 | F3 log-polar foveation design + signature | 🆕 PLANNED — disclosed; in training |
+| §4.4 | Encoder feature-map probe design + signature | 🆕 PLANNED — disclosed; in probing (job 2849191-93) |
+| §4.4 | Foveated-shifted control (links to H3) | 🆕 PLANNED — disclosed; in training |
+| §4.5 | H3 learned-gaze collapse | ✅ |
+| §4.5 | H3 fov-shifted causal control | ⚠️ TODO (in flight) |
+| §4.5 | Shortcut discovery + "having vs using" anomaly | ✅ |
+| §4.6 | Occupancy + place cells + per-unit info + goal vector → boundaries | ✅ slimmed |
 
 ### §5 Discussion
 | Claim | Status |
@@ -202,10 +211,11 @@ Status legend:
 ### Appendix
 | Section | Status |
 |---|---|
-| App A: supplementary figures | ✅ |
+| App A: supplementary figures (training, t-SNE, place_cells, goal_vector, layerwise, mp3d-companion) | ✅ |
 | App B: gaze-diversity loss pilot | ✅ |
 | App C: training stability (NaN bug) | ✅ |
-| App D: encoder-capacity scaling | ⚠️ TODO (friend's H100) |
+| App D: foveation experiments status (NEW, links from §4.4) | ✅ — design disclosed, results pending |
+| App E: encoder-capacity scaling | ⚠️ TODO (friend's H100) |
 
 ---
 
@@ -213,26 +223,36 @@ Status legend:
 
 For each figure: source, freshness, paper-section, ready-to-publish.
 
+**Restructure 2026-04-25**: figure budget went from 8 main + 2 tables → 4 main + 2 tables. Old standalone figures (h1_bottleneck, temporal_probe_evolution, layerwise_decay, mp3d_generalization, h3_content, place_cells, goal_vector_probe) consolidated or moved to appendix.
+
+### Main figures (after restructure)
 | Filename | Source | Freshness | Section | Status |
 |---|---|---|---|---|
-| `fig_blind.png`, `fig_uniform.png`, `fig_foveated.png`, `fig_topdown.png` | Static illustrations | static | Fig 1 (setup) | ✅ |
-| `h1_bottleneck.pdf` | Hardcoded values matching Table 1 | det | Fig 2 | ✅ |
-| `h2_cka_heatmap.pdf` | `cka_det.json` | det | Fig 3 | ✅ |
-| `transplant_sweep.pdf` | `*_to_*_mid<N>.json` (3 pairs) | det | Fig 4 | ✅ + 🆕 will refresh after A/H land |
-| `h3_content.pdf` | `goal_vector_det.json` + `data/shortcut/*` | det | Fig 5 | ✅ |
-| `place_cells.pdf` + `layerwise_decay.pdf` | `<cond>_gibson_det_analysis.json` 5a + 1d | det | Fig 6 | ✅ + 🆕 expanding via pop coding analysis |
-| `mp3d_generalization.pdf` | `<cond>_mp3d_det_analysis.json` | det | Fig 7 | ✅ |
-| `training_curves.pdf` | TB scalars | not affected by probe bug | App A | ✅ |
-| `h2_hidden_embedding_tsne.pdf` | det NPZs | det | App A | ✅ |
-| `temporal_probe_evolution.pdf` | `temporal_probe_det.json` | det | Fig (in §4.2) | ✅ |
-| **NEW PLANNED** | | | | |
-| `population_coding_summary.pdf` | `population_coding_det.json` (job 2849188) | det | §4.6 | 🆕 In-flight |
-| `rate_maps_<cond>.pdf` (×5) | Per-condition top-9 unit rate maps | det | App or §4.6 | 🆕 In-flight |
-| `training_dynamics.pdf` | `<cond>_gibson_ckpt<N>_det_analysis.json` × 22 | det | §4.6 | 🆕 In-flight (J) |
-| `transplant_5x5_matrix.pdf` | 5×5 transplant SPL matrix | det | §4.3 | 🆕 In-flight (A) |
-| `transplant_per_step.pdf` | extended midpoint sweep | det | §4.3 (new figure) | 🆕 In-flight (H) |
-| `encoder_features_probe.pdf` | `<cond>_encoder_features_det.json` | det | §3.2 / §4.5 | 🆕 In-flight (D) |
-| `scaling_sweep.pdf` | `matched-{32,64,96,192}` probes | det | App D | ❌ Friend's H100 |
+| `fig_blind.png`, `fig_uniform.png`, `fig_foveated.png`, `fig_topdown.png` | Static illustrations | static | Fig 1 (setup, in §1) | ✅ |
+| `h1_mega.pdf` (NEW) | 4-panel composite: hardcoded T1 + temporal_probe_det.json + 1d_multilayer + 1b_global_gps_compass × Gibson/MP3D | det | Fig 2 (§4.2 H1) | ✅ |
+| `h2_cka_heatmap.pdf` + `transplant_sweep.pdf` (combined fig) | `cka_det.json` + `*_to_*_mid<N>.json` | det | Fig 3 (§4.3 H2) | ✅ + 🆕 will refresh after A/H land |
+| `shortcut_bars.pdf` (was part of h3_content) | `data/shortcut/*` | det | Fig 4 (§4.5 H3) | ✅ |
+| `training_curves.pdf` + `h2_hidden_embedding_tsne.pdf` | TB / det NPZs | det | App A supp fig | ✅ |
+| `place_cells.pdf` + `goal_vector_probe.pdf` (now App) | det JSONs | det | App A supp fig | ✅ moved to appendix |
+| `layerwise_decay.pdf` + `mp3d_generalization.pdf` (now App) | det JSONs (companions to h1_mega panels c, d) | det | App A supp fig | ✅ moved to appendix |
+| `temporal_probe_evolution.pdf` (standalone, kept for completeness) | `temporal_probe_det.json` | det | now part of `h1_mega` panel (b); standalone retained | ✅ |
+
+### Foveation slot figures (planned for §4.4)
+| Filename | Source | Status |
+|---|---|---|
+| `foveation_strength_sweep.pdf` | F1-F4 probe results | 🆕 PLANNED — in flight |
+| `logpolar_vs_blur.pdf` | F3 log-polar probes | 🆕 PLANNED — in flight |
+| `encoder_feature_probe.pdf` | encoder feature-map probes job 2849191-93 | 🆕 PLANNED — in flight |
+| `foveated_shifted_results.pdf` | fov-shifted training + probe | 🆕 PLANNED — in flight |
+
+### Other in-flight
+| Filename | Source | Section | Status |
+|---|---|---|---|
+| `population_coding_summary.pdf` | `population_coding_det.json` (job 2849188; **JSON LANDED 2026-04-25, awaits figure script**) | App or §4.6 | 🆕 |
+| `training_dynamics.pdf` | `<cond>_gibson_ckpt<N>_det_analysis.json` × 22 | §4.6 / App | 🆕 In-flight (J) |
+| `transplant_5x5_matrix.pdf` | 5×5 transplant SPL matrix | §4.3 | 🆕 In-flight (A, jobs 2849148-64) |
+| `transplant_per_step.pdf` | extended midpoint sweep | §4.3 | 🆕 In-flight (H, jobs 2849166-79) |
+| `scaling_sweep.pdf` | encoder-resolution sweep | App E | ❌ Friend's H100 |
 
 ---
 
@@ -272,6 +292,21 @@ For each figure: source, freshness, paper-section, ready-to-publish.
 ---
 
 ## 6. Decision log (chronological, why we did what)
+
+### 2026-04-25 (afternoon): Results section restructure + foveation slot
+
+**Why restructured**: The original §4 Results structure put H1 as a hypothesis-by-hypothesis layout (H1 → H2 → H3 → "additional analyses"), with H1's most important reinforcing evidence (per-layer probe, MLP probe, MP3D generalization) buried in "additional analyses" rather than alongside H1. A reviewer's natural objection ("Layer 0 GPS exists for ALL conditions — how can H1 distinguish?") was answered three subsections later. Also, foveation was scattered as one of five conditions with no dedicated narrative slot, mismatching the paper's title.
+
+**What changed**:
+1. New 6-subsection structure: §4.1 setup → §4.2 H1 (consolidated) → §4.3 H2 (transplant-led) → **§4.4 Foveation slot (NEW)** → §4.5 H3 → §4.6 Boundaries.
+2. Consolidated H1 evidence into a single mega-figure `fig:h1_mega` with 4 panels: (a) current-state bars, (b) temporal probe, (c) per-layer, (d) MP3D. Replaces 4 separate figures.
+3. Slimmed summary table from 11 columns → 6 columns. lag-5 / shortcut / MP3D columns moved to their respective subsections.
+4. Place-cells, layerwise, goal-vector, MP3D-companion figures all moved to App A supplementary visualisations.
+5. Foveation slot (§4.4) created with disclosed-design / pending-results paragraphs for: F1-F4 strength sweep, F3 log-polar, encoder feature-map probe, foveated-shifted control. New App D `app:foveation-status` lists submission state.
+
+**Data fix surfaced in the process**: existing `make_mp3d_generalization_figure.py` used JSON field `gps_r2` (single train/test fit) instead of `gps_cv_r2_mean` (5-fold CV). This inflated the apparent rich-encoder negativity on MP3D in the standalone figure. Mega-figure panel (d) uses the correct CV-mean, which agrees with Table 1 / panel (a). Side effect: foveated MP3D GPS is `+0.35` (mild positive recovery, not "chance"), and foveated-learned MP3D is `-0.79` (less bad than `-2.43` Gibson). Paper text updated accordingly.
+
+**Scripts added**: `scripts/paper_figures/make_h1_mega_figure.py`.
 
 ### 2026-04-22 to 04-24: Pre-fix work and bug discoveries
 
