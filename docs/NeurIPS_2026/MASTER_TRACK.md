@@ -59,17 +59,21 @@ Snapshot 2026-04-25 23:40:
 
 ### 1.3 Friend's H100 — REQUIRED experiments (separate cluster, blocks paper)
 
-These experiments need H100 because they require new training runs (2-7 days each on V100, faster on H100) that are too long for our Izar QOS, OR are independent modules best parallelised separately. \emph{None of them are in flight right now — they need explicit hand-off to the collaborator.}
+These experiments need H100 because they require new training runs (2-7 days each on V100, faster on H100) AND we want to avoid splitting/merging multi-cluster results.
 
 | Code | Experiment | Why needed | Paper section affected | Effort estimate |
 |---|---|---|---|---|
-| **H100-A** | Fov-shifted causal H3 retrain (clean transform) | Old `foveated_shifted_gibson_buggy_transform` used the broken transform; clean H3 causal control needs a fresh retrain at the collapsed gaze location $(0.49, 0.62)$ | §4.5 H3 (currently `\TODO{Training in progress}`) + §4.4.4 in App D | 1 retrain × 2--3 days V100 (faster on H100) |
-| **H100-B** | Encoder-resolution scaling sweep ($32, 48, 64, 96, 128, 192$ pixels at fixed encoder stack) | Tests H1 mechanism causally — directly varies encoder spatial output dimensionality with everything else held fixed | App E (currently `\TODO{Pending data}`); strengthens §4.2 mechanism + §5.4 implication (i) | 6 retrains × 2--3 days V100 = 12-18 V100-days. **H100 critical** |
-| **H100-C** | Foveation-fix multi-seed (seeds 0, 1, 3) | Lets us promote the §4.5 2$\times$2 dissociation from "candidate" to "robust"; current claims rest on single-seed runs | §1 / §4.5 / §6 (hedging upgrade) | 3 retrains × 2--3 days each (Izar uniform_seed2 + fov_seed2 already running, will land tomorrow) |
+| **H100-A** | Fov-shifted causal H3 retrain (clean transform) | Clean H3 causal control: foveated agent with hardcoded gaze at $(0.49, 0.62)$, the collapsed-gaze location | §4.5 H3 (currently `\TODO{Training in progress}`) + §4.4.4 in App D | 1 retrain × 2--3 days V100 |
+| **H100-B** | Encoder-resolution scaling sweep ($32, 48, 64, 96, 128, 192$ pixels at fixed encoder stack) | Tests H1 mechanism causally — directly varies encoder spatial output dimensionality with everything else held fixed | App E (currently `\TODO{Pending data}`); strengthens §4.2 mechanism + §5.4 implication (i) | 6 retrains × 2--3 days V100 = 12-18 V100-days. **H100 strongly preferred for parallelism** |
 
-**Hand-off status**: Friend has docs (`experiments/foveation_transform_fix_retrain.md`, `experiments/encoder_capacity_scaling.md`) but has not started training. **Critical path: H100-A and H100-B are the most blocking** — without them §4.4 H3 and App E remain TODO at submission.
+**Removed from H100 list (2026-04-26)**: ~~H100-C Multi-seed gap fills~~ — decision to keep all multi-seed work on Izar to avoid split/merge complexity. Submitted blind/matched/foveated_learned seed=2 retrains via Izar normal QOS (jobs 2850374-76); uniform/foveated seed=2 already in flight on cs-503 QOS. All 5 conditions will have N=2 multi-seed coverage by ~3 days from now.
 
-**Decision (2026-04-25)**: F1-F4 σ-sweep + log-polar + normaliser were moved off H100 list onto Izar to keep results in one place; H1-H3 paper claims do NOT depend on F1-F4. The H100 list is now strictly the experiments friend's compute is best for or for which we lack queue capacity.
+**Decision (2026-04-25 / 26)**: 
+1. F1-F4 σ-sweep + log-polar + normaliser run on Izar (paper claims don't depend on them; they only sharpen).
+2. **All multi-seed retrains run on Izar** (avoid cross-cluster merging headaches).
+3. H100 list is now strictly: H100-A + H100-B (the 2 experiments truly best for friend's H100). 
+
+**Hand-off status**: Friend has docs (`experiments/foveation_transform_fix_retrain.md`, `experiments/encoder_capacity_scaling.md`). **Critical path: H100-A and H100-B are the most blocking** — without them §4.5 H3 fov-shifted and App E scaling sweep remain TODO at submission.
 
 ---
 
@@ -310,11 +314,12 @@ For each figure: source, freshness, paper-section, ready-to-publish.
 
 ### 5.2 ⚠️ Friend's H100 — REQUIRED experiments (block paper, see §1.3 above)
 
+Reduced to 2 experiments (multi-seed moved off H100 to Izar 2026-04-26).
+
 | Code | Experiment | What it answers | Status |
 |---|---|---|---|
-| **H100-A** | Fov-shifted causal H3 retrain (clean transform, seeds 0/1/3) | Replaces buggy-transform fov-lrn baseline AND populates §4.4.4 + §4.5 H3 causal test | ⚠️ **NOT STARTED** — critical path |
+| **H100-A** | Fov-shifted causal H3 retrain (clean transform) | Populates §4.4.4 + §4.5 H3 causal test | ⚠️ **NOT STARTED** — critical path |
 | **H100-B** | Encoder-resolution scaling sweep ($32, 48, 64, 96, 128, 192$ at fixed encoder stack) | App E: causally tests the encoder-spatial-output mechanism by varying encoder resolution while holding everything else fixed | ⚠️ **NOT STARTED** — critical path |
-| **H100-C** | Multi-seed gap fills for blind, matched, foveated, foveated-learned (seed 0, 1, 3) | Promotes single-seed dissociations to robust findings; uniform_seed2 + foveated_seed2 already on Izar (land tomorrow) | ⚠️ Partial: uniform/fov done on Izar, blind + matched + fov-lrn still need H100 |
 
 ### 5.3 Should-have experiments — not yet planned, would strengthen claims if added
 
