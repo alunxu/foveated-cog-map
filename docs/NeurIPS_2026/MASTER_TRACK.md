@@ -3,7 +3,7 @@
 Single source of truth for: cluster jobs, experiment status, paper
 claims, figure freshness, open questions, decision log.
 
-**Last updated**: 2026-04-25 22:50 (commit `6ecc508`).
+**Last updated**: 2026-04-25 23:40 (commit `a8a1338`).
 Update this file when state changes — do NOT rely on memory.
 
 ---
@@ -12,14 +12,14 @@ Update this file when state changes — do NOT rely on memory.
 
 | Dimension | Status |
 |---|---|
-| Paper version | v1 substantially complete; all main figures landed; awaiting in-flight experiments to fill placeholders |
-| Page count | **32 pages** (NeurIPS allows 9 main + unlimited appendix; we use the appendix budget heavily) |
-| Submission deadline | **~2 weeks out** (per user 2026-04-25) — not rushed, can wait for experiments |
-| Critical TODO in paper | App E scaling figure `\TODO{Pending data}` (friend H100); §4.4 in-flight subsections (4 experiments designed, awaiting numbers); 4 cells of 5×5 transplant matrix (matched recipient column) |
-| Cluster jobs running | 2 multi-seed retrains (uni_s2, fov_s2 — long-running) + several encoder feature & training-dyn |
-| Cluster jobs pending | ~30 (priority block) |
-| Most recent landed | Encoder feature-map probes (matched/uniform/foveated all 3), Phase B shortcut+trajectory data, 5×5 transplant matrix mostly populated, 1 training-dyn ckpt |
-| Most recent paper change | 5×5 transplant matrix integrated into §4.3 H2 + transplant_sweep moved to App A (commit `6ecc508`) |
+| Paper version | v1 substantially complete; aggressive cut done (§3 / §4.4 / §5.2 / §5.3 → appendix); main text dense |
+| Page count | **29 pages total**; main text 12-14 (Discussion p12, Conclusion p14, References p15+) |
+| Submission deadline | **~2 weeks out** (per user 2026-04-25) — not rushed |
+| Cluster: jobs RUNNING | 5 trainings (multi-seed seed2 + 3 foveation variants + normaliser) + 6 transplants |
+| Cluster: jobs PENDING | 22 training-dyn probes + 4-ish transplants |
+| Most recent landed | Encoder feature-map probes (3/3 conds), Phase B shortcut+trajectories (5/5 conds), 33-cell 5×5 transplant, 1 training-dyn ckpt (blind) |
+| Most recent paper change | Aggressive cut + appendix moves (commits `7409ac8` + `8267f80`); main text reduced from 30→29p; ~1 page headroom freed for incoming results |
+| Most recent submit batch | 22 training-dyn probes + 7 transplants (4 matched-recipient + 3 per-step missing) — 2026-04-25 23:30 (commit `a8a1338`) |
 
 ---
 
@@ -27,34 +27,49 @@ Update this file when state changes — do NOT rely on memory.
 
 ### 1.1 Running (verify with `ssh izar "squeue -u wxu"`)
 
-| Job ID | Name | Started | Expected | Output |
+Snapshot 2026-04-25 23:40:
+
+| Job ID | Name | Elapsed | Time left | Output |
 |---|---|---|---|---|
-| 2844326 | uni_s2 multi-seed | 2026-04-23 | ~2026-04-26 | `/scratch/izar/wxu/habitat_checkpoints/uniform_gibson_seed2/` |
-| 2844327 | fov_s2 multi-seed | 2026-04-23 | ~2026-04-26 | `/scratch/izar/wxu/habitat_checkpoints/foveated_gibson_seed2/` |
-| 2849136-9 | F1-F4 foveation strength sweep | 2026-04-25 | ~2026-04-28 | `foveated_v2_gibson` etc. (training; ~5% done at log-time) |
-| 2849139 | F3 log-polar (cs503_tr_fov_logpolar_gibson) | 2026-04-25 | ~2026-04-28 | `foveated_logpolar_gibson` (training; 2/36 ckpts) |
-| 2849138 | F4 strong σ=20 | 2026-04-25 | ~2026-04-28 | `foveated_strong_gibson` |
+| 2844326 | uni_s2 multi-seed | 2d 6h | **~18h** | `uniform_gibson_seed2/` (21/36 ckpts ≈ 84%) |
+| 2844327 | fov_s2 multi-seed | 2d 5h | **~18h** | `foveated_gibson_seed2/` (20/36 ckpts ≈ 80%) |
+| 2849139 | F3 log-polar | 5h | 2.5d | `foveated_logpolar_gibson/` (3 ckpts) |
+| 2849138 | F4 σ_max=20 strong | 7h | 2.5d | `foveated_strong_gibson/` (3 ckpts) |
+| 2849136 | foveated_v2 (clean σ=8 retrain) | 8h | 2.5d | `foveated_v2_gibson/` (3 ckpts) |
+| 2849... | F2 normaliser | very early | 3d | `foveated_normaliser_gibson/` (1 ckpt) |
+| 2850299-2850305 | Transplant cells (matched-recipient + a few per-step) | 0-5min | 3h | `/scratch/izar/wxu/transplant_results/` |
 
-### 1.2 Pending (in priority queue)
+### 1.2 Pending (just submitted, 2026-04-25 23:30, commit `a8a1338`)
 
-| Batch | Jobs submitted | Status | Per-job |
+| Batch | Jobs | Status | Per-job |
 |---|---|---|---|
-| 5×5 cross-condition transplant | 17 (2849148-64) | mostly LANDED — 33 cells in `/scratch/izar/wxu/transplant_results/` (4 matched-recipient cells still queued / running) | ~1.5h each |
-| Per-step transplant extension | 12 (2849166-79) | mostly LANDED — mid200/400/800 cells visible | ~1.5h each |
-| Training-dynamics probes | 22 (J) | 1/22 LANDED (blind ckpt 10) | ~3h each |
-| Encoder feature-map probes (D) | 3 (re-submitted 2849972-74 after script bug fix) | **3/3 LANDED** with results integrated in §4.4.4 | ~30 min each |
-| Population coding analysis | 1 (2849188) | LANDED, integrated in App A | done |
-| Phase B shortcut + trajectories (ST) | 5 (2849306-10) | **5/5 LANDED**, integrated in §4.5 (commit `d97eda9`) | ~30 min each |
-| Topdown render for Fig 1d | 1 (2849993, debug QOS) | LANDED, integrated in Fig 1 (commit `01c4933`) | ~3 min |
+| Training-dynamics probes (J) | 22 (2850318-2850340) | PENDING (queued normal QOS, run in parallel ~10 at a time) | ~1-3h each |
+| 4 matched-recipient transplant + 3 per-step missing | 7 | RUNNING (above) | ~1.5h each |
 
-### 1.3 Friend's H100 (separate cluster)
+### 1.3 Already LANDED & integrated in paper
 
-| Experiment | Status | Notes |
+| Batch | Status | Paper section |
 |---|---|---|
-| Fov-shifted causal H3 | NOT YET STARTED | Friend has docs (`foveation_transform_fix_retrain.md`); blocks §4.4 H3 |
-| Encoder-resolution scaling sweep | NOT YET STARTED | Friend has docs (`encoder_capacity_scaling.md`); blocks App D |
-| Multi-seed gap fills (foveation-fix retrains) | NOT YET STARTED | Friend has docs |
-| All other (F1-F4) | We're running them on Izar instead | Decision made 2026-04-25 to not split F1-F4 across clusters |
+| 5×5 cross-condition transplant (excluding matched recipient) | 13/16 cross + diag, 33 cells total | Fig 3 right panel (§4.3) |
+| Per-step transplant (mid200/400/800) | mostly done | App `fig:transplant_sweep_supp` |
+| Encoder feature-map probes (D) | **3/3** (matched/uniform/foveated) | §4.4.4 + Fig 4 |
+| Phase B shortcut + trajectories (ST) | **5/5** | §4.5 + Fig 6 |
+| Population coding analysis | 1/1 | App A `fig:supp_pop_coding` |
+| Topdown render for Fig 1d | 1/1 | Fig 1d (with floor plan) |
+
+### 1.3 Friend's H100 — REQUIRED experiments (separate cluster, blocks paper)
+
+These experiments need H100 because they require new training runs (2-7 days each on V100, faster on H100) that are too long for our Izar QOS, OR are independent modules best parallelised separately. \emph{None of them are in flight right now — they need explicit hand-off to the collaborator.}
+
+| Code | Experiment | Why needed | Paper section affected | Effort estimate |
+|---|---|---|---|---|
+| **H100-A** | Fov-shifted causal H3 retrain (clean transform) | Old `foveated_shifted_gibson_buggy_transform` used the broken transform; clean H3 causal control needs a fresh retrain at the collapsed gaze location $(0.49, 0.62)$ | §4.5 H3 (currently `\TODO{Training in progress}`) + §4.4.4 in App D | 1 retrain × 2--3 days V100 (faster on H100) |
+| **H100-B** | Encoder-resolution scaling sweep ($32, 48, 64, 96, 128, 192$ pixels at fixed encoder stack) | Tests H1 mechanism causally — directly varies encoder spatial output dimensionality with everything else held fixed | App E (currently `\TODO{Pending data}`); strengthens §4.2 mechanism + §5.4 implication (i) | 6 retrains × 2--3 days V100 = 12-18 V100-days. **H100 critical** |
+| **H100-C** | Foveation-fix multi-seed (seeds 0, 1, 3) | Lets us promote the §4.5 2$\times$2 dissociation from "candidate" to "robust"; current claims rest on single-seed runs | §1 / §4.5 / §6 (hedging upgrade) | 3 retrains × 2--3 days each (Izar uniform_seed2 + fov_seed2 already running, will land tomorrow) |
+
+**Hand-off status**: Friend has docs (`experiments/foveation_transform_fix_retrain.md`, `experiments/encoder_capacity_scaling.md`) but has not started training. **Critical path: H100-A and H100-B are the most blocking** — without them §4.4 H3 and App E remain TODO at submission.
+
+**Decision (2026-04-25)**: F1-F4 σ-sweep + log-polar + normaliser were moved off H100 list onto Izar to keep results in one place; H1-H3 paper claims do NOT depend on F1-F4. The H100 list is now strictly the experiments friend's compute is best for or for which we lack queue capacity.
 
 ---
 
@@ -287,19 +302,19 @@ For each figure: source, freshness, paper-section, ready-to-publish.
 | F4b | Foveation $\sigma_{\max}=20$ | Strongest foveation in sweep | §4.4.2 | submitted |
 | F-shift | Foveated-shifted (gaze $(0.49, 0.62)$) | Gaze location as 2nd content axis (H3 causal) | §4.4.4 + §4.5 | submitted |
 | F-norm | Foveated with normaliser re-enabled | Normaliser-invariance control | §3.2 implementation note | submitted |
-| A | 5×5 transplant matrix (17 cross-pairs) | Replace "we tested 3 pairs" with complete matrix | §4.3 | jobs 2849148-64 |
-| H | Per-step transplant (12 extended midpoints) | Does mismatch cost grow with midpoint? | §4.3 | jobs 2849166-79 |
-| J | Training dynamics (5 cond × 4-5 ckpts) | When does encoder-memory race emerge in training? | §4.6 / App | submitted |
-| D | Encoder feature-map probe (matched, uniform, foveated) | Where world-frame info sits encoder vs LSTM | §4.4.4 | jobs 2849191-93 |
-| ST | Shortcut + trajectories (5 conds) | Phase B paired-episode trajectory figure for §4.5 | §4.5 | jobs 2849306-10 |
+| A | 5×5 transplant matrix (cross-pairs at midpoint=30) | Replace "we tested 3 pairs" with complete matrix | §4.3 | LANDED 33 cells; 4 matched-recipient cells re-submitted 2850299-2850305 |
+| H | Per-step transplant (extended midpoints 200/400/800) | Does mismatch cost grow with midpoint? | App `fig:transplant_sweep_supp` | LANDED |
+| J | Training dynamics (22 ckpt probes across 5 conds) | When does encoder-memory race emerge in training? | §4.6 / App | 1/22 LANDED; 22 re-submitted 2850318-2850340 normal QOS |
+| D | Encoder feature-map probe (matched, uniform, foveated) | Where world-frame info sits encoder vs LSTM | §4.4.4 | **LANDED 3/3** + integrated |
+| ST | Shortcut + trajectories (5 conds) | Phase B paired-episode trajectory figure for §4.5 | §4.5 | **LANDED 5/5** + integrated |
 
-### 5.2 Awaiting friend's H100
+### 5.2 ⚠️ Friend's H100 — REQUIRED experiments (block paper, see §1.3 above)
 
 | Code | Experiment | What it answers | Status |
 |---|---|---|---|
-| F5a | Fov-learned clean-transform retrain (seeds 0, 1, 3) | Replaces buggy-transform fov-lrn baseline | TODO |
-| F6  | Encoder-resolution scaling sweep ($32{\times}32$ to $192{\times}192$) | App E: resolves the matched-bottleneck-vs-low-resolution attribution; tests H1 as a continuous lever holding encoder stack fixed | TODO |
-| F7  | Multi-seed (≥3) gap fills for the 5 main conditions | Bound seed-to-seed variability of H1 numbers; needed before promoting "candidate dissociation" labels in §4.5 / §6 | TODO |
+| **H100-A** | Fov-shifted causal H3 retrain (clean transform, seeds 0/1/3) | Replaces buggy-transform fov-lrn baseline AND populates §4.4.4 + §4.5 H3 causal test | ⚠️ **NOT STARTED** — critical path |
+| **H100-B** | Encoder-resolution scaling sweep ($32, 48, 64, 96, 128, 192$ at fixed encoder stack) | App E: causally tests the encoder-spatial-output mechanism by varying encoder resolution while holding everything else fixed | ⚠️ **NOT STARTED** — critical path |
+| **H100-C** | Multi-seed gap fills for blind, matched, foveated, foveated-learned (seed 0, 1, 3) | Promotes single-seed dissociations to robust findings; uniform_seed2 + foveated_seed2 already on Izar (land tomorrow) | ⚠️ Partial: uniform/fov done on Izar, blind + matched + fov-lrn still need H100 |
 
 ### 5.3 Should-have experiments — not yet planned, would strengthen claims if added
 
