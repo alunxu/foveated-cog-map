@@ -67,7 +67,9 @@ submit() {
     fi
 
     echo "  sbatch ${cond} ckpt.${ckpt_idx}"
-    ssh izar "cd ~/cs503-project && sbatch scripts/cluster/submit_probe_deterministic.sh \
+    # Override qos/time to normal qos with 6h walltime for parallelism
+    # (cs-503 default is MaxJobsPU=1; normal allows up to ~10 in flight).
+    ssh izar "cd ~/cs503-project && sbatch --qos=normal --time=6:00:00 scripts/cluster/submit_probe_deterministic.sh \
       ${cfg} ${ckpt_path} 500 ${cond}_gibson_ckpt${ckpt_idx}" 2>/dev/null | tail -1
 }
 
