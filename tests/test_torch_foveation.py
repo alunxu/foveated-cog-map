@@ -46,6 +46,7 @@ _spec = _ilu.spec_from_file_location(
 _mod = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 TorchFoveationTransform = _mod.TorchFoveationTransform
+LogPolarFoveationTransform = _mod.LogPolarFoveationTransform
 
 
 IMAGE_SIZE = 128
@@ -113,6 +114,50 @@ def test_forward_runs_clean():
     out = transform(image, gaze=gaze)
     assert out.shape == image.shape
     assert torch.isfinite(out).all()
+
+
+def test_logpolar_output_shape_and_finiteness():
+    """T5 (log-polar): forward produces (B, C, n_rho, n_theta)."""
+    transform = LogPolarFoveationTransform(
+        image_size=128, n_rho=16, n_theta=32
+    ).eval()
+    image = torch.rand(2, 3, 128, 128)
+    gaze = torch.tensor([[0.5, 0.5], [0.49, 0.62]], dtype=torch.float32)
+    out = transform(image, gaze=gaze)
+    assert out.shape == (2, 3, 16, 32), out.shape
+    assert torch.isfinite(out).all()
+
+
+def test_logpolar_centre_intensity_matches_image_centre():
+    """T6 (log-polar): the inner ring should sample near the gaze pixel."""
+    H = 64
+    transform = LogPolarFoveationTransform(
+        image_size=H, n_rho=8, n_theta=16, rho_min=1.0, rho_max=24.0
+    ).eval()
+    # Construct an image where the gaze-centre pixel is white and the
+    # rest is black.  The inner ring of the log-polar output should pick
+    # up that bright value (allowing for bilinear interp + immediate
+    # neighbours).
+    image = torch.zeros(1, 1, H, H)
+    cx, cy = H // 2, H // 2
+    image[0, 0, cy, cx] = 1.0
+    image[0, 0, cy, cx + 1] = 1.0
+    image[0, 0, cy + 1, cx] = 1.0
+    out = transform(image, gaze=torch.tensor([[0.5, 0.5]], dtype=torch.float32))
+    inner_ring = out[0, 0, 0]  # (n_theta,)
+    # Inner ring should pick up some non-trivial intensity from the centre.
+    assert inner_ring.max().item() > 0.1, inner_ring
+
+
+def test_logpolar_shifted_gaze_changes_output():
+    """T7 (log-polar): different gaze positions produce different outputs."""
+    transform = LogPolarFoveationTransform(image_size=64, n_rho=8, n_theta=16).eval()
+    image = torch.rand(1, 3, 64, 64)
+    out_centred = transform(image,
+                            gaze=torch.tensor([[0.5, 0.5]], dtype=torch.float32))
+    out_shifted = transform(image,
+                            gaze=torch.tensor([[0.3, 0.7]], dtype=torch.float32))
+    assert not torch.allclose(out_centred, out_shifted, atol=1e-3)
 
 
 if __name__ == "__main__":

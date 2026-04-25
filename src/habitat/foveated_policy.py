@@ -135,7 +135,16 @@ class FoveatedWijmansNet(WijmansPointNavNet):
       - swaps the standard ResNet encoder for ``FoveatedResNetEncoder``
       - adds a small MLP that decodes a 2-D gaze position from the previous
         LSTM hidden state, used to drive the foveation transform
+
+    Subclass-level override: ``_force_enable_normaliser`` (default False)
+    is read inside ``__init__`` to decide whether the visual encoder
+    should use ``RunningMeanAndVar``. Foveated default is False because
+    the in-place buffer mutation conflicts with autograd along the gaze
+    decoder path; the F2 invariance experiment subclass sets it True for
+    fov-fix where there is no gaze decoder.
     """
+
+    _force_enable_normaliser: bool = False
 
     def __init__(
         self,
@@ -189,12 +198,20 @@ class FoveatedWijmansNet(WijmansPointNavNet):
             # is False) avoids the in-place version conflict. The standard
             # sighted agents are unaffected by this bug because they have only
             # one gradient path through the visual encoder.
+            #
+            # The class attribute ``_force_enable_normaliser`` (subclass
+            # override, default False) lets the F2 normaliser-invariance
+            # experiment opt back in for fov-fix specifically (no gaze
+            # decoder, no autograd conflict). All historical foveated
+            # checkpoints were trained with this False; do not change for
+            # default fov-fix runs.
+            _enable = type(self)._force_enable_normaliser and normalize_visual_inputs
             self.visual_encoder = FoveatedResNetEncoder(
                 use_obs_space,
                 baseplanes=resnet_baseplanes,
                 ngroups=resnet_baseplanes // 2,
                 make_backbone=getattr(resnet, backbone),
-                normalize_visual_inputs=False,
+                normalize_visual_inputs=_enable,
                 fovea_radius=fovea_radius,
                 blur_sigma_max=blur_sigma_max,
                 falloff=falloff,
@@ -324,7 +341,14 @@ class FoveatedWijmansNet(WijmansPointNavNet):
 
 @baseline_registry.register_policy(name="FoveatedWijmansPolicy")
 class FoveatedWijmansPolicy(NetPolicy):
-    """Wijmans-faithful PointNav policy with foveated vision and learned gaze."""
+    """Wijmans-faithful PointNav policy with foveated vision and learned gaze.
+
+    Subclasses can override the underlying ``net`` class by setting the
+    class attribute ``_net_cls`` (default ``FoveatedWijmansNet``) — used
+    by the F2 (normaliser-enabled) experiment.
+    """
+
+    _net_cls = None  # set in __init__ if None to allow subclass override
 
     def __init__(
         self,
@@ -353,8 +377,9 @@ class FoveatedWijmansPolicy(NetPolicy):
         else:
             discrete_actions = True
 
+        net_cls = type(self)._net_cls or FoveatedWijmansNet
         super().__init__(
-            FoveatedWijmansNet(
+            net_cls(
                 observation_space=observation_space,
                 action_space=action_space,
                 hidden_size=hidden_size,

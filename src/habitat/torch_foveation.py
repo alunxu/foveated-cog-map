@@ -127,23 +127,29 @@ class TorchFoveationTransform(nn.Module):
         dy = self._y_grid.unsqueeze(0) - gaze_y.view(B, 1, 1)  # (B, H, W)
         dist = torch.sqrt(dx ** 2 + dy ** 2)
 
-        # Normalized eccentricity.
-        # NOTE: `self._max_dist` is computed ONCE from the image centre
-        # to the corner (= sqrt(2) * image_size / 2). For shifted-gaze
-        # conditions (fov-learned collapsed at (0.49, 0.62); fov-shifted
-        # control) the actual farthest corner from gaze is up to ~13%
-        # larger than this static value. Peripheral eccentricity
-        # saturates slightly earlier than intended, producing marginally
-        # stronger peripheral blur than the formula nominally specifies.
-        # We retain this behaviour rather than making it gaze-dependent
-        # because (a) every trained policy learned with this transform
-        # applied at training time, so changing it at probe time would
-        # feed the policy input it was not trained on, and (b) the bias
-        # is internal to each policy --- at equilibrium the policy has
-        # adapted to whatever peripheral blur it sees. The effect on the
-        # H3 fov-shifted vs fov-fix comparison is noted in Appendix
-        # \ref{app:foveation} of the paper.
-        ecc = (dist - self.fovea_radius) / (self._max_dist - self.fovea_radius)
+        # Per-sample max eccentricity: farthest image corner from
+        # this gaze position. Replaces the previous static image-centre
+        # max (valid only when gaze is at (0.5, 0.5)). For off-centre
+        # gazes the static version over-saturates peripheral
+        # eccentricity, producing systematically stronger peripheral
+        # blur than the formula nominally specifies. This fix keeps
+        # the foveation transform consistent across gaze locations so
+        # cross-condition comparisons (e.g., fov-shifted vs.\ fov-fix)
+        # differ only in the gaze location.
+        corner_x = torch.tensor(
+            [0.0, 0.0, self.image_size - 1.0, self.image_size - 1.0],
+            device=gaze.device, dtype=gaze.dtype,
+        )
+        corner_y = torch.tensor(
+            [0.0, self.image_size - 1.0, 0.0, self.image_size - 1.0],
+            device=gaze.device, dtype=gaze.dtype,
+        )
+        corner_dx = corner_x.view(1, 4) - gaze_x.view(B, 1)
+        corner_dy = corner_y.view(1, 4) - gaze_y.view(B, 1)
+        corner_dist = torch.sqrt(corner_dx ** 2 + corner_dy ** 2)
+        max_dist = corner_dist.max(dim=1).values.view(B, 1, 1)  # (B, 1, 1)
+
+        ecc = (dist - self.fovea_radius) / (max_dist - self.fovea_radius)
         ecc = ecc.clamp(0.0, 1.0)
 
         return ecc
@@ -214,3 +220,135 @@ class TorchFoveationTransform(nn.Module):
         result = (1 - alpha) * low_vals + alpha * high_vals
 
         return result
+
+
+class LogPolarFoveationTransform(nn.Module):
+    """Log-polar foveation transform — a stronger foveation model than
+    Gaussian-blur-only.
+
+    Real primate foveation has variable spatial sampling (acuity falls as
+    1/eccentricity), not just spatial-frequency degradation.  This module
+    approximates that by:
+
+      1. Sampling each input frame on a log-polar grid centred at the
+         current gaze position, with ``n_rho`` rings exponentially spaced
+         along radius and ``n_theta`` angular bins around the gaze.
+      2. Producing an output tensor of shape ``(B, C, n_rho, n_theta)``
+         that the encoder consumes as if it were a small uniform image.
+
+    Compared to ``TorchFoveationTransform`` (uniform pixel grid +
+    eccentricity-dependent Gaussian blur), this transform actually
+    *removes* peripheral spatial samples rather than just blurring them,
+    creating a true encoder-input bottleneck that scales with eccentricity.
+    The downstream encoder therefore sees fewer and fewer spatial cells
+    for content far from gaze.
+
+    Defaults:
+      - ``image_size``: input frame side length (square).
+      - ``n_rho``:    number of radial rings (effective output height).
+      - ``n_theta``:  number of angular bins (effective output width).
+      - ``rho_min``:  inner radius (pixels) — anything inside is sampled
+                     as the foveal centre.
+      - ``rho_max``:  outer radius (pixels) — anything outside is clipped
+                     to the boundary.
+
+    Args (default values picked to roughly match human-foveation acuity):
+      image_size = 256, n_rho = 32, n_theta = 64, rho_min = 4, rho_max = 128
+    """
+
+    def __init__(
+        self,
+        image_size: int = 256,
+        n_rho: int = 32,
+        n_theta: int = 64,
+        rho_min: float = 4.0,
+        rho_max: Optional[float] = None,
+    ):
+        super().__init__()
+        self.image_size = image_size
+        self.n_rho = n_rho
+        self.n_theta = n_theta
+        self.rho_min = float(rho_min)
+        self.rho_max = float(rho_max if rho_max is not None
+                             else image_size * (2 ** 0.5) / 2)
+
+        # Pre-compute the log-spaced radial sampling grid.
+        # log_rho values in [log(rho_min), log(rho_max)] inclusive.
+        log_rho = torch.linspace(
+            float(torch.log(torch.tensor(self.rho_min))),
+            float(torch.log(torch.tensor(self.rho_max))),
+            n_rho,
+            dtype=torch.float32,
+        )
+        rho = torch.exp(log_rho)  # (n_rho,)
+        self.register_buffer("_rho", rho)
+
+        theta = torch.linspace(
+            0.0, 2 * 3.141592653589793, n_theta + 1,
+            dtype=torch.float32,
+        )[:-1]  # exclude the duplicate at 2π
+        self.register_buffer("_theta", theta)
+
+        # Sampling offsets (dx, dy) per (rho, theta) cell — fixed in the
+        # gaze-centred coordinate frame.  Final pixel coords are
+        # gaze + offset.  Stored as (n_rho, n_theta, 2) for convenience.
+        rr, tt = torch.meshgrid(rho, theta, indexing="ij")
+        offsets = torch.stack(
+            [rr * torch.cos(tt), rr * torch.sin(tt)], dim=-1
+        )  # (n_rho, n_theta, 2)
+        self.register_buffer("_offsets_xy", offsets)
+
+    @property
+    def output_shape(self) -> tuple:
+        """The (H', W') shape the downstream encoder will see."""
+        return (self.n_rho, self.n_theta)
+
+    def forward(
+        self,
+        image: torch.Tensor,
+        gaze: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """Apply log-polar resampling to a batch of images.
+
+        Args:
+            image: (B, C, H, W) float tensor in [0, 1].
+            gaze:  (B, 2) gaze positions in [0, 1] normalised coords;
+                   defaults to image centre.
+
+        Returns:
+            Resampled tensor of shape (B, C, n_rho, n_theta).
+        """
+        B, C, H, W = image.shape
+        if gaze is None:
+            gaze = torch.full((B, 2), 0.5, device=image.device,
+                              dtype=image.dtype)
+
+        # Convert normalised gaze to pixel coords (B, 2).
+        gaze_px = gaze * torch.tensor([W - 1.0, H - 1.0],
+                                      device=image.device, dtype=image.dtype)
+
+        # Build the per-batch sampling grid in pixel coords:
+        #   target_xy[b, i, j] = gaze_px[b] + _offsets_xy[i, j]
+        offsets_xy = self._offsets_xy.to(image.dtype)  # (n_rho, n_theta, 2)
+        target_xy = (
+            gaze_px.view(B, 1, 1, 2)
+            + offsets_xy.view(1, self.n_rho, self.n_theta, 2)
+        )  # (B, n_rho, n_theta, 2)
+
+        # F.grid_sample expects the sampling grid in *normalised* coords
+        # in [-1, 1], with the last-dim ordering (x, y) referring to W, H.
+        # Build that explicitly to avoid an off-by-one ambiguity.
+        target_x_norm = (target_xy[..., 0] / (W - 1.0)) * 2.0 - 1.0
+        target_y_norm = (target_xy[..., 1] / (H - 1.0)) * 2.0 - 1.0
+        grid = torch.stack([target_x_norm, target_y_norm], dim=-1)
+        # (B, n_rho, n_theta, 2)
+
+        out = F.grid_sample(
+            image,
+            grid,
+            mode="bilinear",
+            padding_mode="zeros",
+            align_corners=True,
+        )  # (B, C, n_rho, n_theta)
+
+        return out

@@ -32,6 +32,18 @@ from src.habitat.foveated_learned_policy import (  # noqa: F401
     FoveatedLearnedGazePolicy,
 )
 
+# F2/F3/F4 foveation-strength experiments (see experiments/
+# foveation_strength_ablation.md and foveation_normaliser_invariance.md).
+from src.habitat.foveated_normalised_policy import (  # noqa: F401
+    FoveatedNormalisedWijmansPolicy,
+)
+from src.habitat.foveated_strong_policy import (  # noqa: F401
+    FoveatedStrongWijmansPolicy,
+)
+from src.habitat.foveated_logpolar_policy import (  # noqa: F401
+    FoveatedLogPolarWijmansPolicy,
+)
+
 # Auxiliary losses (ablation experiments):
 #  - gaze_diversity: anti-collapse regulariser for learned-gaze policies.
 #    Importing the module has side effects (config store + baseline
