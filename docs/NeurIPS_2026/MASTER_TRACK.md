@@ -3,7 +3,7 @@
 Single source of truth for: cluster jobs, experiment status, paper
 claims, figure freshness, open questions, decision log.
 
-**Last updated**: 2026-04-25 (commit `be369f5`).
+**Last updated**: 2026-04-25 22:50 (commit `6ecc508`).
 Update this file when state changes — do NOT rely on memory.
 
 ---
@@ -12,13 +12,14 @@ Update this file when state changes — do NOT rely on memory.
 
 | Dimension | Status |
 |---|---|
-| Paper version | v1 in progress; main story stable; integration of latest experiments pending |
-| Page count | 28 pages (NeurIPS limit 9 main + unlimited appendix) |
-| Critical TODO in paper | Table 1 fov-lrn `\TODO{H3}`, App D scaling figure `\TODO{Pending data}`, §4.4 H3 paragraph (training in progress) |
-| Cluster jobs running | 2 (fov_s2 + uni_s2 multi-seed training) |
-| Cluster jobs pending | ~50 (F1-F4 + 5×5 transplant + per-step transplant + training dynamics + encoder features + pop coding) |
-| Most recent finding | Temporal probe shows H1 is about TEMPORAL STABILITY of GPS code, not its existence (commit c904e8c) |
-| Most recent paper change | Integrated temporal probe finding into §1, §4.1, §4.2, §5.1, §6 (commit 6408d6c) |
+| Paper version | v1 substantially complete; all main figures landed; awaiting in-flight experiments to fill placeholders |
+| Page count | **32 pages** (NeurIPS allows 9 main + unlimited appendix; we use the appendix budget heavily) |
+| Submission deadline | **~2 weeks out** (per user 2026-04-25) — not rushed, can wait for experiments |
+| Critical TODO in paper | App E scaling figure `\TODO{Pending data}` (friend H100); §4.4 in-flight subsections (4 experiments designed, awaiting numbers); 4 cells of 5×5 transplant matrix (matched recipient column) |
+| Cluster jobs running | 2 multi-seed retrains (uni_s2, fov_s2 — long-running) + several encoder feature & training-dyn |
+| Cluster jobs pending | ~30 (priority block) |
+| Most recent landed | Encoder feature-map probes (matched/uniform/foveated all 3), Phase B shortcut+trajectory data, 5×5 transplant matrix mostly populated, 1 training-dyn ckpt |
+| Most recent paper change | 5×5 transplant matrix integrated into §4.3 H2 + transplant_sweep moved to App A (commit `6ecc508`) |
 
 ---
 
@@ -30,17 +31,21 @@ Update this file when state changes — do NOT rely on memory.
 |---|---|---|---|---|
 | 2844326 | uni_s2 multi-seed | 2026-04-23 | ~2026-04-26 | `/scratch/izar/wxu/habitat_checkpoints/uniform_gibson_seed2/` |
 | 2844327 | fov_s2 multi-seed | 2026-04-23 | ~2026-04-26 | `/scratch/izar/wxu/habitat_checkpoints/foveated_gibson_seed2/` |
+| 2849136-9 | F1-F4 foveation strength sweep | 2026-04-25 | ~2026-04-28 | `foveated_v2_gibson` etc. (training; ~5% done at log-time) |
+| 2849139 | F3 log-polar (cs503_tr_fov_logpolar_gibson) | 2026-04-25 | ~2026-04-28 | `foveated_logpolar_gibson` (training; 2/36 ckpts) |
+| 2849138 | F4 strong σ=20 | 2026-04-25 | ~2026-04-28 | `foveated_strong_gibson` |
 
-### 1.2 Pending (in priority order)
+### 1.2 Pending (in priority queue)
 
-| Batch | Jobs | Total | Per-job | Source script |
-|---|---|---|---|---|
-| F1-F4 foveation strength | 4 (2849136-9) | ~50-70h each | 250M frames training | `submit_train.sh + 4 configs` |
-| 5×5 cross-condition transplant | 17 | ~1.5h each | midpoint=30 | `submit_5x5_transplant.sh` (A) |
-| Per-step transplant extension | 12 | ~1.5h each | midpoint={200,400,800} × 4 pairs | `submit_5x5_transplant.sh` (H) |
-| Training-dynamics probes | 22 | ~3h each | 5 conds × 4-5 ckpts | `submit_training_dynamics.sh` (J) |
-| Encoder feature-map probes | 3 | ~3h each | matched/uniform/foveated | `submit_encoder_features.sh` (D) |
-| Population coding analysis | 1 (2849188) | ~30-60 min | CPU mostly | `submit_population_coding.sh` |
+| Batch | Jobs submitted | Status | Per-job |
+|---|---|---|---|
+| 5×5 cross-condition transplant | 17 (2849148-64) | mostly LANDED — 33 cells in `/scratch/izar/wxu/transplant_results/` (4 matched-recipient cells still queued / running) | ~1.5h each |
+| Per-step transplant extension | 12 (2849166-79) | mostly LANDED — mid200/400/800 cells visible | ~1.5h each |
+| Training-dynamics probes | 22 (J) | 1/22 LANDED (blind ckpt 10) | ~3h each |
+| Encoder feature-map probes (D) | 3 (re-submitted 2849972-74 after script bug fix) | **3/3 LANDED** with results integrated in §4.4.4 | ~30 min each |
+| Population coding analysis | 1 (2849188) | LANDED, integrated in App A | done |
+| Phase B shortcut + trajectories (ST) | 5 (2849306-10) | **5/5 LANDED**, integrated in §4.5 (commit `d97eda9`) | ~30 min each |
+| Topdown render for Fig 1d | 1 (2849993, debug QOS) | LANDED, integrated in Fig 1 (commit `01c4933`) | ~3 min |
 
 ### 1.3 Friend's H100 (separate cluster)
 
@@ -177,17 +182,18 @@ New 6-section structure (was 5; foveation slot is new):
 |---|---|---|
 | §4.1 | Per-condition summary table (5 cols: cond / frames / SPL / succ / GPS R² / Compass R²) | ✅ slimmed |
 | §4.2 | H1 finding + temporal stability + Layer-0 disambiguation + MLP probe + MP3D | ✅ all consolidated into §4.2 with single mega-figure (`fig:h1_mega`) |
-| §4.2 | Proposed mechanism (encoder–memory race) | ✅ + TODO for direct causal test |
+| §4.2 | Proposed mechanism (encoder–memory race), wording aligned with encoder probe | ✅ refined to "spatial-feature variety per step" framing (commit `cc1b7e7`); direct causal test still TODO |
 | §4.3 | H2 format divergence (transplant lead, then CKA / transfer / 1-NN) | ✅ |
-| §4.3 | "Pairs we tested" caveat for transplant | ⚠️ — 5×5 matrix in flight (jobs 2849148-79) |
-| §4.4 | Foveated-fix / fov-learned current placement (rich-encoder regime under σ_max=8 Gaussian blur) | ✅ |
-| §4.4 | F1-F4 strength sweep design + signature | 🆕 PLANNED — disclosed; in training |
-| §4.4 | F3 log-polar foveation design + signature | 🆕 PLANNED — disclosed; in training |
-| §4.4 | Encoder feature-map probe design + signature | 🆕 PLANNED — disclosed; in probing (job 2849191-93) |
-| §4.4 | Foveated-shifted control (links to H3) | 🆕 PLANNED — disclosed; in training |
+| §4.3 | "Pairs we tested" caveat for transplant | ✅ MOSTLY RESOLVED — 5×5 matrix at midpoint=30 with 13/16 cross-cells filled (commit `6ecc508`); 4 matched-recipient cells pending |
+| §4.3 | Asymmetry pattern in 5×5 matrix (blind→uniform -0.38 vs uniform→blind +0.02) | ✅ NEW finding integrated (commit `6ecc508`) |
+| §4.4 | Foveation table comparing fov vs uniform (converge on H1, diverge on H2 + behaviour) | ✅ Table 3 (commit `98b9627`) |
+| §4.4 | F1-F4 strength sweep design + signature | 🆕 in training — script ready |
+| §4.4 | F3 log-polar foveation design + falsifiable prediction (R² ≥ 0.3 if mechanism is encoder spatial output dim) | ✅ DISCLOSED (commit `70bd1fd`); in training, 2/36 ckpts |
+| §4.4 | Encoder feature-map probe (matched/uniform/foveated all 3) | ✅ all landed (commit `409e6bd`); none of the 3 sighted encoders linearly decode GPS |
+| §4.4 | Foveated-shifted control (links to H3) | 🆕 in training |
 | §4.5 | H3 learned-gaze collapse | ✅ |
 | §4.5 | H3 fov-shifted causal control | ⚠️ TODO (in flight) |
-| §4.5 | Shortcut discovery + "having vs using" anomaly | ✅ |
+| §4.5 | Shortcut discovery + 2×2 dissociation (matched/uniform anomalies) | ✅ scatter (commit `4d9ee81`) + paired-traj fig (commit `d97eda9`) |
 | §4.6 | Occupancy + place cells + per-unit info + goal vector → boundaries | ✅ slimmed |
 
 ### §5 Discussion
@@ -233,34 +239,38 @@ For each figure: source, freshness, paper-section, ready-to-publish.
 
 **Population coding 2026-04-25**: pulled `population_coding_det.json` + summary figure from Izar (job 2849188 done). Replaced broken `place_cells.pdf` with `population_coding_summary.pdf` in App A; updated §4.6 paragraph. **Data correctness flag**: old `place_cells.pdf` was showing impossible per-unit info (mean $\bar s = 65$ bits/unit, max 150) — but a 20×20 grid is bounded at $\log_2(400) \approx 8.6$ bits per unit. The new analysis (capped at ~2 bits max) is correct. The old figure's qualitative ordering (bottleneck > rich-encoder for n_above_1bit) was also REVERSED by the corrected analysis: rich-encoder conditions actually have MORE high-info units (16-18 vs blind's 1), but those units don't decode GPS — they encode position-correlated features. New paper §4.6 reflects this: blind has compressed broad spatial code, rich-encoder has higher-dim representations with peaked landmark-like units that don't translate to GPS readout. This is consistent with the encoder-memory race story (rich-encoder uses encoder for landmarks, doesn't compress to position).
 
-### Main figures (after restructure)
-| Filename | Source | Freshness | Section | Status |
-|---|---|---|---|---|
-| `fig_blind.png`, `fig_uniform.png`, `fig_foveated.png`, `fig_topdown.png` | Static illustrations | static | Fig 1 (setup, in §1) | ✅ |
-| `h1_mega.pdf` (NEW) | 4-panel composite: hardcoded T1 + temporal_probe_det.json + 1d_multilayer + 1b_global_gps_compass × Gibson/MP3D | det | Fig 2 (§4.2 H1) | ✅ |
-| `h2_cka_heatmap.pdf` + `transplant_sweep.pdf` (combined fig) | `cka_det.json` + `*_to_*_mid<N>.json` | det | Fig 3 (§4.3 H2) | ✅ + 🆕 will refresh after A/H land |
-| `shortcut_bars.pdf` (was part of h3_content) | `data/shortcut/*` | det | Fig 4 (§4.5 H3) | ✅ |
-| `training_curves.pdf` + `h2_hidden_embedding_tsne.pdf` | TB / det NPZs | det | App A supp fig | ✅ |
-| `place_cells.pdf` + `goal_vector_probe.pdf` (now App) | det JSONs | det | App A supp fig | ✅ moved to appendix |
-| `layerwise_decay.pdf` + `mp3d_generalization.pdf` (now App) | det JSONs (companions to h1_mega panels c, d) | det | App A supp fig | ✅ moved to appendix |
-| `temporal_probe_evolution.pdf` (standalone, kept for completeness) | `temporal_probe_det.json` | det | now part of `h1_mega` panel (b); standalone retained | ✅ |
+### Main figures (current)
+| Filename | Section | Status |
+|---|---|---|
+| `fig_blind.png`, `fig_uniform.png`, `fig_foveated.png` + `trajectory_overlay.pdf` (with topdown) | Fig 1 setup + trajectory overlay (§1, §4.2 preview) | ✅ Fig 1d uses topdown floor plan, scene E9uDoFAP3SH ep 414 (commit `01c4933`) |
+| `h1_mega.pdf` | Fig 2 (§4.2 H1) — 3-panel: bars / temporal / per-layer / MP3D | ✅ |
+| `h2_cka_heatmap.pdf` + `transplant_5x5.pdf` | Fig 3 (§4.3 H2) — CKA heatmap + 5×5 cross-condition transplant matrix | ✅ — 33/37 cells populated; 4 matched-recipient cells pending (commit `6ecc508`) |
+| `encoder_feature_probe.pdf` | Fig 4 (§4.4 foveation, encoder feature-map probe) — 3 conditions × GPS/Compass | ✅ matched/uniform/foveated all done (commit `409e6bd`) |
+| `shortcut_scatter.pdf` | Fig 5 (§4.5 H3) — 2×2 dissociation: probe vs behavioural memory | ✅ (commit `4d9ee81`) |
+| `shortcut_paired_traj.pdf` | Fig 6 (§4.5 H3) — paired-trajectory failure visualisation, 3 conditions | ✅ (commit `d97eda9`) |
 
-### Foveation slot figures (planned for §4.4)
+### Appendix A figures (after restructure)
 | Filename | Source | Status |
 |---|---|---|
-| `foveation_strength_sweep.pdf` | F1-F4 probe results | 🆕 PLANNED — in flight |
-| `logpolar_vs_blur.pdf` | F3 log-polar probes | 🆕 PLANNED — in flight |
-| `encoder_feature_probe.pdf` | encoder feature-map probes job 2849191-93 | 🆕 PLANNED — in flight |
-| `foveated_shifted_results.pdf` | fov-shifted training + probe | 🆕 PLANNED — in flight |
+| `training_curves.pdf` + `h2_hidden_embedding_tsne.pdf` | TB / det NPZs | ✅ |
+| `population_coding_summary.pdf` + `goal_vector_probe.pdf` | det JSONs | ✅ |
+| `layerwise_decay.pdf` + `mp3d_generalization.pdf` | det JSONs (companions to h1_mega panels c, d) | ✅ moved to appendix |
+| `temporal_probe_evolution.pdf` (standalone) | `temporal_probe_det.json` | ✅ — also in h1_mega panel (b) |
+| `transplant_sweep.pdf` (NEW App location) | midpoint-sweep view of 3 representative pairs (commit `6ecc508`) | ✅ supports the t=30 main matrix |
 
-### Other in-flight
-| Filename | Source | Section | Status |
-|---|---|---|---|
-| `population_coding_summary.pdf` | `population_coding_det.json` (job 2849188; **JSON LANDED 2026-04-25, awaits figure script**) | App or §4.6 | 🆕 |
-| `training_dynamics.pdf` | `<cond>_gibson_ckpt<N>_det_analysis.json` × 22 | §4.6 / App | 🆕 In-flight (J) |
-| `transplant_5x5_matrix.pdf` | 5×5 transplant SPL matrix | §4.3 | 🆕 In-flight (A, jobs 2849148-64) |
-| `transplant_per_step.pdf` | extended midpoint sweep | §4.3 | 🆕 In-flight (H, jobs 2849166-79) |
-| `scaling_sweep.pdf` | encoder-resolution sweep | App E | ❌ Friend's H100 |
+### Foveation slot figures (placeholders for §4.4 sub-paragraphs; data in flight)
+| Filename | Source | Status |
+|---|---|---|
+| `foveation_strength_sweep.pdf` | F1-F4 probe results | 🆕 SCRIPT READY (`make_foveation_strength_figure.py`); awaits training + probe |
+| `logpolar_vs_blur.pdf` | F3 log-polar probes | 🆕 awaits log-polar checkpoint to be probable |
+| `foveated_shifted_results.pdf` | fov-shifted training + probe | 🆕 awaits fov-shifted training |
+
+### Other in-flight figures (scripts ready)
+| Filename | Section | Status |
+|---|---|---|
+| `training_dynamics.pdf` | §4.6 / App | 🆕 SCRIPT READY (`make_training_dynamics_figure.py`); 1/22 ckpt landed |
+| `transplant_5x5.pdf` (current) | Fig 3 right | ✅ partial; will refresh as 4 matched-recipient cells land |
+| `scaling_sweep.pdf` | App E | ❌ Friend's H100 |
 
 ---
 
@@ -326,6 +336,43 @@ For each: which paper claim is currently held by hedging that this experiment wo
 ---
 
 ## 6. Decision log (chronological, why we did what)
+
+### 2026-04-25 (evening): Encoder feature-map probe + Phase B + 5×5 + H1 mechanism refinement
+
+Big batch of cluster results landed late afternoon / evening:
+
+**Encoder feature-map probe — 3/3 conditions** (commit `409e6bd`):
+- matched encoder→GPS R² = -3.14 ± 5.91
+- uniform encoder→GPS R² = -0.32 ± 0.08
+- foveated encoder→GPS R² = -0.65 ± 0.28
+
+NONE of the 3 sighted encoders linearly decode GPS. This was a more interesting outcome than the original 3 hypothesised possibilities. Sharpened H1 mechanism wording across abstract / §4.2 / §5.4 (commit `cc1b7e7`):
+
+OLD framing: "rich encoder can re-derive position from current frame; bottleneck encoder cannot → LSTM compensates"
+NEW framing: "no encoder linearly preserves GPS; what determines whether LSTM compensates is the encoder's spatial-feature variety per step (matched 1×1 vs uniform 8×8). LSTM Layer 0 reads GPS sensor directly; bottleneck conditions integrate it across time because they have minimal visual feature variety to substitute"
+
+**Phase B paired-trajectory figure — 5/5 conditions** (commit `d97eda9`):
+- New eval script `scripts/eval/shortcut_with_trajectories.py` saves per-episode positions
+- Figure shows "memory locks onto old goal" failure mode: blind's persistent run oscillates around previous-episode goal location; uniform/foveated wander more diffusely
+- Visualises the §4.5 2×2 dissociation finding behaviorally
+
+**5×5 transplant matrix — 33 cells** (commit `6ecc508`):
+- Replaces the 3-pair midpoint sweep as Fig 3 right panel
+- 13/16 cross-pairs at midpoint=30 visible; 4 matched-recipient cells pending
+- New findings: asymmetry (blind→uniform -0.38 vs uniform→blind +0.02), recipient ranking (uniform suffers most from foreign donors, blind least)
+- Old transplant_sweep moved to App A as midpoint-stability evidence
+
+**Topdown render fix** (commit `01c4933`):
+- Fig 1d trajectory overlay now on actual Habitat occupancy map for the scene (E9uDoFAP3SH)
+- Required 3 attempts: env._episode_iterator hack didn't work; env._dataset.episodes hack didn't work; finally fixed by setting config.habitat.simulator.scene + passing filtered dataset explicitly to habitat.Env
+
+**F3 log-polar prediction** (commit `70bd1fd`):
+- Wrote falsifiable prediction in §4.4.3: log-polar should give LSTM GPS R² ≥ 0.3 (because encoder 2×2 spatial output, between matched 1×1 and uniform 8×8). If mechanism is encoder spatial-output dimensionality, this should manifest in the LSTM
+- F3 still training (~5% done at log time), ETA 2-3 days
+
+**Cluster QOS workaround for short jobs** (decision):
+- Topdown render needed debug QOS (priority 50000) to bypass the ~30 pending normal-QOS jobs ahead
+- For future short single-purpose jobs (analyses on existing checkpoints), use --qos=debug + 1h walltime + 5 max submissions
 
 ### 2026-04-25 (afternoon): Results section restructure + foveation slot
 
