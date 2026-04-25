@@ -26,10 +26,17 @@
 CONFIG_NAME=${1:?"config name required"}
 CKPT_PATH=${2:?"ckpt path required"}
 NUM_EPISODES=${3:-500}
+# Optional 4th arg: explicit run name (overrides default derived from config).
+# Used for training-dynamics sweeps where we want
+# `<cond>_gibson_ckpt<N>_det.npz` rather than the config-derived name.
+OUT_RUN_NAME=${4:-}
 
 source "${SLURM_SUBMIT_DIR}/scripts/cluster/common.sh"
 
 RUN_NAME=$(run_name_from_config "${CONFIG_NAME}")
+if [ -n "${OUT_RUN_NAME}" ]; then
+    RUN_NAME="${OUT_RUN_NAME}"
+fi
 ABBREV=$(echo "${RUN_NAME}" | sed 's/blind/bld/;s/uniform/uni/;s/foveated/fov/;s/matched/mtc/;s/learned/lrn/')
 scontrol update JobId=${SLURM_JOB_ID} JobName="cs503_prb_det_${ABBREV}" 2>/dev/null || true
 
