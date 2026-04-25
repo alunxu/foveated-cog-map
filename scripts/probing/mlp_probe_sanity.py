@@ -167,11 +167,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--in-dir", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--suffix", type=str, default="",
+                    help="Optional filename suffix, e.g. '_det' to read "
+                         "'<condition>_det.npz'.")
     args = ap.parse_args()
 
     results = {}
     for c in CONDITIONS:
-        path = args.in_dir / f"{c}.npz"
+        path = args.in_dir / f"{c}{args.suffix}.npz"
         if not path.exists():
             print(f"[skip] {path}")
             continue
