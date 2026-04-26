@@ -155,10 +155,9 @@ def main() -> None:
          ylim=(0, 1.05))
     fig.tight_layout()
 
-    for ext in ("pdf", "png"):
-        p = args.out_dir / f"training_curves.{ext}"
-        fig.savefig(p, dpi=200, bbox_inches="tight")
-        print(f"wrote {p}")
+    p = args.out_dir / "appfig7_training_curves.pdf"
+    fig.savefig(p, dpi=200, bbox_inches="tight")
+    print(f"wrote {p}")
     plt.close(fig)
 
 

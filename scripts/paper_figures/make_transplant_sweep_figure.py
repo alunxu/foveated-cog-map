@@ -97,7 +97,6 @@ def fig_sweep(in_dir: Path, out_path: Path) -> None:
 
     fig.tight_layout()
     fig.savefig(out_path, bbox_inches="tight")
-    fig.savefig(out_path.with_suffix(".png"), dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"wrote {out_path}")
 
@@ -120,7 +119,7 @@ def main() -> None:
     args = ap.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    fig_sweep(args.in_dir, args.out_dir / "transplant_sweep.pdf")
+    fig_sweep(args.in_dir, args.out_dir / "appfig9_transplant_sweep.pdf")
 
 
 if __name__ == "__main__":

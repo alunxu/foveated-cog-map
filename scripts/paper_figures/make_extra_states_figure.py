@@ -7,7 +7,7 @@ in main results).
 
 Reads:  data/extra_states/<cond>_extra_states.json (from
         scripts/probing/analyze_extra_states.py)
-Writes: docs/NeurIPS_2026/fig/extra_states.{pdf,png}
+Writes: docs/NeurIPS_2026/fig/appfig10_extra_states.pdf
 """
 from __future__ import annotations
 
@@ -90,10 +90,9 @@ def main() -> None:
     axes[0].legend(loc="lower right", fontsize=8, frameon=False, ncol=1)
 
     plt.tight_layout()
-    for ext in ("pdf", "png"):
-        out = args.out_dir / f"extra_states.{ext}"
-        fig.savefig(out, dpi=200, bbox_inches="tight")
-        print(f"wrote {out}")
+    out = args.out_dir / "appfig10_extra_states.pdf"
+    fig.savefig(out, dpi=200, bbox_inches="tight")
+    print(f"wrote {out}")
 
 
 if __name__ == "__main__":

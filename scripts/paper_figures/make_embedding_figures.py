@@ -117,10 +117,14 @@ def fig_conditions_embedding(in_dir: Path, out_dir: Path, method: str = "pca",
     ax.grid(True, alpha=0.25)
     fig.tight_layout()
 
-    for ext in ("pdf", "png"):
-        p = out_dir / f"h2_hidden_embedding_{method}.{ext}"
-        fig.savefig(p, dpi=200, bbox_inches="tight")
-        print(f"wrote {p}")
+    # Only the tsne version is used in the paper (appfig 7); pca is kept
+    # for sanity but generated under its old name (orphan).
+    if method == "tsne":
+        p = out_dir / "appfig7_h2_hidden_embedding_tsne.pdf"
+    else:
+        p = out_dir / f"h2_hidden_embedding_{method}.pdf"
+    fig.savefig(p, dpi=200, bbox_inches="tight")
+    print(f"wrote {p}")
     plt.close(fig)
 
 
@@ -172,10 +176,10 @@ def fig_per_condition_position_pca(in_dir: Path, out_dir: Path,
     fig.suptitle("Per-condition PCA of top-layer LSTM hidden state, "
                  "coloured by agent position", fontsize=10, y=1.03)
 
-    for ext in ("pdf", "png"):
-        p = out_dir / f"h2_position_manifold.{ext}"
-        fig.savefig(p, dpi=200, bbox_inches="tight")
-        print(f"wrote {p}")
+    # Orphan: not used in current paper. Kept for reproducibility.
+    p = out_dir / "h2_position_manifold.pdf"
+    fig.savefig(p, dpi=200, bbox_inches="tight")
+    print(f"wrote {p}")
     plt.close(fig)
 
 

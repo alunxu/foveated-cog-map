@@ -377,7 +377,7 @@ def main() -> None:
     axes[1].spines["right"].set_visible(False)
 
     fig.tight_layout()
-    cross_path = args.out_fig_dir / "population_coding_summary.pdf"
+    cross_path = args.out_fig_dir / "appfig11_population_coding.pdf"
     fig.savefig(cross_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"\nwrote {cross_path}")

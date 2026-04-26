@@ -21,7 +21,7 @@ its Y is single-cell, marked with a hollow marker + footnote in caption.
 Reads:  /tmp/transplant_local/<donor>_to_<recipient>.json (mid=30)
         /tmp/probing_results_local/<cond>_gibson_det_analysis.json
         data/shortcut/<cond>_gibson.json
-Writes: docs/NeurIPS_2026/fig/synthesis_2axes.{pdf,png}
+Writes: docs/NeurIPS_2026/fig/fig6_synthesis_2axes.pdf
 """
 from __future__ import annotations
 
@@ -249,10 +249,9 @@ def main() -> None:
     leg.get_frame().set_edgecolor("#bbb")
 
     fig.tight_layout()
-    for ext in ("pdf", "png"):
-        out = args.out_dir / f"synthesis_2axes.{ext}"
-        fig.savefig(out, dpi=200, bbox_inches="tight")
-        print(f"wrote {out}")
+    out = args.out_dir / "fig6_synthesis_2axes.pdf"
+    fig.savefig(out, dpi=200, bbox_inches="tight")
+    print(f"wrote {out}")
 
 
 if __name__ == "__main__":

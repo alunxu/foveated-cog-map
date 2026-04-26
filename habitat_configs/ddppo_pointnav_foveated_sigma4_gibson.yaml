@@ -1,0 +1,113 @@
+# @package _global_
+#
+# Wijmans-faithful FOVEATED PointGoal navigator on Gibson.
+#
+# Same Wijmans sensor stack and reward shaping as the other configs, plus a
+# foveated visual encoder with a learned gaze head. The custom policy
+# (FoveatedPointNavResNetPolicy) applies an eccentricity-dependent Gaussian
+# blur to the RGB input before the ResNet, and decodes a 2-D gaze position
+# from the previous LSTM hidden state.
+#
+# Uses FoveatedWijmansPolicy: combines the Wijmans sensor stack (g, GPS,
+# compass, close-to-goal indicator) with the foveation transform applied
+# inside the visual encoder, plus a learned gaze head from the LSTM hidden
+# state. See src/habitat/foveated_policy.py.
+#
+# Training set: Gibson-0+ (411 scenes) via the train_extra_large split.
+# See ddppo_pointnav_blind_gibson.yaml for the dataset rationale.
+#
+# Submit:
+#   sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
+
+defaults:
+  - /benchmark/nav/pointnav: pointnav_gibson
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - override /habitat/task/lab_sensors:
+      - gps_sensor
+      - compass_sensor
+      - goal_in_start_frame_sensor
+      - close_to_goal_indicator_sensor
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 2000
+  task:
+    success_reward: 2.5
+    slack_reward: -0.001
+    measurements:
+      success:
+        success_distance: 0.2
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            height: 256
+            width: 256
+          depth_sensor:
+            height: 256
+            width: 256
+  dataset:
+    # Wijmans 2023 A.1: train on 411 Gibson + 72 MP3D scenes. We use the
+    # pre-built Gibson-0+ (411) and MP3D train (61 available) merged via
+    # symlinks at data/datasets/pointnav/mp3d_gibson/v1/train/. 472 total.
+    data_path: data/datasets/pointnav/mp3d_gibson/v1/{split}/{split}.json.gz
+    split: train
+
+habitat_baselines:
+  verbose: False
+  trainer_name: "ddppo"
+  torch_gpu_id: 0
+  tensorboard_dir: "tb"
+  video_dir: "video_dir"
+  eval_ckpt_path_dir: "data/checkpoints/foveated_sigma4_gibson"
+  num_environments: 6
+  checkpoint_folder: "data/checkpoints/foveated_sigma4_gibson"
+  num_updates: -1
+  total_num_steps: 2.5e8
+  log_interval: 10
+  num_checkpoints: 50
+  force_torch_single_threaded: True
+  force_blind_policy: False
+
+  rl:
+    policy:
+      main_agent:
+        name: "FoveatedSigma4WijmansPolicy"
+        action_distribution_type: "categorical"
+        # Foveation hyperparameters are hardcoded in src/habitat/foveated_policy.py
+        # per the PoC decisions in docs/foveation_design.md §2.1:
+        #   fovea_radius=16, blur_sigma_max=8.0, falloff=quadratic
+        # Hydra's structured config validation rejects unknown fields here.
+
+    ppo:
+      clip_param: 0.2
+      ppo_epoch: 2
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.01
+      lr: 2.5e-4
+      eps: 1.0e-5
+      max_grad_norm: 0.2
+      num_steps: 128
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+      use_linear_clip_decay: False
+      use_linear_lr_decay: True
+      reward_window_size: 50
+      use_normalized_advantage: False
+      hidden_size: 512
+      use_double_buffered_sampler: False
+
+    ddppo:
+      sync_frac: 0.6
+      distrib_backend: NCCL
+      pretrained: False
+      pretrained_encoder: False
+      train_encoder: True
+      reset_critic: True
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 3

@@ -136,10 +136,9 @@ def main() -> None:
                  fontsize=9.5)
 
     plt.tight_layout()
-    for ext in ("pdf", "png"):
-        out = args.out_dir / f"transplant_5x5.{ext}"
-        fig.savefig(out, dpi=200, bbox_inches="tight")
-        print(f"wrote {out}")
+    out = args.out_dir / "fig4_transplant_5x5.pdf"
+    fig.savefig(out, dpi=200, bbox_inches="tight")
+    print(f"wrote {out}")
 
 
 if __name__ == "__main__":

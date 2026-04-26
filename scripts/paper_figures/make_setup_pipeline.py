@@ -190,10 +190,9 @@ def main() -> None:
     arrow(ax, (6.9, 1.3), (7.1, 1.25), lw=0.6, style="-")
 
     plt.tight_layout(pad=0.3)
-    for ext in ("pdf", "png"):
-        out = OUT_DIR / f"setup_pipeline.{ext}"
-        fig.savefig(out, dpi=200, bbox_inches="tight", pad_inches=0.05)
-        print(f"wrote {out}")
+    out = OUT_DIR / "fig1_setup_pipeline.pdf"
+    fig.savefig(out, dpi=200, bbox_inches="tight", pad_inches=0.05)
+    print(f"wrote {out}")
     plt.close(fig)
 
 

@@ -31,6 +31,9 @@ from src.habitat.foveated_shifted_policy import FoveatedShiftedGazePolicy  # noq
 from src.habitat.foveated_learned_policy import (  # noqa: F401
     FoveatedLearnedGazePolicy,
 )
+from src.habitat.foveated_stochastic_policy import (  # noqa: F401
+    FoveatedStochasticGazePolicy,
+)
 
 # F2/F3/F4 foveation-strength experiments (see experiments/
 # foveation_strength_ablation.md and foveation_normaliser_invariance.md).
@@ -39,6 +42,15 @@ from src.habitat.foveated_normalised_policy import (  # noqa: F401
 )
 from src.habitat.foveated_strong_policy import (  # noqa: F401
     FoveatedStrongWijmansPolicy,
+)
+from src.habitat.foveated_sigma2_policy import (  # noqa: F401
+    FoveatedSigma2WijmansPolicy,
+)
+from src.habitat.foveated_sigma4_policy import (  # noqa: F401
+    FoveatedSigma4WijmansPolicy,
+)
+from src.habitat.foveated_sigma12_policy import (  # noqa: F401
+    FoveatedSigma12WijmansPolicy,
 )
 from src.habitat.foveated_logpolar_policy import (  # noqa: F401
     FoveatedLogPolarWijmansPolicy,

@@ -93,7 +93,6 @@ def fig_goal_vector_grouped(in_path: Path, out_path: Path) -> None:
 
     fig.tight_layout()
     fig.savefig(out_path, bbox_inches="tight")
-    fig.savefig(out_path.with_suffix(".png"), dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"wrote {out_path}")
 
@@ -116,7 +115,7 @@ def main() -> None:
     args = ap.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    fig_goal_vector_grouped(args.in_path, args.out_dir / "goal_vector_probe.pdf")
+    fig_goal_vector_grouped(args.in_path, args.out_dir / "appfig12_goal_vector.pdf")
 
 
 if __name__ == "__main__":

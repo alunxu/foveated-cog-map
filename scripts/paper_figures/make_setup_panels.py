@@ -79,10 +79,9 @@ def save_panel(arr: np.ndarray, name: str, dpi: int = 200) -> None:
         spine.set_linewidth(0.8)
         spine.set_color("#333")
     fig.tight_layout(pad=0.1)
-    for ext in ("png", "pdf"):
-        out = OUT_DIR / f"{name}.{ext}"
-        fig.savefig(out, dpi=dpi, bbox_inches="tight", pad_inches=0.05)
-        print(f"wrote {out}")
+    out = OUT_DIR / f"fig1_{name}.pdf"
+    fig.savefig(out, dpi=dpi, bbox_inches="tight", pad_inches=0.05)
+    print(f"wrote {out}")
     plt.close(fig)
 
 

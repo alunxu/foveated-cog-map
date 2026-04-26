@@ -115,7 +115,6 @@ def fig_mp3d(results_dir: Path, out_path: Path, suffix: str = "") -> None:
     fig.suptitle("Probe generalisation: Gibson-trained \u2192 MP3D validation", fontsize=10, y=1.02)
     fig.tight_layout()
     fig.savefig(out_path, bbox_inches="tight")
-    fig.savefig(out_path.with_suffix(".png"), dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"wrote {out_path}")
 
@@ -142,7 +141,7 @@ def main() -> None:
     args = ap.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    fig_mp3d(args.results_dir, args.out_dir / "mp3d_generalization.pdf",
+    fig_mp3d(args.results_dir, args.out_dir / "appfig13_mp3d_generalization.pdf",
              suffix=args.suffix)
 
 

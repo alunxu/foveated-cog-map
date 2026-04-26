@@ -17,7 +17,7 @@ Reads:
   - <results-dir>/{cond}_gibson_det_analysis.json               (c, LSTM layers)
   - <results-dir>/{cond}_encoder_features_det.json              (c, encoder)
 
-Writes: <out-dir>/h1_mega.{pdf,png}
+Writes: <out-dir>/fig2_h1_mega.pdf
 
 Usage:
     python scripts/paper_figures/make_h1_mega_figure.py \\
@@ -268,10 +268,9 @@ def main() -> None:
         ax.text(-0.14, 1.18, lbl, transform=ax.transAxes,
                 fontsize=12, fontweight="bold", va="top", ha="left")
 
-    for ext in ("pdf", "png"):
-        out = args.out_dir / f"h1_mega.{ext}"
-        fig.savefig(out, dpi=200, bbox_inches="tight")
-        print(f"wrote {out}")
+    out = args.out_dir / "fig2_h1_mega.pdf"
+    fig.savefig(out, dpi=200, bbox_inches="tight")
+    print(f"wrote {out}")
 
 
 if __name__ == "__main__":

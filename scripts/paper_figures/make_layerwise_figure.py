@@ -99,10 +99,9 @@ def main() -> None:
     axes[1].legend(loc="lower left", fontsize=7, frameon=False, ncol=1)
     fig.tight_layout()
 
-    for ext in ("pdf", "png"):
-        out = args.out_dir / f"layerwise_decay.{ext}"
-        fig.savefig(out, dpi=200, bbox_inches="tight")
-        print(f"wrote {out}")
+    out = args.out_dir / "appfig13_layerwise_decay.pdf"
+    fig.savefig(out, dpi=200, bbox_inches="tight")
+    print(f"wrote {out}")
 
 
 if __name__ == "__main__":

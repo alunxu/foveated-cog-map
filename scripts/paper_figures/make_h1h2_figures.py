@@ -136,10 +136,9 @@ def fig_path_history(in_dir: Path, out_dir: Path) -> None:
     ax.grid(True, alpha=0.25)
     fig.tight_layout()
 
-    for ext in ("pdf", "png"):
-        p = out_dir / f"h1_path_history.{ext}"
-        fig.savefig(p, dpi=200, bbox_inches="tight")
-        print(f"wrote {p}")
+    p = out_dir / "h1_path_history.pdf"
+    fig.savefig(p, dpi=200, bbox_inches="tight")
+    print(f"wrote {p}")
     plt.close(fig)
 
 
@@ -176,10 +175,9 @@ def fig_accuracy_vs_timestep(in_dir: Path, out_dir: Path) -> None:
     ax.set_ylim(-3.0, 1.0)
     fig.tight_layout()
 
-    for ext in ("pdf", "png"):
-        p = out_dir / f"h1_accuracy_vs_timestep.{ext}"
-        fig.savefig(p, dpi=200, bbox_inches="tight")
-        print(f"wrote {p}")
+    p = out_dir / "h1_accuracy_vs_timestep.pdf"
+    fig.savefig(p, dpi=200, bbox_inches="tight")
+    print(f"wrote {p}")
     plt.close(fig)
 
 
@@ -215,10 +213,9 @@ def fig_global_probe_summary(in_dir: Path, out_dir: Path) -> None:
     ax.grid(True, axis="y", alpha=0.25)
     fig.tight_layout()
 
-    for ext in ("pdf", "png"):
-        p = out_dir / f"h1_global_probe.{ext}"
-        fig.savefig(p, dpi=200, bbox_inches="tight")
-        print(f"wrote {p}")
+    p = out_dir / "h1_global_probe.pdf"
+    fig.savefig(p, dpi=200, bbox_inches="tight")
+    print(f"wrote {p}")
     plt.close(fig)
 
 
@@ -298,10 +295,9 @@ def fig_cka_heatmap(in_dir: Path, out_dir: Path) -> None:
     fig.colorbar(im, ax=ax, shrink=0.8, label="CKA (clipped at 0.05)")
     fig.tight_layout()
 
-    for ext in ("pdf", "png"):
-        p = out_dir / f"h2_cka_heatmap.{ext}"
-        fig.savefig(p, dpi=200, bbox_inches="tight")
-        print(f"wrote {p}")
+    p = out_dir / "appfig8_h2_cka_heatmap.pdf"
+    fig.savefig(p, dpi=200, bbox_inches="tight")
+    print(f"wrote {p}")
     plt.close(fig)
 
 

@@ -241,10 +241,9 @@ def main() -> None:
                ncol=5, fontsize=9, frameon=False,
                bbox_to_anchor=(0.5, -0.01))
 
-    for ext in ("pdf", "png"):
-        out = args.out_dir / f"shortcut_paired_traj.{ext}"
-        fig.savefig(out, dpi=200, bbox_inches="tight")
-        print(f"wrote {out}")
+    out = args.out_dir / "fig5_shortcut_paired_traj.pdf"
+    fig.savefig(out, dpi=200, bbox_inches="tight")
+    print(f"wrote {out}")
 
 
 if __name__ == "__main__":
