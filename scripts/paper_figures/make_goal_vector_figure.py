@@ -26,7 +26,7 @@ COND_DISPLAY = {
     "uniform_gibson":          ("Uniform",            "#4daf4a"),
     "foveated_gibson":         ("Foveated (fix)",   "#e41a1c"),
     "foveated_learned_gibson": ("Foveated (learned)", "#ff7f00"),
-    "matched_gibson":          ("Matched-compute",    "#377eb8"),
+    "matched_gibson":          ("Coarse",    "#377eb8"),
 }
 COND_ORDER = [
     "blind_gibson",

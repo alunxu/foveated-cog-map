@@ -35,7 +35,7 @@ import numpy as np
 
 CONDS = [
     ("blind_gibson",            "Blind",            "#444444", "o"),
-    ("matched_gibson",          "Matched (1×1)",    "#377eb8", "s"),
+    ("matched_gibson",          "Coarse (1×1)",    "#377eb8", "s"),
     ("uniform_gibson",          "Uniform",          "#4daf4a", "^"),
     ("foveated_gibson",         "Foveated (fix)",   "#e41a1c", "D"),
     ("foveated_learned_gibson", "Foveated (learned)",      "#ff7f00", "v"),

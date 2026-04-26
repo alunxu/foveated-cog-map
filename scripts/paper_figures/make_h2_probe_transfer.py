@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 
-CONDS = ["Blind", "Uniform", "Fov-fix", "Fov-lrn", "Matched"]
+CONDS = ["Blind", "Uniform", "Foveated\n(fix)", "Foveated\n(learned)", "Coarse"]
 
 # Train (row) x Test (col) probe-transfer R²
 # (paper Table 2)
@@ -39,7 +39,7 @@ M = np.array([
     [-1383,    +0.90,    -7046,     -3305,    -110317],  # Uniform
     [-2091,    -2792,    +0.92,     -1263,    -39100],   # Fov-fix
     [-6722,    -2423,    -6205,     +0.89,    -38842],   # Fov-lrn
-    [-10621,   -4832,    -4984,     -58169,   +0.96],    # Matched
+    [-10621,   -4832,    -4984,     -58169,   +0.96],    # Coarse
 ], dtype=float)
 
 

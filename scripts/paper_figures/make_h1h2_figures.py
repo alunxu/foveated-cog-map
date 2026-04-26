@@ -42,7 +42,7 @@ COND_DISPLAY = {
     "uniform": ("Uniform", "#4daf4a"),
     "foveated": ("Foveated (fix)", "#e41a1c"),
     "foveated_learned": ("Foveated (learned)", "#ff7f00"),
-    "matched": ("Matched-compute", "#377eb8"),  # matched-48 is the probed run; paper text calls it Matched-compute
+    "matched": ("Coarse", "#377eb8"),  # matched-48 is the probed run; paper text calls it Matched-compute
 }
 COND_ORDER = ["blind", "uniform", "foveated", "foveated_learned", "matched"]
 

@@ -79,7 +79,7 @@ def load_episode_pair(traj_dir: Path, cond: str, scene: str, ep_idx: int) -> dic
 MARGIN_TABLE = [
     # (label,        n,  margin,  colour)
     ("Blind",         27, -0.38, "#444444"),
-    ("Matched",       35, -0.57, "#377eb8"),
+    ("Coarse",       35, -0.57, "#377eb8"),
     ("Uniform",       46, +1.83, "#4daf4a"),
     ("Foveated (fix)", 16, -0.59, "#e41a1c"),
     ("Foveated (learned)",    5, +2.30, "#ff7f00"),

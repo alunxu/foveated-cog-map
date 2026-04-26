@@ -33,7 +33,7 @@ import numpy as np
 CONDS = [
     # (json_key,            short_label,         colour,    marker)
     ("blind",               "Blind",             "#444444", "o"),
-    ("matched",             "Matched (1×1)",     "#377eb8", "s"),
+    ("matched",             "Coarse (1×1)",     "#377eb8", "s"),
     ("uniform",             "Uniform",           "#4daf4a", "^"),
     ("foveated",            "Foveated (fix)",    "#e41a1c", "D"),
     ("foveated_learned",    "Foveated (learned)",       "#ff7f00", "v"),
@@ -86,7 +86,7 @@ def main() -> None:
         # Label offset to avoid marker overlap.
         offsets = {
             "Blind":          (-0.08, +0.0),
-            "Matched (1×1)":  (-0.08, +0.0),
+            "Coarse (1×1)":  (-0.08, +0.0),
             "Uniform":        (+0.08, +0.0),
             "Foveated (fix)": (+0.08, +0.0),
             "Foveated (learned)":    (+0.10, -3.5),

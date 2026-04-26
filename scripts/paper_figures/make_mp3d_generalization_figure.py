@@ -25,7 +25,7 @@ CONDS = [
     ("uniform",          "Uniform",            "#4daf4a"),
     ("foveated",         "Foveated (fix)",     "#e41a1c"),
     ("foveated_learned", "Foveated (learned)", "#ff7f00"),
-    ("matched",          "Matched-compute",    "#377eb8"),
+    ("matched",          "Coarse",    "#377eb8"),
 ]
 TARGETS = [
     ("1b_global_gps_compass", "gps_r2",       "GPS"),

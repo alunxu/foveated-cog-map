@@ -22,7 +22,7 @@ COND_DISPLAY = {
     "uniform": ("Uniform", "#4daf4a"),
     "foveated": ("Foveated (fix)", "#e41a1c"),
     "foveated_learned": ("Foveated (learned)", "#ff7f00"),
-    "matched": ("Matched-compute", "#377eb8"),
+    "matched": ("Coarse", "#377eb8"),
 }
 COND_ORDER = ["blind", "uniform", "foveated", "foveated_learned", "matched"]
 

@@ -34,7 +34,7 @@ COND_COLS = {
 COND_LABELS = {
     "blind_gibson": "Blind", "uniform_gibson": "Uniform",
     "foveated_gibson": "Fov-fix", "foveated_learned_gibson": "Fov-lrn",
-    "matched_gibson": "Matched",
+    "matched_gibson": "Coarse",
 }
 COND_ORDER_GV = ["blind_gibson", "uniform_gibson", "foveated_gibson",
                  "foveated_learned_gibson", "matched_gibson"]
@@ -44,7 +44,7 @@ SHORTCUT_FILES = [
     ("uniform", "uniform_gibson.json", "Uniform", "#4daf4a"),
     ("foveated", "foveated_gibson.json", "Fov-fix", "#e41a1c"),
     ("foveated_learned", "foveated_learned_gibson.json", "Fov-lrn", "#ff7f00"),
-    ("matched", "matched_gibson.json", "Matched", "#377eb8"),
+    ("matched", "matched_gibson.json", "Coarse", "#377eb8"),
 ]
 
 

@@ -33,7 +33,7 @@ import numpy as np
 
 CONDS = [
     ("blind",            "Blind"),
-    ("matched",          "Matched\n(1×1)"),
+    ("matched",          "Coarse\n(1×1)"),
     ("uniform",          "Uniform"),
     ("foveated",         "Foveated\n(fix)"),
     ("foveated_learned", "Foveated (learned)"),
