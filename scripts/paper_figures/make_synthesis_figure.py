@@ -1,0 +1,197 @@
+"""
+Discussion §5.1 synthesis figure: place the 5 conditions in a 2D space
+defined by the two axes the prose introduces.
+
+x-axis (H1 magnitude): top-layer GPS $R^2$ on $\mathbf{h}_2$ (Gibson, 5-fold CV).
+y-axis (H2 format isolation): negation of average row of the 5x5
+  cross-condition memory-transplant matrix (with off-diagonal cells only).
+  Higher Y = this condition's hidden state is more disruptive to OTHER
+  conditions' policies = more format-isolated as donor.
+
+Caveat: coarse-as-donor has only 1 measured cell (coarse→blind);
+its Y is single-cell, marked with a hollow marker + footnote in caption.
+
+Visual structure: 2x2 quadrants with corner labels showing the 4 logical
+combinations of (H1 magnitude × H2 format isolation).
+
+Reads:  /tmp/transplant_local/<donor>_to_<recipient>.json (default mid=30)
+        /tmp/probing_results_local/<cond>_gibson_det_analysis.json
+Writes: docs/NeurIPS_2026/fig/synthesis_2axes.{pdf,png}
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+CONDS = [
+    # (key,           label,                colour,    marker)
+    ("blind",            "Blind",             "#444444", "o"),
+    ("matched",          "Coarse (1×1)",      "#377eb8", "s"),
+    ("uniform",          "Uniform",           "#4daf4a", "^"),
+    ("foveated",         "Foveated (fix)",    "#e41a1c", "D"),
+    ("foveated_learned", "Foveated (learned)", "#ff7f00", "v"),
+]
+
+CLIP_X_MIN = -1.5  # for plot; foveated_learned actual GPS R² = -2.43
+
+
+def load_h1_magnitude(probing_dir: Path) -> dict[str, float]:
+    """Top-layer GPS R^2 per condition (Gibson, 5-fold CV)."""
+    out = {}
+    for cond_key, *_ in CONDS:
+        p = probing_dir / f"{cond_key}_gibson_det_analysis.json"
+        if not p.exists():
+            continue
+        d = json.loads(p.read_text())
+        v = d.get("1b_global_gps_compass", {}).get("gps_cv_r2_mean")
+        if v is not None:
+            out[cond_key] = v
+    return out
+
+
+def load_donor_toxicity(transplant_dir: Path) -> tuple[dict[str, float], dict[str, int]]:
+    """Average cross-transplant cost when this condition is donor.
+
+    For each donor D, average over recipients R != D where pair JSON exists.
+    The cost is (cross_transplant_spl - recipient_self_spl), where the
+    self-spl is recipient-specific (collected from the same pair files).
+
+    Returns (avg_cost dict, n_cells dict).
+    """
+    # First pass: recipient_self_spl per recipient
+    recip_self: dict[str, float] = {}
+    for fp in sorted(transplant_dir.glob("*_to_*.json")):
+        # only mid=30 (default; files without _midN are mid30)
+        if "_mid" in fp.stem:
+            continue
+        # parse donor / recipient
+        parts = fp.stem.split("_to_")
+        donor, recip = parts[0], parts[1]
+        d = json.loads(fp.read_text())
+        if recip not in recip_self:
+            recip_self[recip] = d["self_transplant"]["mean_spl"]
+
+    # Second pass: avg cost per donor
+    avg_cost: dict[str, float] = {}
+    n_cells: dict[str, int] = {}
+    for cond_key, *_ in CONDS:
+        costs = []
+        for fp in sorted(transplant_dir.glob(f"{cond_key}_to_*.json")):
+            if "_mid" in fp.stem:
+                continue
+            recip = fp.stem.split("_to_")[1]
+            if recip == cond_key:  # self-transplant — skip
+                continue
+            d = json.loads(fp.read_text())
+            cost = d["cross_transplant"]["mean_spl"] - recip_self.get(
+                recip, d["self_transplant"]["mean_spl"]
+            )
+            costs.append(cost)
+        if costs:
+            avg_cost[cond_key] = float(np.mean(costs))
+            n_cells[cond_key] = len(costs)
+    return avg_cost, n_cells
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--probing-dir", type=Path, required=True)
+    ap.add_argument("--transplant-dir", type=Path, required=True)
+    ap.add_argument("--out-dir", type=Path, required=True)
+    args = ap.parse_args()
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    gps_r2 = load_h1_magnitude(args.probing_dir)
+    avg_cost, n_cells = load_donor_toxicity(args.transplant_dir)
+
+    print("Loaded:")
+    for k in [c[0] for c in CONDS]:
+        print(f"  {k:20s} GPS R^2={gps_r2.get(k, 'N/A'):>7} | "
+              f"donor toxicity={avg_cost.get(k, 'N/A'):>8} ({n_cells.get(k, 0)} cells)")
+
+    fig, ax = plt.subplots(figsize=(7.0, 5.0))
+
+    # 2x2 quadrant separators (use thresholds that visually split the 5 conds)
+    GPS_THRESH = 0.4
+    TOX_THRESH = 0.12  # "above" = format-isolated as donor
+
+    ax.axhline(TOX_THRESH, ls="--", color="#888", lw=0.9, zorder=1)
+    ax.axvline(GPS_THRESH, ls="--", color="#888", lw=0.9, zorder=1)
+
+    # Plot points
+    for cond_key, label, colour, marker in CONDS:
+        if cond_key not in gps_r2 or cond_key not in avg_cost:
+            continue
+        x = max(gps_r2[cond_key], CLIP_X_MIN)
+        y = -avg_cost[cond_key]   # higher Y = more toxic = more format-isolated
+        clipped = gps_r2[cond_key] < CLIP_X_MIN
+        n = n_cells[cond_key]
+        # Hollow marker for single-cell measurement (coarse)
+        if n < 3:
+            facecolor = "white"
+            edgecolor = colour
+            edge_lw = 2.0
+        else:
+            facecolor = colour
+            edgecolor = "black"
+            edge_lw = 0.9
+        ax.scatter(x, y, s=180, c=facecolor, edgecolor=edgecolor,
+                   linewidths=edge_lw, marker=marker, zorder=4)
+        # Label offset
+        offsets = {
+            "Blind":          (-0.05, +0.014),
+            "Coarse (1×1)":   (+0.06, +0.018),
+            "Uniform":        (-0.05, +0.013),
+            "Foveated (fix)": (+0.05, -0.012),
+            "Foveated (learned)": (+0.10, +0.000),
+        }
+        dx, dy = offsets.get(label, (0.05, 0.0))
+        ha = "right" if dx < 0 else "left"
+        annot = label
+        if clipped:
+            annot = f"{label}\n($R^2{{=}}{gps_r2[cond_key]:.1f}$)"
+        if n < 3:
+            annot = f"{label}\n($n_{{cells}}{{=}}{n}$)"
+        ax.annotate(annot, (x, y), xytext=(x + dx, y + dy),
+                    ha=ha, va="center", fontsize=9, fontweight="bold")
+
+    # Quadrant labels (corners)
+    quad_kw = dict(transform=ax.transAxes, fontsize=8.5, color="#444",
+                   style="italic", alpha=0.85)
+    ax.text(0.97, 0.97, "linear GPS code\n+ format-isolated",
+            ha="right", va="top", **quad_kw)
+    ax.text(0.03, 0.97, "no linear GPS\n+ format-isolated",
+            ha="left", va="top", **quad_kw)
+    ax.text(0.97, 0.03, "linear GPS code\n+ format-shared",
+            ha="right", va="bottom", **quad_kw)
+    ax.text(0.03, 0.03, "no linear GPS\n+ format-shared",
+            ha="left", va="bottom", **quad_kw)
+
+    ax.set_xlabel("H1 magnitude:  top-layer GPS $R^2$ (probe on $\\mathbf{h}_2$)",
+                  fontsize=10)
+    ax.set_ylabel("H2 format isolation\n(avg transplant cost as donor)",
+                  fontsize=10)
+    ax.set_xlim(CLIP_X_MIN - 0.05, 1.10)
+    ax.set_ylim(-0.04, 0.32)
+    ax.tick_params(axis="both", labelsize=9)
+    for s_ in ("top", "right"):
+        ax.spines[s_].set_visible(False)
+    ax.grid(linestyle=":", alpha=0.25)
+
+    fig.tight_layout()
+    for ext in ("pdf", "png"):
+        out = args.out_dir / f"synthesis_2axes.{ext}"
+        fig.savefig(out, dpi=200, bbox_inches="tight")
+        print(f"wrote {out}")
+
+
+if __name__ == "__main__":
+    main()
