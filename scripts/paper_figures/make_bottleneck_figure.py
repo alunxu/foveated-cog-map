@@ -18,7 +18,7 @@ DATA = [
     ("Matched (1×1)",   +0.78, 0.10, +0.64, 0.10, +0.85, 0.12),
     ("Uniform",         -0.31, 0.86, +0.36, 0.23, +0.86, 0.09),
     ("Foveated (fix)",  +0.06, 0.88, +0.07, 0.69, +0.82, 0.09),
-    ("Fov-learned",     -2.43, 3.98, -1.34, 3.14, +0.81, 0.09),
+    ("Foveated (learned)",     -2.43, 3.98, -1.34, 3.14, +0.81, 0.09),
 ]
 
 # Clip to [-1.5, 1] for visibility; mark sentinels with arrows/patterns

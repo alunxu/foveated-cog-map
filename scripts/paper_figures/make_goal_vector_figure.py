@@ -24,7 +24,7 @@ import numpy as np
 COND_DISPLAY = {
     "blind_gibson":            ("Blind",              "#444444"),
     "uniform_gibson":          ("Uniform",            "#4daf4a"),
-    "foveated_gibson":         ("Foveated (fixed)",   "#e41a1c"),
+    "foveated_gibson":         ("Foveated (fix)",   "#e41a1c"),
     "foveated_learned_gibson": ("Foveated (learned)", "#ff7f00"),
     "matched_gibson":          ("Matched-compute",    "#377eb8"),
 }

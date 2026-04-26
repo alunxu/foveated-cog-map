@@ -82,7 +82,7 @@ MARGIN_TABLE = [
     ("Matched",       35, -0.57, "#377eb8"),
     ("Uniform",       46, +1.83, "#4daf4a"),
     ("Foveated (fix)", 16, -0.59, "#e41a1c"),
-    ("Fov-learned",    5, +2.30, "#ff7f00"),
+    ("Foveated (learned)",    5, +2.30, "#ff7f00"),
 ]
 
 

@@ -40,7 +40,7 @@ import numpy as np
 COND_DISPLAY = {
     "blind": ("Blind", "#444444"),
     "uniform": ("Uniform", "#4daf4a"),
-    "foveated": ("Foveated (fixed)", "#e41a1c"),
+    "foveated": ("Foveated (fix)", "#e41a1c"),
     "foveated_learned": ("Foveated (learned)", "#ff7f00"),
     "matched": ("Matched-compute", "#377eb8"),  # matched-48 is the probed run; paper text calls it Matched-compute
 }

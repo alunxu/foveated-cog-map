@@ -34,7 +34,7 @@ CONDS = [
     ("matched", "Matched (1×1)", "#377eb8", "s"),
     ("uniform", "Uniform", "#4daf4a", "^"),
     ("foveated", "Foveated (fix)", "#e41a1c", "D"),
-    ("foveated_learned", "Fov-learned", "#ff7f00", "v"),
+    ("foveated_learned", "Foveated (learned)", "#ff7f00", "v"),
 ]
 
 

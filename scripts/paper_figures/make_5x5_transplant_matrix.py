@@ -36,7 +36,7 @@ CONDS = [
     ("matched",          "Matched\n(1×1)"),
     ("uniform",          "Uniform"),
     ("foveated",         "Foveated\n(fix)"),
-    ("foveated_learned", "Fov-learned"),
+    ("foveated_learned", "Foveated (learned)"),
 ]
 
 

@@ -26,7 +26,7 @@ PAIRS = [
      "Foveated$\\rightarrow$Uniform",
      "#e41a1c", "#4daf4a"),
     ("foveated_learned_to_foveated.json",
-     "Fov-learned$\\rightarrow$Foveated",
+     "Foveated (learned)$\\rightarrow$Foveated (fix)",
      "#ff7f00", "#e41a1c"),
 ]
 

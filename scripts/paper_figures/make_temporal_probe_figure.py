@@ -38,7 +38,7 @@ CONDS = [
     ("matched_gibson",          "Matched (1×1)",    "#377eb8", "s"),
     ("uniform_gibson",          "Uniform",          "#4daf4a", "^"),
     ("foveated_gibson",         "Foveated (fix)",   "#e41a1c", "D"),
-    ("foveated_learned_gibson", "Fov-learned",      "#ff7f00", "v"),
+    ("foveated_learned_gibson", "Foveated (learned)",      "#ff7f00", "v"),
 ]
 
 
