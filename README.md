@@ -1,9 +1,9 @@
-# What Do Foveated Agents Remember?
-## How Perceptual Uncertainty Shapes the Content of Learned Cognitive Maps
+# How Foveated Vision Shapes Cognitive Maps in Navigation Agents
 
 **CS503 Visual Intelligence — EPFL, Spring 2026**
+**Submission target: NeurIPS 2026**
 
-> When a visual agent navigates through a foveated sensor, what does it choose to remember?
+> Holding task and architecture fixed, does the structure of the visual sensor reshape what an agent's memory encodes?
 
 ---
 
@@ -11,48 +11,52 @@
 
 ### The Big Picture
 
-Imagine a robot navigating inside a building. It uses a recurrent neural network (LSTM) as its "brain" — at each step, it reads sensor input, updates its hidden state, and decides what to do next. That hidden state is the agent's **working memory**.
+Wijmans et al. (ICLR 2023) showed that map-like representations emerge in the recurrent state of navigation agents trained with deep RL — *including agents with no vision at all*. Their result establishes that *some* spatial structure is learned without being designed in. It leaves open the complementary question we take up here: **holding task and architecture fixed, does the structure of the visual sensor reshape what an agent's memory encodes?**
 
-Wijmans et al. (ICLR 2023) discovered something surprising: even a **blind** agent (receiving only GPS+Compass, no camera) develops **spatial maps inside its memory**. By probing the LSTM hidden states with simple linear classifiers, they showed the agent secretly encodes room layouts, its own position, and wall locations — all without ever "seeing" anything.
+We treat this as a controlled silicon case study using a recurrent (LSTM-3-layer-512) PointNav agent. The architecture, training algorithm (DD-PPO), reward, and dataset are held fixed; **only the visual sensor varies** across five conditions (Figure 1 in the paper).
 
-Our project extends this by asking: **what happens when you give the agent eyes — specifically, human-like foveated eyes?**
+### Why Foveation? Why Sensor Variety?
 
-### Why Foveation?
+Biological evidence is consistent: sensor structure reshapes spatial memory format. Primates with foveated eyes show place-view-action coding in hippocampus; rodents with near-panoramic vision show classic place fields; bats remap their hippocampal populations under vision vs. echolocation; congenitally blind humans recruit occipital-hippocampal circuits for spatial tasks. The pattern across systems is that "the structure of the sensor shapes the structure of spatial memory."
 
-Human vision is not uniform. We see sharply only at the center of gaze (the **fovea**, ~2 degrees), while the periphery is progressively blurred. This forces us to actively choose **where to look**, creating a tight loop between attention, perception, and memory.
+Whether the same holds for *artificial* navigation agents — whose memory also develops cognitive-map-like structure under task pressure alone — has not been tested directly, because prior work has either removed vision entirely or used spatially uniform input. We isolate the principle by varying only the visual sensor.
 
-We hypothesize that an agent with foveated vision will develop qualitatively different spatial representations than one with a perfect camera — because it must selectively attend to parts of the scene and remember what it cannot currently see clearly.
-
-### Four Experimental Conditions
+### Five Experimental Conditions
 
 We train five navigation agents (varying only visual input) and compare what their memories encode:
 
-| Agent | Input | What We Test |
-|-------|-------|-------------|
-| **Blind** | Non-visual sensor stack only (goal, GPS, compass, close-to-goal) | Baseline: do spatial maps emerge without any vision? (replication of Wijmans) |
-| **Uniform** | 256×256 RGB via ResNet-18 | Does adding uniform vision change memory content? |
-| **Foveated (fixed)** | 256×256 RGB with eccentricity-dependent Gaussian blur (σ_max=8), gaze locked at centre | Does spatial non-uniformity reshape what gets remembered? |
-| **Foveated (learned)** | Same blur, gaze predicted by MLP (~33K params) from LSTM state | Does active gaze amplify the effect? |
-| **Matched-Compute** | 48×48 uniform RGB (2,304 pixels, exceeding foveated budget) | Control: is it about spatial distribution or total info volume? |
+| Agent | Input | Encoder spatial output | Role |
+|-------|-------|------------------------|------|
+| **Blind** | Non-visual sensor stack only (goal-in-start-frame, GPS, compass, close-to-goal) | None | Baseline: do spatial maps emerge without any vision? (Wijmans replication) |
+| **Coarse (1×1)** | 48×48 uniform RGB | 1×1 (encoder collapsed) | Has visual input but encoder cannot resolve world-frame position. Tests whether the bottleneck is "no vision" or "no spatial features" |
+| **Uniform** | 256×256 full-resolution RGB | 8×8 | Does adding spatially rich vision change memory content? |
+| **Foveated (fix)** | 256×256 with eccentricity-dependent Gaussian blur (σ_max=8, quadratic falloff), gaze locked at center | 8×8 | Spatially non-uniform input within the rich-encoder regime |
+| **Foveated (learned)** | Same blur, gaze (x,y) predicted by lightweight MLP from previous LSTM state | 8×8 | Does active gaze amplify the effect? |
 
-The **blind vs. uniform** comparison tells us whether vision changes memory. The **uniform vs. foveated** comparison tells us whether spatial non-uniformity matters. The **foveated vs. matched-compute** comparison isolates spatial distribution from total information volume. The **fixed vs. learned gaze** comparison isolates the contribution of active gaze (H3 test).
+All five share an identical 3-layer LSTM-512 backbone. Sighted conditions train to ~250M environment frames; blind trains to 342M to allow slower convergence from proprioception alone.
 
-### Hypotheses
+### Three Hypotheses
 
-**H1 (Compensatory memory):** Layout-probe accuracy stratified by observation eccentricity: a passive memory predicts falling accuracy; compensatory memory predicts flat or *rising* accuracy in the periphery. A separate confidence probe (inverse cumulative blur σ) tests whether input quality is recorded at all.
+**H1 (Encoder–memory race):** When the visual encoder supplies little spatial-feature variety per step, the recurrent state should compensate by carrying a world-frame spatial code; richer encoder output should let memory rely on visual features instead.
 
-**H2 (Representational divergence):** CKA between foveated and uniform agents: low similarity despite matched task performance indicates qualitatively different spatial codes. Cross-heading position-probe generalization tests whether foveated codes are more appearance-invariant.
+**H2 (Format divergence):** Different sensor conditions should produce hidden-state representations in *distinct linear subspaces*, not scaled versions of a common code.
 
-**H3 (Epistemic gaze):** Correlation of learned gaze coordinates with position-probe error (memory-uncertainty proxy). If the learned-gaze agent shows stronger H1–H2 effects than the fixed-centre variant, fixation is driven by epistemic demands.
+**H3 (Gaze location):** Within the rich-encoder regime, *where* a foveated sensor is centered should act as a second content axis independent of the sensor transform.
 
-Each hypothesis is testable within a semester and produces interesting results whether confirmed or refuted.
+Each H has a direct biological analog (paper §5.2 *Biological precedent*).
+
+### Headline Findings (single-seed; multi-seed replication in flight)
+
+1. **Encoder–memory race (H1)**: visual-encoder capacity tracks top-layer LSTM spatial encoding *inversely*. Bottleneck conditions (blind, coarse) carry a strong linear GPS code at the policy readout (R² 0.78–0.95); rich-encoder conditions (uniform, foveated, foveated-learned) do not. **Cross-training probes show the GPS code emerges *transiently* in rich-encoder agents (R²~0.7–0.8 at ~50M frames) then progressively dissipates** — direct mechanistic evidence for the *substitution mechanism* (LSTM hands off integrated GPS to the visual route as the encoder learns).
+2. **Format divergence (H2)**: the five agents at comparable task competence (success 93–99%) develop hidden states in linearly disjoint subspaces. Cross-condition memory transplants are asymmetric: bottleneck-donor states are toxic to rich-encoder recipients while the reverse is benign.
+3. **Probe-readable vs. policy-used dissociation**: at the H1×shortcut intersection, two conditions go off-diagonal — coarse has a readable GPS code that its policy under-uses; uniform has no readable GPS but its policy is highly memory-dependent. "Has a cognitive map" and "uses a cognitive map" can dissociate in either direction.
 
 ### Motivation
 
-Three implications if confirmed:
-- **Belief-state emergence without Bayesian machinery.** If pure RL under foveation induces uncertainty tracking in recurrent memory, task pressure alone can discover belief-state-like representations — without explicit probabilistic objectives or architectural priors.
-- **Abstract spatial codes from degraded input.** Foveation degrades visual detail within each frame, preventing reliance on appearance-based position encoding. If this forces more abstract, appearance-invariant spatial representations, it identifies input degradation as a sufficient condition for representational abstraction — an information-bottleneck effect driven by sensor structure.
-- **Gaze as epistemic action.** If learned gaze targets memory-weak regions, the navigation objective alone suffices for information-gain-maximizing fixation — without auxiliary exploration rewards or hand-designed gaze shaping.
+If the principle holds:
+- **Sensor structure as a representational-content axis.** Encoder capacity becomes a *training-time lever* for inducing cognitive-map-like memory structure — without changing task, architecture, or reward.
+- **The encoder–memory race is interface-level.** The claim is about what an upstream encoder doesn't supply forcing a downstream memory to compensate. It should generalise (with adapted measurements) to transformer-based navigators, attention-over-history architectures, etc.
+- **Convergent with biology.** The pattern parallels independent animal-navigation findings on hippocampal compensation under sensory deprivation and cross-modality remapping (paper §5.2).
 
 ---
 
@@ -68,21 +72,23 @@ Actions: `MOVE_FORWARD`, `TURN_LEFT`, `TURN_RIGHT` (+ `STOP` in Habitat)
 
 ### 2.2 Agent Architecture
 
-All four conditions share the same recurrent backbone for fair comparison:
+All five conditions share the same recurrent backbone for fair comparison:
 
 ```
-Observation → Encoder → [concatenate with pointgoal] → LSTM (3 layers, 512-d) → Policy Head
-                                                            ↑
-                                                    This hidden state is what we probe
+Observation → Encoder → [concatenate with non-visual sensor stack] → LSTM (3 layers, 512-d) → Policy Head
+                                                                          ↑
+                                                                  This hidden state is what we probe
 ```
 
-| Component | Blind | Uniform | Foveated (fixed/learned) | Matched |
-|-----------|-------|---------|----------|---------|
-| Visual encoder | None | ResNet-18 | ResNet-18 + foveation | ResNet-18 |
-| Input resolution | N/A | 256×256 | 256×256 (foveated, σ_max=8) | 48×48 |
-| Non-visual sensors | goal-in-start-frame, GPS, compass, close-to-goal (each → 32-d) | same | same | same |
-| LSTM | 3 layers, 512-d | 3 layers, 512-d | 3 layers, 512-d | 3 layers, 512-d |
-| Policy head | Categorical | Categorical | Categorical (+ gaze MLP for learned) | Categorical |
+The non-visual sensor stack — `goal-in-start-frame`, `GPS`, `compass`, `close-to-goal-indicator` (each → 32-d) plus a 32-d previous-action embedding — is identical across all five conditions; only the visual encoder varies.
+
+| Component | Blind | Coarse (1×1) | Uniform | Foveated (fixed/learned) |
+|-----------|-------|--------------|---------|--------------------------|
+| Visual encoder | None | ResNet-18 | ResNet-18 | ResNet-18 + foveation transform |
+| Input resolution | N/A | 48×48 | 256×256 | 256×256 (with σ_max=8 blur) |
+| Encoder spatial output | None | 1×1 (collapsed) | 8×8 | 8×8 |
+| LSTM | 3 layers, 512-d | (same) | (same) | (same) |
+| Policy head | Categorical | (same) | (same) | (same; + gaze MLP for learned) |
 
 ### 2.3 Foveation Transform
 
@@ -108,9 +114,11 @@ This means the agent **decides where to look based on what it remembers**, then 
 
 ### 2.4 Training Algorithm
 
-- **Habitat**: DD-PPO (Decentralized Distributed PPO), 500M environment steps on 2 V100 GPUs
-  - DD-PPO runs multiple independent PPO workers that periodically sync gradients
-  - Each worker manages multiple parallel environments (8 for blind, 6 for sighted)
+- **Habitat**: DD-PPO (Decentralized Distributed PPO) on 2× V100 GPUs (Izar SCITAS) or 1× hc GPU (collaborator's H200)
+  - Sighted conditions train to **~250M environment frames**; **blind trains to ~342M** to allow slower convergence from proprioception alone
+  - 72h SLURM walltime → DD-PPO auto-resumes from `latest.pth` checkpoint
+  - Multi-seed replication (seed=2 of all 5 conditions) currently in flight on Izar
+  - Each worker manages multiple parallel environments (typically 6 per worker, 2 workers per node)
 
 ### 2.4.1 Numerical Stability: NaN Sanitisation (Important for Downstream Users)
 
@@ -167,16 +175,20 @@ Beyond probing *what* the memory encodes, we analyze *how gaze and memory intera
 2. **Perceptual uncertainty tracking**: Using the `FoveationTransform.get_uncertainty_map()` method, we compute a per-location uncertainty map from the agent's gaze history. We then test whether this uncertainty is decodable from the hidden state (H2).
 3. **Gaze fixation patterns**: Visualize where the foveated agent looks over time — does it develop systematic scanning patterns (e.g., looking at doorways, obstacles, the goal direction)?
 
-### 2.7 Ablations
+### 2.7 Ablations & Follow-up Experiments
 
-To understand which factors drive our results, we plan the following ablation experiments:
+To understand which factors drive the H1 / H2 / H3 results, we run a structured set of ablation and control experiments. Status as of 2026-04-26:
 
-| Ablation | What We Vary | What We Learn |
-|----------|-------------|---------------|
-| **Foveation strength** | `blur_sigma_max`: 2.0, 4.0, 6.0, 8.0 | How much blur is needed to change memory content? |
-| **Memory capacity** | LSTM hidden size: 128, 256, 512 | Do smaller memories show stronger uncertainty-driven effects? |
-| **Episode length** | Max steps: 250, 500, 1000 | Does memory pressure change what gets remembered? |
-| **Gaze ablation** | Fixed-center vs. random vs. learned gaze | Is learned gaze necessary, or does any foveation suffice? |
+| Experiment | Configs | Status | Targets |
+|---|---|---|---|
+| **Foveation strength sweep** | `foveated_sigma{2,4,12}_gibson` (σ=2/4/12) + existing `foveated_gibson` (σ=8) + `foveated_strong_gibson` (σ=20) | σ=20 RUNNING; σ=2/4/12 PENDING in queue | H1 as continuous lever; falsifiable bound on encoder–memory race |
+| **Log-polar foveation** (F3) | `foveated_logpolar_gibson` | RUNNING (~22h / 72h walltime) | Test "spatial sampling" as the H1 mechanism (vs. blur strength). Predicted GPS R² ≥ 0.3 (between coarse +0.78 and uniform ~0). If matches uniform, H1 mechanism story needs reframing. |
+| **Foveated-shifted (H3 control)** | `foveated_shifted_gibson` | PENDING | Static gaze hardcoded at (0.49, 0.62), matching the position learned-gaze collapsed to. Isolates static-gaze-location effect from learned-gaze dynamics. |
+| **Stochastic gaze policy** | `foveated_stochastic_gibson` (FoveatedStochasticGazePolicy) | Queued for collaborator's hc cluster (see `docs/hc_launch_recipe.md`) | Reparameterized bounded-σ Gaussian gaze sampling; designed to fix gaze collapse without aux loss. Re-tests H3 with a working learned gaze. |
+| **Encoder-capacity scaling sweep** | `matched{32,64,96,192}_gibson` (Coarse at 4 input resolutions) | Pending hc cluster | Bridges Coarse (1×1 collapse @ 48×48) to Uniform (8×8 @ 256×256). Causal H1 test: GPS R² should monotonically decrease with input resolution. |
+| **Multi-seed replication** | `{blind,uniform,foveated,foveated_learned}_gibson_seed2` + matched | RUNNING (5 conditions on Izar) | Gates strength of every quantitative claim |
+| **fov_v2 (clean re-run)** | `foveated_v2_gibson` | RUNNING | Re-train fov-fix from scratch on the post-NaN-fix clean ckpt chain (current `foveated_gibson` uses ckpt.36 = ~174M frames, last clean before NaN-corruption window) |
+| **Across-checkpoint probing** | All 5 conditions × 4–5 ckpts each | DONE | Substitution mechanism direct evidence (paper §4.2 Figure 3) |
 
 ---
 
@@ -222,47 +234,91 @@ We use Gibson-0+ because it's the largest publicly pre-built Gibson PointNav epi
 
 ```
 Project/
-├── habitat_configs/                    # Habitat DD-PPO configs
+├── habitat_configs/                    # Habitat DD-PPO training configs (Hydra)
 │   ├── ddppo_pointnav_blind_gibson.yaml
 │   ├── ddppo_pointnav_uniform_gibson.yaml
-│   ├── ddppo_pointnav_foveated_gibson.yaml
-│   └── ddppo_pointnav_matched_gibson.yaml
+│   ├── ddppo_pointnav_matched_gibson.yaml             # Coarse 48×48 → 1×1 encoder output
+│   ├── ddppo_pointnav_foveated_gibson.yaml            # Foveated (fix), σ=8
+│   ├── ddppo_pointnav_foveated_learned_gibson.yaml    # Foveated (learned), deterministic gaze
+│   ├── ddppo_pointnav_foveated_v2_gibson.yaml         # Clean re-run of fov-fix
+│   ├── ddppo_pointnav_foveated_shifted_gibson.yaml    # H3 control: gaze hardcoded at (0.49, 0.62)
+│   ├── ddppo_pointnav_foveated_stochastic_gibson.yaml # Stochastic-gaze variant
+│   ├── ddppo_pointnav_foveated_sigma{2,4,12}_gibson.yaml  # σ_max strength sweep
+│   ├── ddppo_pointnav_foveated_strong_gibson.yaml     # σ=20 (F4 strength endpoint)
+│   ├── ddppo_pointnav_foveated_logpolar_gibson.yaml   # F3 log-polar resampling
+│   ├── ddppo_pointnav_foveated_normaliser_gibson.yaml # F2 invariance control
+│   ├── ddppo_pointnav_foveated_learned_div_gibson.yaml # learned-gaze + diversity aux loss
+│   └── ddppo_pointnav_matched{32,64,96,128,192}_gibson.yaml # Encoder-capacity scaling sweep
 │
 ├── src/
 │   ├── habitat/                        # Habitat DD-PPO integration
-│   │   ├── __init__.py                 # Registers custom policies with habitat-baselines
-│   │   ├── wijmans_policy.py           # Wijmans et al. PointNav policy (blind + sighted)
+│   │   ├── __init__.py                 # Registers all custom policies with habitat-baselines
+│   │   ├── wijmans_policy.py           # Wijmans et al. PointNav policy + NaN-sanitisation patch
 │   │   ├── wijmans_sensors.py          # Custom sensors (GoalInStartFrame, CloseToGoal)
 │   │   ├── foveated_policy.py          # Foveated policy (fixed-center gaze)
-│   │   ├── foveated_learned_policy.py  # Foveated policy (learned gaze)
-│   │   └── torch_foveation.py          # GPU-native differentiable foveation transform
-│   └── utils/                          # Shared utilities (no code duplication)
+│   │   ├── foveated_learned_policy.py  # Foveated policy (deterministic learned gaze)
+│   │   ├── foveated_shifted_policy.py  # Foveated, gaze hardcoded at (0.49, 0.62) — H3 control
+│   │   ├── foveated_stochastic_policy.py # Foveated, bounded-σ Gaussian gaze sampling
+│   │   ├── foveated_sigma{2,4,12}_policy.py # σ-strength variants of foveated
+│   │   ├── foveated_strong_policy.py   # σ=20 variant (F4)
+│   │   ├── foveated_logpolar_policy.py # Log-polar resampling (F3)
+│   │   ├── foveated_normalised_policy.py # σ=8 + RunningMeanAndVar (F2)
+│   │   ├── gaze_diversity_loss.py      # Anti-collapse aux loss for learned gaze
+│   │   └── torch_foveation.py          # GPU-native differentiable foveation transforms
+│   └── utils/                          # Shared utilities
 │       ├── probing.py                  # Ridge probe fitting, feature prep, episode split
 │       └── habitat_env.py              # Config loading, policy loading, geometry helpers
 │
 ├── scripts/
-│   ├── probing/                        # Representation probing scripts
+│   ├── probing/                        # Representation-probing pipeline
 │   │   ├── collect.py                  # Collect LSTM hidden states + ground-truth pose
-│   │   ├── analyze.py                  # Comprehensive single-condition probing (13 experiments)
+│   │   ├── analyze.py                  # Comprehensive single-condition probes (12 experiments)
 │   │   ├── analyze_cross.py            # Cross-condition CKA + probe transfer
-│   │   └── analyze_legacy.py           # Legacy GPS/compass probe (backward compat)
+│   │   ├── analyze_extra_states.py     # Probes h_0/h_1/h_2/c_0/c_1/c_2 × {GPS, compass}
+│   │   ├── analyze_encoder_features.py # Probes the post-ResNet-18 feature map directly
+│   │   ├── temporal_probe.py           # Step-binned GPS R² across episode
+│   │   ├── lagk_all_targets.py         # Lag-k path-history probe
+│   │   ├── masked_heading_probe.py     # H3 causal test: encoding vs. passthrough
+│   │   ├── goal_vector_probe.py        # Goal-vector probe (ego-frame goal)
+│   │   ├── population_coding_analysis.py # Per-unit spatial information + place-cell stats
+│   │   ├── unaligned_cka.py            # Cross-condition linear CKA
+│   │   ├── compare_det.py              # Deterministic-vs-stochastic comparison
+│   │   └── ...                         # ~25 more diagnostic scripts
 │   ├── eval/                           # Behavioral evaluation scripts
-│   │   └── shortcut.py                 # Shortcut discovery / cognitive-map behavioral eval
+│   │   └── shortcut.py                 # Shortcut discovery (paired same-scene-different-goal eps)
+│   ├── paper_figures/                  # All paper figure generators (PDF-only output)
+│   │   ├── make_setup_panels.py        # Fig 1: 5-condition setup panels
+│   │   ├── make_setup_pipeline.py      # Fig 1: training+analysis schematic
+│   │   ├── make_h1_mega_figure.py      # Fig 2: H1 evidence (3 panels)
+│   │   ├── make_substitution_figure.py # Fig 3: substitution mechanism cross-training
+│   │   ├── make_h2_probe_transfer.py   # Fig 4: H2 probe-transfer heatmap
+│   │   ├── make_5x5_transplant_matrix.py  # Fig 4: H2 5×5 transplant matrix
+│   │   ├── make_shortcut_paired_trajectory_figure.py # Fig 5: persistent-memory failures
+│   │   ├── make_synthesis_figure.py    # Fig 6: 3-axis synthesis
+│   │   ├── make_extra_states_figure.py # Appfig 10: per-(state×layer) probes
+│   │   ├── make_*figure*.py            # Other appfigN_ generators
+│   │   └── ...
 │   └── cluster/                        # SLURM job scripts
 │       ├── common.sh                   # Shared env setup (sourced by all submit_*.sh)
-│       ├── submit_train.sh             # Submit DD-PPO training job (Izar V100)
-│       ├── submit_eval.sh              # Submit evaluation + video (Izar V100)
-│       ├── submit_probe.sh             # Submit probing pipeline (Izar V100)
-│       ├── submit_cross.sh             # Submit cross-condition CKA (CPU-only)
-│       ├── submit_shortcut.sh          # Submit shortcut eval (Izar V100)
-│       ├── submit_probe_mig.sh         # Probing on Kuma MIG (H100 vGPU, free beta)
-│       ├── submit_eval_mig.sh          # Eval on Kuma MIG
-│       ├── submit_shortcut_mig.sh      # Shortcut eval on Kuma MIG
+│       ├── submit_train.sh             # Submit DD-PPO training (Izar V100)
+│       ├── submit_train_seeded.sh      # Multi-seed training with isolated checkpoint dir
+│       ├── submit_probe_deterministic.sh  # Deterministic-rollout probing
+│       ├── submit_eval.sh              # Submit evaluation + video
+│       ├── submit_shortcut.sh          # Submit shortcut eval
+│       ├── submit_transplant.sh        # Submit memory transplant experiment
 │       ├── run_habitat.py              # Custom entry point (registers policies)
-│       ├── setup_env.sh                # Conda environment setup
-│       ├── download_gibson_0plus.sh    # Dataset download + validation
-│       ├── sync_to_cluster.sh          # Upload code → SCITAS
-│       └── sync_from_cluster.sh        # Download results ← SCITAS
+│       └── ...
+│
+├── docs/
+│   ├── NeurIPS_2026/                   # Paper source + final figures
+│   │   ├── neurips_2026.tex
+│   │   ├── neurips_2026.pdf
+│   │   ├── MASTER_TRACK.md             # Single source of truth for project state
+│   │   ├── literature.bib
+│   │   └── fig/                        # 21 figures, named figN_*/appfigN_*
+│   ├── hc_launch_recipe.md             # Friend's high-compute cluster launch recipe
+│   ├── foveation_design.md             # Foveation PoC design rationale
+│   └── ...
 │
 └── Cluster_Tutorial/                   # SCITAS usage guides
 ```
@@ -377,7 +433,7 @@ Four members work in parallel on independent modules, meeting at integration poi
 
  Member B — "Give the agent eyes"
    Adds a visual system (ResNet18) that processes RGB camera images.
-   Trains the sighted (uniform) and matched-compute agents.
+   Trains the sighted (uniform) and coarse (1×1) agents.
 
  Member C — "Make the eyes biological"
    Implements foveated vision (sharp center, blurry periphery) with a
@@ -630,7 +686,7 @@ ls /scratch/izar/$USER/habitat_checkpoints/<run_name>/  # checkpoints
 
 See [`docs/foveation_design.md`](docs/foveation_design.md) for the frozen
 PoC hyperparameters (fovea_radius=16, blur_sigma_max=8.0, fixed center
-gaze, matched-compute 48×48) and the rationale behind each choice.
+gaze, coarse 48×48) and the rationale behind each choice.
 
 ### 7.7 Recording Agent Videos (for Evaluation & Figures)
 
@@ -689,121 +745,91 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 
 ## 8. Current Status & Results
 
-### Habitat Gibson + MP3D (5-condition run in flight)
+**Snapshot — 2026-04-26.** Paper at NeurIPS 2026 submission stage (~2 weeks from deadline). All 5 main conditions trained (single seed). Multi-seed replication, σ_max sweep, log-polar control, foveated-shifted, and stochastic gaze in flight.
 
-Snapshot — 2026-04-10 (all 4 initial conditions training, learned-gaze pending):
+### Single-seed final metrics (Table 1 of paper)
 
-| Agent | Job | Steps | Success | SPL | Target | Notes |
-|-------|-----|-------|---:|---:|---:|-------|
-| **Blind** | 2826964 | ~162M | 78.3% | 0.452 | 500M | 32% done, will need resubmission |
-| **Uniform** | 2826965 | ~110M | 92.2% | 0.756 | 250M | 44% done, strong |
-| **Foveated (fixed)** | 2827419 | ~63M | 93.0% | 0.691 | 250M | 25% done — remarkably strong, beating uniform at fewer steps |
-| **Matched-Compute** | 2827420 | ~90M | 87.4% | 0.527 | 250M | 36% done |
-| **Foveated (learned)** | — | — | — | — | 250M | Pending — to be launched after fixed-gaze validates |
+| Condition | Frames | SPL | Success | GPS R² (Gibson, no-cap) | Compass R² |
+|-----------|---:|---:|---:|---:|---:|
+| **Blind** | 342M | 0.59 | 0.93 | **+0.95±0.02** | **+0.81±0.08** |
+| **Coarse (1×1)** | 250M | 0.67 | 0.98 | **+0.78±0.10** | **+0.64±0.10** |
+| **Uniform** | 250M | **0.85** | **0.99** | −0.31±0.86 | +0.36±0.23 |
+| **Foveated (fix)** | 174M (ckpt.36) | 0.78 | 0.96 | +0.06±0.88 | +0.07±0.69 |
+| **Foveated (learned)** | 250M | 0.82 | 0.98 | −2.43±3.98 | −1.34±3.14 |
 
-**Dataset.** All conditions train on a merged Gibson-0+ (411) ∪ MP3D-train (61) = 472-scene pool and evaluate on Matterport3D test (18 scenes, 1008 episodes), matching Wijmans 2023 Appendix A.1. See §3.2 for the Gibson-0/2/4+ naming clarification and §7.4 for the symlink recipe.
+5-fold episode-level CV, deterministic-rollout. Bold = H1-relevant ordering (blind > coarse ≫ rich-encoder).
 
-**Probing pipeline v2 deployed (2026-04-10).** Comprehensive probing analysis (`analyze_probes.py`) with 12 experiments across 5 phases: baseline probes (GPS/compass, per-scene position, distance-to-goal, multi-layer comparison, control tasks), H1 tests (accuracy vs. timestep, cross-heading generalization), SPACE-inspired probes (path-history lag-k decoding, visited-region spatial working memory), and per-unit rate maps. Cross-condition CKA and probe transfer via `analyze_cross.py`. Jobs 2828732 (blind ckpt.16) and 2828733 (uniform ckpt.22) submitted with v2 pipeline.
+### Headline findings (paper §4)
 
-**Initial probing results (2026-04-10, legacy pipeline, 500 eps).** Blind agent (ckpt.10): GPS R²=0.876, Compass R²=0.604. Uniform agent (ckpt.14): GPS R²=0.453, Compass R²=0.706. Blind agent encodes GPS much more strongly (no vision → heavier reliance on memory for position tracking). Uniform agent encodes heading better (visual landmarks anchor orientation).
+1. **Encoder–memory race (H1, §4.2)**. Visual-encoder capacity tracks top-layer LSTM spatial encoding *inversely*. Bottleneck conditions hold a strong linear GPS code; rich-encoder conditions do not. Replicates on held-out MP3D (cross-dataset). **Cross-training probes at 4–5 checkpoints/condition** (paper Fig 3, `fig3_substitution_dynamics.pdf`) confirm the substitution mechanism: rich-encoder agents learn an integrated GPS code transiently (R²~0.7–0.8 at ~50M frames) then progressively unlearn its linear top-layer readability as the visual route consolidates. Bottleneck conditions hold tight high R² across the entire training trajectory.
 
-**Eval video pipeline shipped (2026-04-09).** `scripts/cluster/submit_eval.sh` plus the `patches/habitat_lab_eval_video.patch` upstream fixes produce playable MP4s (RGB + top-down trajectory map) with every metric embedded in the filename.
+2. **Format divergence (H2, §4.3)**. Pairwise linear CKA <10⁻⁴ between conditions; 1-NN purity = 1.000 vs. chance 0.20 on pooled hidden states; cross-condition probe transfer collapses (off-diagonal R² ≪ −800). Memory transplants (5×5 matrix, midpoint t=30) show *asymmetric* costs: bottleneck-donor states are toxic to rich-encoder recipients (uniform suffers up to 0.21 SPL drop), the reverse is benign.
 
-**Foveation PoC design frozen (2026-04-09).** The five conditions share a single set of frozen hyperparameters documented in [`docs/foveation_design.md`](docs/foveation_design.md). No sweeps in the PoC — one seed per condition, one setting per agent.
+3. **Probe-readable vs. policy-used dissociation (§4.5)**. Coarse has a readable GPS code (R²=+0.78) but low memory reliance (shortcut SPL drop ~5%); Uniform has no readable GPS but high memory reliance (~41% drop). Trajectory analysis of persistent-memory failures shows uniform "locks onto" the previous episode's goal location (margin +1.83m at n=46), suggesting its persistent code is a non-spatial scene/history anchor.
 
-**Training will require resubmission.** No job will finish within the 72h SLURM wall limit. DD-PPO resumes automatically from the latest checkpoint, so resubmitting the same `sbatch` command continues training.
+4. **Foveation: convergence on H1, divergence on H2 + behaviour (§4.4)**. Foveated (fix) and uniform group together as "rich-encoder pass-through" on H1 (both at chance). But MP3D held-out generalisation, shortcut SPL drop, transplant cost, and CKA all read foveation ≠ uniform. The four in-flight foveation experiments (F1–F4 sigma sweep + log-polar) test what the differential is.
+
+### Cluster status (Izar SCITAS, 2026-04-26 16:19 CEST)
+
+**RUNNING (8 jobs)**:
+- 5 multi-seed (seed=2): `bld_s2`, `mtc_s2`, `fov_lrn_s2` (~3–4h each, just started); `uni_s2`, `fov_s2` (~70h, hitting 72h walltime today ~17:24)
+- 3 foveation experiments: `fov_v2_gibson` (~21h), `fov_strong_gibson` (~20h, σ=20), `fov_logpolar_gibson` (~22h)
+
+**PENDING (5 jobs)**:
+- `foveated_sigma{2,4,12}_gibson` (cs-503 / normal QOS)
+- `foveated_shifted_gibson` (normal QOS — H3 control)
+- Stochastic-gaze smoke test
+
+**Probing**: 23 across-checkpoint analyses landed (substitution mechanism finding integrated). Standard 5-condition probing complete.
+
+### Paper artefacts
+
+- Source: `docs/NeurIPS_2026/neurips_2026.tex`
+- Build: 28 pages, 6 main figures + 7 appendix figures (PDF-only, named `figN_*` / `appfigN_*`)
+- Master tracker: `docs/NeurIPS_2026/MASTER_TRACK.md`
+- Friend's high-compute launch recipe: `docs/hc_launch_recipe.md`
 
 ---
 
-## 9. Detailed TODO
+## 9. Status TODO
 
-### Phase 1: Infrastructure & Training Setup (Complete)
-- [x] Set up Habitat + Gibson on SCITAS
-- [x] Download Gibson scene .glb files (~490 scenes, 13 GB)
-- [x] Create DD-PPO configs for all 4 conditions (blind, uniform, foveated, matched)
-- [x] Migrate all configs to Gibson-0+ train (411 scenes) + MP3D test eval
-- [x] Run `scripts/cluster/download_gibson_0plus.sh` — verified 411/411 Gibson + 18/18 MP3D
-- [x] Normalize nested MP3D layout (`mp3d/mp3d/*` → `mp3d/*`)
-- [x] Build merged Gibson-0+ ∪ MP3D training pool (472 scenes)
-- [x] Implement GPU foveation transform (`src/habitat/torch_foveation.py`)
-- [x] Implement custom foveated policy (`src/habitat/foveated_policy.py`)
-- [x] Freeze foveation PoC hyperparameters (σ_max=8, fovea_radius=16, fixed center gaze, matched@48×48)
-- [x] Ship eval video pipeline (`submit_eval.sh` + upstream patch)
+Phases 1–3 below are the original course-era milestones. We are now in **Phase 4 + multi-seed wait + follow-up experiments**.
 
-### Phase 2: Training (In Progress)
-All 4 initial conditions are training on SCITAS (2×V100, 72h wall limit, auto-resume from checkpoints):
+### Phase 1–3 (Mostly complete)
 
-- [x] Submit blind agent (job 2826964) — ~162M / 500M steps, 78.3% success
-- [x] Submit uniform agent (job 2826965) — ~110M / 250M steps, 92.2% success
-- [x] Submit foveated fixed-gaze agent (job 2827419) — ~63M / 250M steps, 93.0% success
-- [x] Submit matched-compute agent (job 2827420) — ~90M / 250M steps, 87.4% success
-- [ ] Resubmit all 4 conditions as they hit 72h wall limit (DD-PPO auto-resumes)
-- [ ] Verify final blind metrics approach Wijmans (target: >95% success, >0.9 SPL)
-- [ ] Verify all sighted conditions converge (target: >90% success)
-- [ ] Save final checkpoints to `/home/` for safety
-- [ ] Launch learned-gaze foveated agent (5th condition, after fixed-gaze validates)
+- [x] **Phase 1: Infrastructure & training setup.** Habitat + Gibson on SCITAS, configs for 5 conditions, foveation transform + foveated policies (fixed + learned + shifted + stochastic), foveation PoC frozen at σ=8, eval video pipeline.
+- [x] **Phase 2: Training.** All 5 conditions trained to single-seed convergence (frame budgets in §8 table). DD-PPO NaN-corruption discovered + patched (§2.4.1). Foveated (fix) ckpt.36 used due to silent NaN window in original run.
+- [x] **Phase 3: Probing & analysis.**
+  - [x] Comprehensive probing pipeline (12 experiments per condition × 5 conditions × multiple checkpoints)
+  - [x] Cross-condition: linear CKA, 1-NN purity, probe transfer
+  - [x] Behavioral interventions: 5×5 memory transplant matrix, shortcut discovery (paired same-scene-different-goal)
+  - [x] Substitution mechanism: across-training probing on all 5 conditions × 4-5 checkpoints
+  - [x] H3 instrumentation: gaze-collapse measurement, foveated-shifted control queued
+  - [ ] 4 coarse-recipient transplant cells (queued, low priority)
 
-### Phase 3: Probing & Analysis (In Progress)
+### Phase 4: Paper finalisation (current)
 
-#### 3A: Pipeline Implementation (Complete)
-- [x] Build probing pipeline v1 (collect LSTM top-h, GPS/compass probe)
-- [x] Run initial probing on blind (ckpt.10) and uniform (ckpt.14), 500 episodes
-- [x] Build comprehensive probing pipeline v2 (`analyze_probes.py`) — 13 experiments:
-  - [x] 1a: Per-scene absolute position probe (Wijmans replication)
-  - [x] 1b: Global GPS/compass probe
-  - [x] 1c: Distance-to-goal probe
-  - [x] 1d: Multi-layer comparison (h₁/h₂/h₃ + c₁/c₂/c₃)
-  - [x] 1e-f: Control tasks + Hewitt & Liang selectivity index
-  - [x] 2a: Accuracy vs. timestep-in-episode
-  - [x] 2b: Cross-heading generalization (allocentric vs. egocentric codes)
-  - [x] 2c: Path-history lag-k decoding (SPACE-inspired)
-  - [x] 2d: Visited-region probe (SPACE-inspired)
-  - [x] 2e: Occupancy map decoding (local 20×20 navigability grid)
-  - [x] 5a: Per-unit rate maps + place-cell identification
-- [x] Build cross-condition analysis (`analyze_cross.py`)
-  - [x] Pairwise linear CKA (per-layer, h and c states)
-  - [x] Cross-condition probe transfer
-- [x] Build shortcut discovery behavioral test (`eval_shortcut.py`)
-  - [x] Persistent vs. reset LSTM hidden state across same-scene sequential episodes
-  - [x] Early-vs-late map-building gain analysis
-- [x] Create all SLURM submission scripts (probe, cross, shortcut)
+- [x] Bio-first narrative restructure (paper §5.2)
+- [x] H1 / H2 / H3 hypothesis framing reconciled with current findings
+- [x] Figure pipeline: 13 active figure scripts, PDF-only output, named `figN_*` / `appfigN_*`
+- [x] `\uncertain` / `\pendnote` macros for color-coded interpretive claims and pending-data caveats
+- [x] Substitution mechanism integrated (§4.2 cross-training paragraph + Fig 3)
+- [x] Coarse rename (Matched → Coarse) global with collision fixes
+- [x] Tier 1+2 polish on §4.1 / §4.2 / §4.3 / §4.4 / §4.5 / §4.7
+- [x] H3 reframed as foveated-shifted control (not 6th agent)
+- [x] §3.2 probe grouping by results-section purpose (H1/H2/boundary)
+- [x] §5.1 synthesis figure: 5 conditions in 2D (H1×H2) → expanded to 3-axis (with shortcut SPL drop as marker size)
+- [x] §5.2–§5.5 + §6 + §1 narrative consistency audit
+- [ ] Multi-seed land → update single-seed magnitudes throughout paper
+- [ ] σ_max sweep + log-polar + foveated-shifted land → update §4.4 + appendix table
+- [ ] Optional: stochastic gaze land → upgrade §4.6 H3 from "control" to "test"
 
-#### 3B: Run Experiments (Pending — blocked on training convergence)
-- [ ] Submit v2 probing for blind + uniform (jobs 2828732, 2828733 in queue)
-- [ ] Run v2 probing on foveated + matched (after sufficient training)
-- [ ] Run cross-condition CKA analysis (all 4 conditions)
-- [ ] Run shortcut discovery eval on all 4 conditions
+### Phase 5: Follow-up & outstanding
 
-#### 3C: Hypothesis Testing (Pending — blocked on probing results)
-- [ ] **H1 test: Compensatory memory**
-  - [ ] Compare accuracy-vs-timestep curves across conditions
-  - [ ] Compare path-history decay rates: blind vs. foveated vs. uniform
-  - [ ] Occupancy decoding: foveated vs. uniform F1 scores
-- [ ] **H2 test: Representational divergence**
-  - [ ] Interpret CKA: low foveated↔uniform despite matched task performance?
-  - [ ] Cross-heading generalization: foveated more allocentric?
-  - [ ] Probe transfer: do probes trained on one condition work on another?
-- [ ] **H3 test: Epistemic gaze** (requires learned-gaze agent)
-  - [ ] Correlate learned gaze with position-probe error
-  - [ ] Compare learned-gaze vs. fixed-centre: does active gaze amplify H1–H2?
-- [ ] **Behavioral cognitive map test**
-  - [ ] Compare persistent vs. reset SPL benefit across conditions
-  - [ ] Interpret: which agent builds the most useful cognitive map?
-
-#### 3D: Visualization (Pending)
-- [ ] Per-unit rate maps (place-cell-like neurons)
-- [ ] Cross-condition CKA heatmap (layer × layer)
-- [ ] R² bar charts across all conditions and probe types
-- [ ] Path-history decay curves
-- [ ] Occupancy decoding qualitative examples
-
-### Phase 4: Paper Writing
-- [ ] Introduction: spatial memory in navigation, foveation hypothesis
-- [ ] Related work: Wijmans 2023, SPACE benchmark, foveated vision in RL, cognitive maps
-- [ ] Methods: 5 conditions, architecture, foveation transform, probing suite, behavioral tests
-- [ ] Results: training curves, probing results, cross-condition comparison, shortcut discovery
-- [ ] Discussion: what foveation changes about memory, implications for embodied AI
-- [ ] Figures: architecture diagram, foveation visualization, probing results, gaze patterns
+- Items left for follow-up (in paper §5.5 limitations):
+  - Encoder-resolution scaling sweep (matched at {32, 64, 96, 128, 192} input pixels)
+  - Direct causal test: visual ablation mid-rollout in rich-encoder agents
+  - Architecture scope: transformer-based navigators, attention-over-history (paper claims interface-level generalisation but doesn't verify)
 
 ---
 
@@ -818,7 +844,7 @@ All 4 initial conditions are training on SCITAS (2×V100, 72h wall limit, auto-r
 | **Sensor design & task perf.** | Atanov et al. (ECCV 2024, VILAB) | Show photoreceptor design critically shapes task performance | We extend from "sensor shapes performance" to "sensor shapes memory content" |
 | **Perception-action-memory** | Beker et al. (NeurIPS 2022, PALMER) | Study perception-action loops with memory for planning | We specifically study how foveation constrains what memory encodes |
 
-**The gap we fill**: No existing work studies how foveation — spatially varying perceptual quality — shapes the *content and structure* of cognitive maps in navigation agents. The components exist separately; we combine them.
+**The gap we fill**: Prior emergent-cognitive-maps work uses either no vision (blind) or spatially uniform vision; prior foveated-RL work doesn't probe internal memory. No existing work systematically varies *sensor structure* (no vision → resolution-collapsed → uniform → foveated fix → foveated learned) holding task and architecture fixed and asks how the structure of the visual sensor reshapes the *format* of learned spatial memory. Our paper isolates this principle in a controlled silicon case study and links it to convergent biological evidence (paper §5.2).
 
 ---
 
