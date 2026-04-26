@@ -1,21 +1,26 @@
 """
-Discussion §5.1 synthesis figure: place the 5 conditions in a 2D space
-defined by the two axes the prose introduces.
+Discussion §5.1 synthesis figure: place the 5 conditions in a 2D
+(H1 magnitude × H2 format isolation) plane, with marker size encoding
+the third dimension (behavioural memory reliance from §4.5 shortcut).
 
 x-axis (H1 magnitude): top-layer GPS $R^2$ on $\mathbf{h}_2$ (Gibson, 5-fold CV).
 y-axis (H2 format isolation): negation of average row of the 5x5
-  cross-condition memory-transplant matrix (with off-diagonal cells only).
+  cross-condition memory-transplant matrix (off-diagonal cells only).
   Higher Y = this condition's hidden state is more disruptive to OTHER
   conditions' policies = more format-isolated as donor.
+marker size: shortcut SPL drop % (= 100 × (reset - persist) / reset).
+  Bigger marker = policy more dependent on persistent recurrent memory.
+
+This panel REPLACES what was previously a separate H1×behaviour scatter
+in §4.5, since both are 2D scatters of the same 5 conditions on the
+same X-axis (top-layer GPS R²).
 
 Caveat: coarse-as-donor has only 1 measured cell (coarse→blind);
 its Y is single-cell, marked with a hollow marker + footnote in caption.
 
-Visual structure: 2x2 quadrants with corner labels showing the 4 logical
-combinations of (H1 magnitude × H2 format isolation).
-
-Reads:  /tmp/transplant_local/<donor>_to_<recipient>.json (default mid=30)
+Reads:  /tmp/transplant_local/<donor>_to_<recipient>.json (mid=30)
         /tmp/probing_results_local/<cond>_gibson_det_analysis.json
+        data/shortcut/<cond>_gibson.json
 Writes: docs/NeurIPS_2026/fig/synthesis_2axes.{pdf,png}
 """
 from __future__ import annotations
@@ -101,23 +106,43 @@ def load_donor_toxicity(transplant_dir: Path) -> tuple[dict[str, float], dict[st
     return avg_cost, n_cells
 
 
+def load_shortcut_drop(shortcut_dir: Path) -> dict[str, float]:
+    """Shortcut SPL drop % per condition: 100 × (reset - persist) / reset."""
+    out = {}
+    for cond_key, *_ in CONDS:
+        p = shortcut_dir / f"{cond_key}_gibson.json"
+        if not p.exists():
+            continue
+        d = json.loads(p.read_text())
+        reset = d.get("reset_mean_spl")
+        persist = d.get("persistent_mean_spl")
+        if reset is None or persist is None or reset <= 0:
+            continue
+        out[cond_key] = 100.0 * (reset - persist) / reset
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--probing-dir", type=Path, required=True)
     ap.add_argument("--transplant-dir", type=Path, required=True)
+    ap.add_argument("--shortcut-dir", type=Path, required=True)
     ap.add_argument("--out-dir", type=Path, required=True)
     args = ap.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     gps_r2 = load_h1_magnitude(args.probing_dir)
     avg_cost, n_cells = load_donor_toxicity(args.transplant_dir)
+    shortcut_drop = load_shortcut_drop(args.shortcut_dir)
 
     print("Loaded:")
     for k in [c[0] for c in CONDS]:
         print(f"  {k:20s} GPS R^2={gps_r2.get(k, 'N/A'):>7} | "
-              f"donor toxicity={avg_cost.get(k, 'N/A'):>8} ({n_cells.get(k, 0)} cells)")
+              f"donor toxicity={avg_cost.get(k, 'N/A'):>8} "
+              f"({n_cells.get(k, 0)} cells) | "
+              f"shortcut SPL drop={shortcut_drop.get(k, 'N/A')}%")
 
-    fig, ax = plt.subplots(figsize=(7.0, 5.0))
+    fig, ax = plt.subplots(figsize=(7.5, 5.4))
 
     # 2x2 quadrant separators (use thresholds that visually split the 5 conds)
     GPS_THRESH = 0.4
@@ -126,12 +151,26 @@ def main() -> None:
     ax.axhline(TOX_THRESH, ls="--", color="#888", lw=0.9, zorder=1)
     ax.axvline(GPS_THRESH, ls="--", color="#888", lw=0.9, zorder=1)
 
+    # Marker-size scaling: behavioural memory reliance (shortcut SPL drop %).
+    # Linear from a base size (smallest drop) to a max (largest drop).
+    drop_min = min(shortcut_drop.values())
+    drop_max = max(shortcut_drop.values())
+    SIZE_MIN, SIZE_MAX = 80.0, 480.0
+
+    def size_for(drop_pct: float) -> float:
+        if drop_max == drop_min:
+            return (SIZE_MIN + SIZE_MAX) / 2
+        t = (drop_pct - drop_min) / (drop_max - drop_min)
+        return SIZE_MIN + t * (SIZE_MAX - SIZE_MIN)
+
     # Plot points
     for cond_key, label, colour, marker in CONDS:
         if cond_key not in gps_r2 or cond_key not in avg_cost:
             continue
         x = max(gps_r2[cond_key], CLIP_X_MIN)
         y = -avg_cost[cond_key]   # higher Y = more toxic = more format-isolated
+        drop = shortcut_drop.get(cond_key)
+        s = size_for(drop) if drop is not None else 180
         clipped = gps_r2[cond_key] < CLIP_X_MIN
         n = n_cells[cond_key]
         # Hollow marker for single-cell measurement (coarse)
@@ -143,7 +182,7 @@ def main() -> None:
             facecolor = colour
             edgecolor = "black"
             edge_lw = 0.9
-        ax.scatter(x, y, s=180, c=facecolor, edgecolor=edgecolor,
+        ax.scatter(x, y, s=s, c=facecolor, edgecolor=edgecolor,
                    linewidths=edge_lw, marker=marker, zorder=4)
         # Label offset
         offsets = {
@@ -185,6 +224,29 @@ def main() -> None:
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
     ax.grid(linestyle=":", alpha=0.25)
+
+    # Size legend: 3 reference circles (small / mid / large drop) placed
+    # OUTSIDE the data area to avoid covering the Coarse marker in the
+    # bottom-right quadrant.
+    from matplotlib.lines import Line2D
+    drop_values = sorted(shortcut_drop.values())
+    legend_drops = [drop_values[0], drop_values[len(drop_values) // 2],
+                    drop_values[-1]]
+    handles = []
+    for d in legend_drops:
+        s = size_for(d)
+        h = Line2D([0], [0], marker="o", color="w",
+                   markerfacecolor="#888", markeredgecolor="black",
+                   markersize=(s ** 0.5), label=f"{d:.0f}%")
+        handles.append(h)
+    leg = ax.legend(handles=handles,
+                    title="shortcut SPL drop\n(behavioural memory\nreliance)",
+                    loc="upper left",
+                    bbox_to_anchor=(1.02, 1.0),
+                    fontsize=7.5, title_fontsize=7.5,
+                    frameon=True, framealpha=0.95, labelspacing=1.4,
+                    handletextpad=1.2, borderpad=0.7)
+    leg.get_frame().set_edgecolor("#bbb")
 
     fig.tight_layout()
     for ext in ("pdf", "png"):
