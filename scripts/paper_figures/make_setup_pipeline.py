@@ -144,9 +144,10 @@ def main() -> None:
         (0, 1, "Memory transplant\n(donor $\\mathbf{h}$ $\\to$ recipient)", "H2"),
         (1, 1, "Shortcut discovery\n(reset vs persistent $\\mathbf{h}$)", "H1$\\times$H2"),
     ]
-    # H3 takes a separate path: it requires retraining a 6th condition
-    # (foveated-shifted) and comparing its memory analyses with foveated
-    # (fix). We annotate it as a side note rather than a probe path.
+    # H3 is a control on top of foveated (fix): retrain foveated with
+    # the gaze shifted to (0.49, 0.62) — same condition, different gaze
+    # location — and compare. Not a new condition, a within-foveated
+    # gaze-location ablation.
     tag_w = 1.0
     col_stride = bw + tag_w + gx
     for col, row, label, tag in analyses:
@@ -178,10 +179,11 @@ def main() -> None:
 
     # H3 side annotation (separate retraining experiment)
     box(ax, (0.4, 0.6), 6.5, 1.4,
-        "H3 (in flight): retrain a 6th visual variant ---\n"
-        "foveated-shifted, hardcoded gaze $(0.49, 0.62)$ ---\n"
-        "and compare its memory analyses with foveated (fix).\n"
-        "Difference $\\to$ gaze location modulates memory format.",
+        "H3 control (in flight): re-train foveated with gaze\n"
+        "shifted from $(0.5, 0.5)$ to $(0.49, 0.62)$. Compare its\n"
+        "memory analyses (a)-(d) with foveated (fix).\n"
+        "Difference $\\to$ gaze-location effect, isolated from\n"
+        "optimisation-path interaction.",
         color="#fff7e6", fontsize=7.5, weight="normal")
     box(ax, (7.1, 0.85), 1.0, 0.8, "H3",
         color="white", fontsize=10, weight="bold", rad=0.05)
