@@ -181,6 +181,25 @@ Listed here so we don't drift into asserting them:
 - **Foveation specifically diverging from uniform "in subspaces invisible to a linear-GPS probe"** — this is a description of what we observed, not a tested claim. Subspace structure of the divergence is unprobed.
 - **Foveated-shifted control predicts H3 effect** — the test is in training (H100-A); the prediction is open.
 
+### 3.0b Methodological oversimplifications (paper has \pendnote flagging each)
+
+Choices that could materially shift findings if revisited; flagged inline
+as `\pendnote{...}` and listed here for follow-up audits.
+
+| # | Choice | Where | Risk to claims | Tighter test |
+|---|---|---|---|---|
+| O1 | Foveation = Gaussian blur (σ_max=8 quadratic falloff) | §3.1 fn | High — Gaussian preserves encoder spatial output (8×8); biologically faithful foveation (log-polar / multi-scale) reduces it. If F3 log-polar matches uniform, the H1 mechanism story (encoder spatial output) needs reframing | F3 log-polar in training; multi-scale pyramid F-future |
+| O2 | Top-layer h_2 only probed | §3.2 fn | Medium — c_t and h_0, h_1 not probed in main figs; if condition-specific structure lives in c_t but not h_2, H2 "disjoint subspaces" claim narrows | Run the full CKA/transfer/transplant pipeline on c_t and h_1; compare with h_2 |
+| O3 | Transplant single midpoint t=30 | §3.2 fn | Low (supp sweep already partly addresses) — sweep stable for t≥15; t≥100 (late-episode) not yet measured. Could matter if late-episode pattern differs | Extend midpoint sweep to t∈{120, 200, 400} |
+| O4 | "Cognitive map" used loosely (= linear-decodable GPS code) | §1 Intro fn | Medium — much narrower than the broader cognitive-map concept (allocentric, relational, multi-scale, hierarchical). Limits scope of "we found cognitive maps" claim | Non-linear / relational probes (deeper MLP, kernel, contrastive) on h_t to test for richer structure |
+| O5 | DD-PPO + PointGoal + Habitat + ResNet-18 (algo / task / sim / encoder) | §3.1 fn | Medium-high (scope) — H1/H2 patterns could shift under different RL algos, navigation tasks, simulators, or visual encoders. Each is a deliberate scope choice for Wijmans-comparability | Re-run 5-cond ablation on (a) ObjectGoal, (b) iGibson sim, (c) ViT or smaller-CNN encoder. Each is a separate paper |
+| O6 | Linear CKA only, Ridge α=10 only | §4.3 + §3.2 implicit | Low — non-linear measures could reveal higher-order shared structure (already in §4.3 Boundaries); α sensitivity untested | Sweep α ∈ {0.1, 1, 10, 100, 1000}; aligned CKA; CKA with non-linear kernel |
+| O7 | Episode-level 5-fold CV (vs. trajectory-balanced or scene-balanced) | §3.2 implicit | Low — under deterministic rollout the splits are reasonably balanced; could under- or over-estimate variance for short-/long-episode-dominant conditions | Trajectory-step-stratified CV; scene-level CV |
+| O8 | Foveated (fix) at ckpt.36 (~174M frames), other 4 at final ckpt | §5.5 (ii) | Medium — foveated under-trained relative to others; if its converged ckpt would shift H1 numbers, the bottleneck-vs-rich partition sample for foveation is biased | Re-run foveated to 250M (clean retrain in flight as F1 control) |
+| O9 | Behavioral metric = SPL drop only | §4.5 implicit | Low — SPL captures both success and path-efficiency. Other metrics (path length, time-to-goal, hesitation count) might tell a different per-condition story | Measure full behavioral signature: SPL, path length, decision entropy, hesitation rate |
+| O10 | Encoder feature-map probe = compressed flatten (d=2048), not raw spatial map | §4.4 implicit | Low-medium — the compressed flatten loses some spatial structure that a raw 8×8×C feature-map probe might recover. If raw probes change the "no encoder linearly decodes GPS" claim, H1 mechanism reframes | Probe raw post-ResNet-18 spatial feature map directly (no compression) |
+| O11 | Foveated-learned gaze collapsed to single point (0.49, 0.62) | §4.6 H3 | High (for H3) — H3 evidence depends on this single gaze location being representative; other learned gaze points might give different results. The foveated-shifted control IS the test, but only at this one location | Sweep gaze locations (e.g.\ 9-point grid in [0,1]²) with hardcoded foveation, see if pattern is gaze-location-monotonic |
+
 
 
 ### Abstract

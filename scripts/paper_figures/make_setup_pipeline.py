@@ -144,6 +144,9 @@ def main() -> None:
         (0, 1, "Memory transplant\n(donor $\\mathbf{h}$ $\\to$ recipient)", "H2"),
         (1, 1, "Shortcut discovery\n(reset vs persistent $\\mathbf{h}$)", "H1$\\times$H2"),
     ]
+    # H3 takes a separate path: it requires retraining a 6th condition
+    # (foveated-shifted) and comparing its memory analyses with foveated
+    # (fix). We annotate it as a side note rather than a probe path.
     tag_w = 1.0
     col_stride = bw + tag_w + gx
     for col, row, label, tag in analyses:
@@ -172,6 +175,17 @@ def main() -> None:
             tgt = (bxe, by - bh - gy / 2 + bh / 2)
         arrow(ax, (htx, hty), tgt, lw=0.7,
               connectionstyle="arc3,rad=0.0")
+
+    # H3 side annotation (separate retraining experiment)
+    box(ax, (0.4, 0.6), 6.5, 1.4,
+        "H3 (in flight): retrain a 6th visual variant ---\n"
+        "foveated-shifted, hardcoded gaze $(0.49, 0.62)$ ---\n"
+        "and compare its memory analyses with foveated (fix).\n"
+        "Difference $\\to$ gaze location modulates memory format.",
+        color="#fff7e6", fontsize=7.5, weight="normal")
+    box(ax, (7.1, 0.85), 1.0, 0.8, "H3",
+        color="white", fontsize=10, weight="bold", rad=0.05)
+    arrow(ax, (6.9, 1.3), (7.1, 1.25), lw=0.6, style="-")
 
     plt.tight_layout(pad=0.3)
     for ext in ("pdf", "png"):
