@@ -132,7 +132,7 @@ We complement probes with two interventions on the LSTM state. \emph{Memory tran
 \subsection{Five conditions, same task}
 \label{sec:summary}
 
-Table~\ref{tab:summary} collects the headline per-condition numbers. All sighted conditions solve PointGoal at $96$--$99\%$ success; blind reaches $93\%$ at a longer training budget, reproducing Wijmans et al.~\citep{wijmans2023emergence}. Success is tightly bunched, so a skill-gap account for the encoded-content differences below is unlikely. The probe is calibrated: distance-to-goal decodes everywhere ($R^2 \in [0.81, 0.90]$); Hewitt--Liang label-permutation selectivity is high precisely where GPS is high (Appendix~\ref{app:probing-details}).
+Table~\ref{tab:summary} collects the headline per-condition numbers. \emph{All five agents solve the same task at near-equivalent competence.} Sighted conditions reach $96$--$99\%$ success; blind reaches $93\%$ at a longer training budget, reproducing Wijmans et al.~\citep{wijmans2023emergence}. The narrow success bracket rules out a skill-gap account for any encoded-content differences below. The probe machinery is calibrated: distance-to-goal decodes everywhere ($R^2 \in [0.81, 0.90]$), demonstrating Ridge has the capacity to fit high-$R^2$ scalars when the hidden state contains them; Hewitt--Liang label-permutation selectivity is high precisely where GPS is high (Appendix~\ref{app:probing-details}). The behavioural near-equivalence sets up the question the rest of §\ref{sec:results} addresses: \emph{what differs internally}, given that what the agents \emph{do} is the same?
 
 \begin{table}[!htbp]
 \centering

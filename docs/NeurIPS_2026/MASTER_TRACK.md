@@ -146,6 +146,26 @@ Status legend:
 - 🆕 New finding from in-flight experiments; needs integration once data lands
 - ❌ Not yet supported
 
+### 3.0-pre §4.x settled-vs-pending status (2026-04-26)
+
+For prioritising Result-section revision: which subsections are stable
+(safe to deep-revise now) vs. which are still in flight (light-polish only).
+
+| § | Status | Why |
+|---|---|---|
+| §4.1 Five conditions, same task | ✅ Settled | Success rates 93--99% robust to multi-seed; DtG $R^2 \in [0.81, 0.90]$ as probe-validity sanity check; Hewitt--Liang selectivity supports |
+| §4.2 H1 Encoder--memory race | ✅ Phenomenon settled, ⚠️ mechanism interpretive | H1 ordering (bottleneck $>$ rich-encoder GPS $R^2$) robust to multi-seed; layer specificity (L2 divergence) robust; encoder probe (no sighted encoder linearly carries GPS) robust; "linear vs non-linear" precision claim established. **Mechanism** ("spatial-feature variety per step") depends on scaling sweep (in flight) — already \uncertain-flagged |
+| §4.3 H2 Format divergence | ✅ Qualitative settled, ⚠️ magnitudes single-seed | 1-NN purity 1.000 ($n{=}7500$ pooled) extremely robust; probe transfer catastrophically negative across all off-diagonals; CKA noise floor robust; transplant asymmetry direction robust. Specific magnitudes single-seed; 4 coarse-recipient transplant cells unmeasured |
+| §4.4 Foveation | ⚠️ NOT settled | Depends on F1--F4 $\sigma_{\max}$ sweep + F3 log-polar (in training). If F3 log-polar matches uniform on H1, mechanism story reframes (\pendnote-flagged). Foveated ckpt 174M not converged. **Light polish only until F1--F4 + F3 land** |
+| §4.5 Dissociation 2$\times$2 | ⚠️ NOT settled | 5 single-seed points on 2$\times$2 plot already labelled \uncertain "candidate dissociations"; multi-seed could collapse anomalies into noise. Lock-onto-old uniform margin $+1.83$m at $n{=}46$ single-seed. **Light polish only until multi-seed lands** |
+| §4.6 H3 Gaze location | ❌ In flight | Foveated-shifted control still training (H100-A). Currently a placeholder paragraph |
+| §4.7 Boundaries | ✅ Mostly settled | DtG everywhere / goal-vector at chance / 20$\times$20 occupancy fail are all robust descriptive results. One interpretive sentence on rich-encoder peaked units already \uncertain-flagged |
+
+**Revision priority (Tier 1, ready now):** §4.1, §4.2, §4.3, §4.7
+**Tier 2 (light polish only):** §4.4, §4.5
+**Tier 3 (wait):** §4.6
+
+
 ### 3.0 Single-seed claim audit (2026-04-26 pass)
 
 Every cross-condition number in the paper is currently single-seed. The
