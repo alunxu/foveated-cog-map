@@ -10,7 +10,7 @@ NAMES="blind matched uniform foveated foveated_learned"
 cfg_for() {
     case "$1" in
         blind) echo "pointnav/ddppo_pointnav_blind_gibson" ;;
-        matched) echo "pointnav/ddppo_pointnav_matched_gibson" ;;
+        matched) echo "pointnav/ddppo_pointnav_matched128_gibson" ;;
         uniform) echo "pointnav/ddppo_pointnav_uniform_gibson" ;;
         foveated) echo "pointnav/ddppo_pointnav_foveated_gibson" ;;
         foveated_learned) echo "pointnav/ddppo_pointnav_foveated_learned_gibson" ;;
@@ -20,7 +20,7 @@ cfg_for() {
 ckpt_for() {
     case "$1" in
         blind) echo "/scratch/izar/wxu/habitat_checkpoints/blind_gibson/ckpt.34.pth" ;;
-        matched) echo "/scratch/izar/wxu/habitat_checkpoints/matched_gibson/ckpt.49.pth" ;;
+        matched) echo "/scratch/izar/wxu/habitat_checkpoints/matched128_gibson/ckpt.49.pth" ;;
         uniform) echo "/scratch/izar/wxu/habitat_checkpoints/uniform_gibson/ckpt.49.pth" ;;
         foveated) echo "/scratch/izar/wxu/habitat_checkpoints/foveated_gibson_corrupt_job2836021/ckpt.36.pth" ;;
         foveated_learned) echo "/scratch/izar/wxu/habitat_checkpoints/foveated_learned_gibson_buggy_transform/ckpt.49.pth" ;;

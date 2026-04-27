@@ -15,10 +15,16 @@ import argparse
 import json
 from pathlib import Path
 
+import sys
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
+from _style import apply_paper_style  # noqa: E402
+
+apply_paper_style()
 import numpy as np
 
 

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -34,6 +35,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent))
+from _style import apply_paper_style  # noqa: E402
+
+apply_paper_style()
 
 
 CONDS = [
@@ -227,9 +233,11 @@ def main() -> None:
     ax.text(0.03, 0.04, "no GPS\nformat-shared",
             ha="left", va="bottom", **quad_kw)
 
+    ax.set_title("Three-axis synthesis of sensor-structure effects",
+                 loc="left", pad=10)
     ax.set_xlabel(r"H1 magnitude: top-layer GPS $R^2$ (probe on $\mathbf{h}_2$)",
                   fontsize=12, labelpad=6)
-    ax.set_ylabel("H2 format isolation\n(avg transplant cost as donor)",
+    ax.set_ylabel("H2 format isolation\n(donor transplant cost)",
                   fontsize=12, labelpad=6)
     ax.set_xlim(CLIP_X_MIN - 0.05, 1.10)
     ax.set_ylim(-0.04, 0.32)

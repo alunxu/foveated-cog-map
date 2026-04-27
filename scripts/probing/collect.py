@@ -164,6 +164,13 @@ def parse_args():
                         "against SLURM timeouts losing 3+ hours of rollouts. The "
                         "partial save overwrites the output path, so the latest "
                         "checkpoint is always recoverable (default: 50).")
+    p.add_argument("--reset-every", type=int, default=0,
+                   help="Periodically reset the LSTM hidden state to zero "
+                        "every K within-episode steps. Used for the "
+                        "memory-length-budget sweep (Wijmans 2023 Fig 2 "
+                        "replication, code WJ-A): with --reset-every=K, the "
+                        "agent's effective memory budget is at most K steps. "
+                        "Default 0 disables the reset (full-history memory).")
     return p.parse_args()
 
 
@@ -342,6 +349,17 @@ def main():
             not_done_mask = torch.ones(1, 1, dtype=torch.bool, device=device)
 
             step += 1
+
+            # WJ-A memory-length-budget sweep: every K within-episode
+            # steps, blank the LSTM hidden state so the agent's effective
+            # memory horizon is at most K steps. (This produces hidden
+            # states whose contents reflect only the last <=K observations.)
+            if args.reset_every > 0 and step % args.reset_every == 0:
+                rnn_hidden = torch.zeros(
+                    1, num_recurrent_layers, hidden_size, device=device,
+                )
+                prev_action = torch.zeros(1, 1, dtype=torch.long, device=device)
+                not_done_mask = torch.zeros(1, 1, dtype=torch.bool, device=device)
 
         if (ep + 1) % 10 == 0:
             total_steps = len(all_hidden)

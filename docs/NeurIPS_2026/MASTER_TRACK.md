@@ -3,7 +3,7 @@
 Single source of truth for: cluster jobs, experiment status, paper
 claims, figure freshness, open questions, decision log.
 
-**Last updated**: 2026-04-25 23:40 (commit `a8a1338`).
+**Last updated**: 2026-04-27 06:50 (Wijmans replication plan added §5.7).
 Update this file when state changes — do NOT rely on memory.
 
 ---
@@ -12,52 +12,34 @@ Update this file when state changes — do NOT rely on memory.
 
 | Dimension | Status |
 |---|---|
-| Paper version | v1 substantially complete; aggressive cut done (§3 / §4.4 / §5.2 / §5.3 → appendix); main text dense |
-| Page count | **29 pages total**; main text 12-14 (Discussion p12, Conclusion p14, References p15+) |
-| Submission deadline | **~2 weeks out** (per user 2026-04-25) — not rushed |
-| Cluster: jobs RUNNING | 5 trainings (multi-seed seed2 + 3 foveation variants + normaliser) + 6 transplants |
-| Cluster: jobs PENDING | 22 training-dyn probes + 4-ish transplants |
-| Most recent landed | Encoder feature-map probes (3/3 conds), Phase B shortcut+trajectories (5/5 conds), 33-cell 5×5 transplant, 1 training-dyn ckpt (blind) |
-| Most recent paper change | Aggressive cut + appendix moves (commits `7409ac8` + `8267f80`); main text reduced from 30→29p; ~1 page headroom freed for incoming results |
-| Most recent submit batch | 22 training-dyn probes + 7 transplants (4 matched-recipient + 3 per-step missing) — 2026-04-25 23:30 (commit `a8a1338`) |
+| Paper version | v1 polished; figure pass complete (Fig 2-6 + appendix); refs working; 28-29 pages |
+| Page count | **28-29 pages**; build clean via `make` (Makefile in docs/NeurIPS_2026/) |
+| Submission deadline | **2026-05-06** (9 days out) |
+| Cluster: jobs RUNNING | 2 trainings (uni-s2 / fov-s2) + transplant tail (matched-recipient cells, last 2) |
+| Cluster: jobs PENDING | 0 |
+| Most recent landed | All 10 topdown maps (Fig 5 backgrounds) ✓; 6/8 matched transplant cells ✓ (patch validated) |
+| Most recent paper change | Footnote color audit (only pending claims red); Makefile for reliable bibtex; Fig 5 redesigned 4×4 + maps |
+| Next experiments queued | WJ-B (probe agent) → WJ-A (memory length) → WJ-C (occupancy decoder) → WJ-E (t-SNE) → WJ-D (Bug baseline) → WJ-F (excursion forgetting). See §5.7. |
 
 ---
 
-## 1. Cluster jobs
+## 1. Cluster jobs (current snapshot)
 
 ### 1.1 Running (verify with `ssh izar "squeue -u wxu"`)
 
-Snapshot 2026-04-25 23:40:
+Snapshot 2026-04-27 06:50:
 
-| Job ID | Name | Elapsed | Time left | Output |
-|---|---|---|---|---|
-| 2844326 | uni_s2 multi-seed | 2d 6h | **~18h** | `uniform_gibson_seed2/` (21/36 ckpts ≈ 84%) |
-| 2844327 | fov_s2 multi-seed | 2d 5h | **~18h** | `foveated_gibson_seed2/` (20/36 ckpts ≈ 80%) |
-| 2849139 | F3 log-polar | 5h | 2.5d | `foveated_logpolar_gibson/` (3 ckpts) |
-| 2849138 | F4 σ_max=20 strong | 7h | 2.5d | `foveated_strong_gibson/` (3 ckpts) |
-| 2849136 | foveated_v2 (clean σ=8 retrain) | 8h | 2.5d | `foveated_v2_gibson/` (3 ckpts) |
-| 2849... | F2 normaliser | very early | 3d | `foveated_normaliser_gibson/` (1 ckpt) |
-| 2850299-2850305 | Transplant cells (matched-recipient + a few per-step) | 0-5min | 3h | `/scratch/izar/wxu/transplant_results/` |
-
-### 1.2 Pending (just submitted, 2026-04-25 23:30, commit `a8a1338`)
-
-| Batch | Jobs | Status | Per-job |
+| Job ID | Name | Elapsed | Output |
 |---|---|---|---|
-| Training-dynamics probes (J) | 22 (2850318-2850340) | PENDING (queued normal QOS, run in parallel ~10 at a time) | ~1-3h each |
-| 4 matched-recipient transplant + 3 per-step missing | 7 | RUNNING (above) | ~1.5h each |
+| 2853101 | uni_s2 multi-seed | ~4h (cycle ~2d total) | `uniform_gibson_seed2/` |
+| 2853102 | fov_s2 multi-seed | ~4h | `foveated_gibson_seed2/` |
+| 2857277 | uniform→matched transplant | ~45min | `/scratch/izar/wxu/transplant_results/` |
+| 2857272 | blind→matched transplant | ~45min | (matched-recipient column completion) |
 
-### 1.3 Already LANDED & integrated in paper
+Cron `auto_resume.sh` keeps uni-s2/fov-s2 alive across 72h walltime cycles.
+Cron `probe_hc_arrival.sh` waits for friend's hc-trained checkpoints.
 
-| Batch | Status | Paper section |
-|---|---|---|
-| 5×5 cross-condition transplant (excluding matched recipient) | 13/16 cross + diag, 33 cells total | Fig 3 right panel (§4.3) |
-| Per-step transplant (mid200/400/800) | mostly done | App `fig:transplant_sweep_supp` |
-| Encoder feature-map probes (D) | **3/3** (matched/uniform/foveated) | §4.4.4 + Fig 4 |
-| Phase B shortcut + trajectories (ST) | **5/5** | §4.5 + Fig 6 |
-| Population coding analysis | 1/1 | App A `fig:supp_pop_coding` |
-| Topdown render for Fig 1d | 1/1 | Fig 1d (with floor plan) |
-
-### 1.3 Friend's H100 — REQUIRED experiments (separate cluster, blocks paper)
+### 1.2 Friend's H100 — REQUIRED experiments (separate cluster, blocks paper)
 
 These experiments need H100 because they require new training runs (2-7 days each on V100, faster on H100) AND we want to avoid splitting/merging multi-cluster results.
 
@@ -79,60 +61,17 @@ These experiments need H100 because they require new training runs (2-7 days eac
 
 ## 2. Experiment registry
 
-Status legend:
-- ❌ NOT_STARTED — script ready, not submitted
-- 🟡 SUBMITTED — sbatch sent, queued or running
-- 🔄 RUNNING — currently executing
-- ✅ DONE — output exists; not yet integrated
-- 📝 INTEGRATED — done + integrated into paper
+All paper-v1 backbone experiments (5-cond probes, transplant, shortcut, CKA, etc.) are integrated. Removed for conciseness — see §6 decision log for history.
 
-### 2.1 Existing core (paper v1 backbone)
-
-| ID | Name | Status | Output | Paper § |
-|---|---|---|---|---|
-| 1 | 5-condition deterministic Gibson probes | 📝 | `<cond>_gibson_det_analysis.json` | §4.1, §4.2, §4.3, §4.5 |
-| 2 | 5-condition deterministic MP3D probes | 📝 | `<cond>_mp3d_det_analysis.json` | §4.5, Fig 7 |
-| 3 | CKA cross-condition | 📝 | `cka_det.json` | §4.3, Fig 3 |
-| 4 | Probe-transfer cross-condition | 📝 | `cross_transfer_det.json` | §4.3, Table 2 |
-| 5 | Goal-vector probe | 📝 | `goal_vector_det.json` | §4.4, Fig 5a |
-| 6 | Lag-k extended probe | 📝 | `extended_lag_det.json` + `extended_lag_det_lag20.json` | §4.2 |
-| 7 | Memory transplant midpoint sweep (3 pairs) | 📝 | `*_to_*_mid<N>.json` | §4.3, Fig 4 |
-| 8 | Shortcut discovery | 📝 | `data/shortcut/*` | §4.4, Fig 5b |
-| 9 | MLP probe sanity | 📝 | `mlp_sanity_det.json` | §4.5, §5.2 |
-| 10 | 1-NN cluster purity | 📝 | `cluster_quality_det.json` | §4.3 |
-| 11 | Length-matched probe (I1) | 📝 | `length_matched_det.json` | §4.2 (in temporal-stability subsection) |
-| 12 | Per-step temporal probe | 📝 | `temporal_probe_det.json` + `temporal_probe_evolution.{pdf,png}` | §4.2 (Fig `temporal_probe`) |
-
-### 2.2 In-flight follow-ups (this batch, ~50 jobs)
-
-| ID | Name | Job IDs | Status | Output (planned) | Paper § (planned) |
-|---|---|---|---|---|---|
-| F1 | Fov-fix v2 (clean restart 250M) | 2849136 | 🟡 | `foveated_v2_gibson` ckpts | §3.2 + §4.2 hedge |
-| F2 | Fov-fix with normaliser enabled | 2849137 | 🟡 | `foveated_normaliser_gibson` ckpts | §3.2 + limitations |
-| F3 | Log-polar foveation | 2849139 | 🟡 | `foveated_logpolar_gibson` ckpts | §3.2 + §4.2 (mechanism test) |
-| F4 | Strong-Gaussian foveation σ_max=20 | 2849138 | 🟡 | `foveated_strong_gibson` ckpts | §3.2 (blur-strength sensitivity) |
-| A | 5×5 cross-condition transplant matrix | 2849148-2849164 | 🟡 | 17 new `*_to_*_mid30.json` | §4.3 H2 (replace "the pairs we tested") |
-| H | Per-step transplant midpoint sweep | 2849166-2849179 | 🟡 | 12 new `*_to_*_mid{200,400,800}.json` | §4.3 (new transplant-vs-midpoint figure) |
-| J | Training-dynamics probes | 2849180-2849187 + others | 🟡 | 22 `<cond>_gibson_ckpt<N>_det.npz/json` | §4.6 NEW (training-dynamics figure) |
-| D | Encoder feature-map probes | 2849191-2849193 | 🟡 | 3 `<cond>_gibson_encfeat_det.npz/json` | §3.2 + §4.5 ("can encoder feature map alone decode position?") |
-| Pop | Population coding analysis | 2849188 | 🟡 | `population_coding_det.json` + `rate_maps_<cond>.pdf` + `population_coding_summary.pdf` | §4.6 NEW (population coding sub-section) |
-
-### 2.3 Friend's H100 — pending (>3 days OR independent module)
-
-| ID | Name | Status | Output | Paper § |
-|---|---|---|---|---|
-| F5a | Fov-learned clean transform retrain (seeds 0,1,3) | ❌ | 3 ckpts | Table 1 fov-lrn row + multi-seed |
-| F5b | Fov-shifted causal control (H3) | ❌ | 1 ckpt | §4.4 H3 (replace `\TODO{H3}` + `\TODO{Training in progress}`) |
-| F6 | Encoder-resolution scaling sweep (matched-{32,64,96,192}) | ❌ | 4 ckpts + probes | App D scaling curve |
-| F7 | Multi-seed gap fills (blind×2, uni_s3, fov_s3, matched×2) | ❌ | Various | Table 1 error bars + §4.2 multi-seed footnote |
+Outstanding experiments organised by §5.7 (Wijmans replication, currently active) and below:
 
 ### 2.4 Future / out of v1 scope
 
-| ID | Name | Status | Notes |
-|---|---|---|---|
-| O1 | Direct H1 mechanism test (GPS perturbation mid-rollout) | ❌ | Future work, listed as TODO in §4.2 "Why" |
-| O2 | Cross-architecture transformer baseline | ❌ | Major work; future paper |
-| O3 | Length-matching ablation in training (truncate trajectories) | ❌ | TODO in §3.3 |
+| ID | Name | Notes |
+|---|---|---|
+| O1 | Direct H1 mechanism test (GPS perturbation mid-rollout) | Future work, listed as TODO in §4.2 "Why" |
+| O2 | Cross-architecture transformer baseline | Major work; future paper |
+| O3 | Length-matching ablation in training (truncate trajectories) | TODO in §3.3 |
 
 ---
 
@@ -145,52 +84,6 @@ Status legend:
 - ⚠️ Hedged with "awaits replication" or TODO marker; needs follow-up
 - 🆕 New finding from in-flight experiments; needs integration once data lands
 - ❌ Not yet supported
-
-### 3.0-pre §4.x settled-vs-pending status (2026-04-26)
-
-For prioritising Result-section revision: which subsections are stable
-(safe to deep-revise now) vs. which are still in flight (light-polish only).
-
-| § | Status | Why |
-|---|---|---|
-| §4.1 Five conditions, same task | ✅ Settled | Success rates 93--99% robust to multi-seed; DtG $R^2 \in [0.81, 0.90]$ as probe-validity sanity check; Hewitt--Liang selectivity supports |
-| §4.2 H1 Encoder--memory race | ✅ Phenomenon settled, ⚠️ mechanism interpretive | H1 ordering (bottleneck $>$ rich-encoder GPS $R^2$) robust to multi-seed; layer specificity (L2 divergence) robust; encoder probe (no sighted encoder linearly carries GPS) robust; "linear vs non-linear" precision claim established. **Mechanism** ("spatial-feature variety per step") depends on scaling sweep (in flight) — already \uncertain-flagged |
-| §4.3 H2 Format divergence | ✅ Qualitative settled, ⚠️ magnitudes single-seed | 1-NN purity 1.000 ($n{=}7500$ pooled) extremely robust; probe transfer catastrophically negative across all off-diagonals; CKA noise floor robust; transplant asymmetry direction robust. Specific magnitudes single-seed; 4 coarse-recipient transplant cells unmeasured |
-| §4.4 Foveation | ⚠️ NOT settled | Depends on F1--F4 $\sigma_{\max}$ sweep + F3 log-polar (in training). If F3 log-polar matches uniform on H1, mechanism story reframes (\pendnote-flagged). Foveated ckpt 174M not converged. **Light polish only until F1--F4 + F3 land** |
-| §4.5 Dissociation 2$\times$2 | ⚠️ NOT settled | 5 single-seed points on 2$\times$2 plot already labelled \uncertain "candidate dissociations"; multi-seed could collapse anomalies into noise. Lock-onto-old uniform margin $+1.83$m at $n{=}46$ single-seed. **Light polish only until multi-seed lands** |
-| §4.6 H3 Gaze location | ❌ In flight | Foveated-shifted control still training (H100-A). Currently a placeholder paragraph |
-| §4.7 Boundaries | ✅ Mostly settled | DtG everywhere / goal-vector at chance / 20$\times$20 occupancy fail are all robust descriptive results. One interpretive sentence on rich-encoder peaked units already \uncertain-flagged |
-
-**Revision priority (Tier 1, ready now):** §4.1, §4.2, §4.3, §4.7
-**Tier 2 (light polish only):** §4.4, §4.5
-**Tier 3 (wait):** §4.6
-
-
-### 3.0 Single-seed claim audit (2026-04-26 pass)
-
-Every cross-condition number in the paper is currently single-seed. The
-multi-seed retrains in flight (uniform/foveated cs-503 jobs, blind/matched/
-fov-learned normal-QOS jobs 2850374-76) will land seed=2 within ~3 days.
-The table below lists which paper claims become falsifiable on multi-seed.
-Hedging in the paper has been tightened (commit pending) to flag every
-quantitative claim as single-seed; if multi-seed lands, switch hedges to
-"replicated across N=2 seeds" / "varies across seeds: needs N=3".
-
-| Claim | Where | Single-seed risk | Multi-seed gates |
-|---|---|---|---|
-| Top-layer GPS $R^2$ ordering (blind +0.95, matched +0.78, uniform −0.31, fov +0.06, fov-lrn −2.43) | §4.2, Fig 2a, Table 1 | Variance bars on rich-encoder huge; ordering itself robust | ✓ ordering survives; magnitudes shift |
-| Long-tail decay step-bin (rich-encoder $R^2$ negative at $800+$ bin only) | §4.2, Fig 2b | Bin variance is wide | step at which the code dissipates may shift ±100 |
-| Per-layer GPS profile (L0 high all, L2 low rich-encoder) | §4.2, Fig 2c | Single fit per condition | profile shape stable; ordering at L2 stable |
-| LSTM gain numbers (matched +3.9, fov +0.7, uniform $\sim$0) | §4.4, Fig 2d | Single point estimates | ordering robust; precise gap may move |
-| MP3D foveated GPS $R^2 = +0.35$ (recovery from chance) | §4.2, Fig 2a | Single-seed cross-dataset shift; could be noise | replicate or retract |
-| MP3D fov-learned compass $-1.34 \to +0.41$ swing | Table 1 + §4.2 | Single-seed cross-dataset shift; could be noise | replicate or retract |
-| Probe-transfer $R^2 \ll -800$ off-diagonal | Fig 3 left | Single fit per cell | sign + order-of-magnitude robust; precise value moves |
-| 5×5 transplant asymmetry (blind→uni −0.38 vs uni→blind +0.02) | Fig 3 right | Single-seed; matched-recipient column unmeasured | ✓ asymmetry survives; precise gaps move |
-| 1-NN purity 1.000 across 7500 pooled states | §4.3 | Pooled across one seed each | likely robust (N is large) |
-| Shortcut SPL drop % (blind 52, uni 41, fov 21, matched 18, fov-lrn 15) | §4.5 | Single seed × 200 paired episodes | ordering should survive |
-| 2×2 dissociation (matched + uniform off-diagonal) | §4.5 Fig 4 | Two interpretive labels on 5 single-seed points | hedged in paper as "candidate dissociations"; multi-seed gates the "anomaly" framing |
-| Lock-onto-old: uniform margin +1.83 m at $n=46$ | §4.5 Fig 5 right | Single seed; one paired-episode protocol | ordering (uniform >> others) likely survives; +1.83 magnitude may move |
-| Fov-learned margin +2.30 at $n=5$ | §4.5 Fig 5 right | Tiny n + single seed | flagged as "low confidence" in paper |
 
 ### 3.0a Mechanism claims explicitly NOT supported by current data
 
@@ -222,150 +115,29 @@ as `\pendnote{...}` and listed here for follow-up audits.
 
 
 
-### Abstract
-| Claim | Status | Backed by |
-|---|---|---|
-| Encoder–memory race principle | ✅ | §4.2 H1 + temporal probe (Fig temporal_probe) |
-| All 5 conditions encode top-layer GPS in mid-episode | ✅ | Temporal probe (commit c904e8c) |
-| Bottleneck conditions maintain GPS code throughout | ✅ | Temporal probe + lag-k |
-| Rich-encoder conditions overwrite GPS code as visual features take over | ✅ | Temporal probe |
-| H2 format divergence | ✅ | CKA + transfer + 1-NN + transplant (4 metrics) |
-| H3 gaze-location pending | ⚠️ | Friend's H100 (fov-shifted) |
-| MP3D generalisation consistent | ✅ | §4.5 MP3D paragraph (commit 169171d) |
-| Bio-analogy 3-fold parallel | ✅ | §5.3 (Chen 2016 disruption fixed in commit 9bdf355) |
-
-### §1 Introduction
-| Claim | Status |
-|---|---|
-| Wijmans (2023) baseline + question framing | ✅ |
-| 5-condition design isolates 3 axes | ✅ |
-| H1/H2/H3 hypothesis statements | ✅ |
-| Findings: encoder–memory race + format divergence | ✅ |
-| Contributions paragraph | ✅ |
-
-### §2 Related Work
-| Claim | Status |
-|---|---|
-| Cognitive maps in RL navigation | ✅ |
-| Foveated vision / gaze policies in DL | ✅ |
-| Probing methodology citations | ✅ |
-| Bio precedent | ✅ |
-| "What is new here" novelty | ✅ |
-
-### §3 Methods
-| Claim | Status |
-|---|---|
-| Agent architecture (Wijmans backbone) | ✅ |
-| 5 visual conditions described | ✅ |
-| Matched-compute attribution to 1×1 feature map | ⚠️ — F3 logpolar will sharpen; D will probe encoder feature directly |
-| Probing methodology (deterministic, 5-fold CV) | ✅ |
-| Sampling-protocol disclosure | ✅ |
-| Foveation conditions disable normaliser (F2 will verify) | ⚠️ — F2 result pending |
-| Behavioural probes (transplant, shortcut) | ✅ |
-
-### §4 Results — RESTRUCTURED 2026-04-25 (commit pending)
-
-New 6-section structure (was 5; foveation slot is new):
-- §4.1 Five conditions, same task — slim summary table (5 cols)
-- §4.2 Encoder–memory race (H1) — consolidated, mega-figure
-- §4.3 Format-level divergence (H2) — transplant-led
-- §4.4 Foveation: where it sits, where the cleaner tests sit — NEW SLOT for in-flight foveation experiments
-- §4.5 Gaze location (H3) — kept independent
-- §4.6 Boundaries and additional probes — short
-
-| Sub | Claim | Status |
-|---|---|---|
-| §4.1 | Per-condition summary table (5 cols: cond / frames / SPL / succ / GPS R² / Compass R²) | ✅ slimmed |
-| §4.2 | H1 finding + temporal stability + Layer-0 disambiguation + MLP probe + MP3D | ✅ all consolidated into §4.2 with single mega-figure (`fig:h1_mega`) |
-| §4.2 | Proposed mechanism (encoder–memory race), wording aligned with encoder probe | ✅ refined to "spatial-feature variety per step" framing (commit `cc1b7e7`); direct causal test still TODO |
-| §4.3 | H2 format divergence (transplant lead, then CKA / transfer / 1-NN) | ✅ |
-| §4.3 | "Pairs we tested" caveat for transplant | ✅ MOSTLY RESOLVED — 5×5 matrix at midpoint=30 with 13/16 cross-cells filled (commit `6ecc508`); 4 matched-recipient cells pending |
-| §4.3 | Asymmetry pattern in 5×5 matrix (blind→uniform -0.38 vs uniform→blind +0.02) | ✅ NEW finding integrated (commit `6ecc508`) |
-| §4.4 | Foveation table comparing fov vs uniform (converge on H1, diverge on H2 + behaviour) | ✅ Table 3 (commit `98b9627`) |
-| §4.4 | F1-F4 strength sweep design + signature | 🆕 in training — script ready |
-| §4.4 | F3 log-polar foveation design + falsifiable prediction (R² ≥ 0.3 if mechanism is encoder spatial output dim) | ✅ DISCLOSED (commit `70bd1fd`); in training, 2/36 ckpts |
-| §4.4 | Encoder feature-map probe (matched/uniform/foveated all 3) | ✅ all landed (commit `409e6bd`); none of the 3 sighted encoders linearly decode GPS |
-| §4.4 | Foveated-shifted control (links to H3) | 🆕 in training |
-| §4.5 | H3 learned-gaze collapse | ✅ |
-| §4.5 | H3 fov-shifted causal control | ⚠️ TODO (in flight) |
-| §4.5 | Shortcut discovery + 2×2 dissociation (matched/uniform anomalies) | ✅ scatter (commit `4d9ee81`) + paired-traj fig (commit `d97eda9`) |
-| §4.6 | Occupancy + place cells + per-unit info + goal vector → boundaries | ✅ slimmed |
-
-### §5 Discussion
-| Claim | Status |
-|---|---|
-| Encoder–memory race unification | ✅ |
-| Alternative explanations rebuttal | ✅ |
-| Bio precedent as analogy | ✅ |
-| Implications for ML practice | ✅ |
-| Limitations | ✅ |
-
-### §6 Conclusion
-| Claim | Status |
-|---|---|
-| Finding 1: encoder–memory race + temporal stability | ✅ |
-| Finding 2: format divergence | ✅ |
-| Finding 3: gaze-location test (pending) | ⚠️ |
-| Bio analogy | ✅ |
-| Open questions | ✅ |
-
-### Appendix
-| Section | Status |
-|---|---|
-| App A: supplementary figures (training, t-SNE, place_cells, goal_vector, layerwise, mp3d-companion) | ✅ |
-| App B: gaze-diversity loss pilot | ✅ |
-| App C: training stability (NaN bug) | ✅ |
-| App D: foveation experiments status (NEW, links from §4.4) | ✅ — design disclosed, results pending |
-| App E: encoder-capacity scaling | ⚠️ TODO (friend's H100) |
-
 ---
 
-## 4. Figure registry
+## 4. Figure registry (current)
 
-For each figure: source, freshness, paper-section, ready-to-publish.
+Figures pass-2 redesigned 2026-04-27 (Times font via `_style.py`; Makefile build; 28-29 pages).
 
-**Restructure 2026-04-25**: figure budget went from 8 main + 2 tables → 4 main + 2 tables. Old standalone figures (h1_bottleneck, temporal_probe_evolution, layerwise_decay, mp3d_generalization, h3_content, place_cells, goal_vector_probe) consolidated or moved to appendix.
-
-**Fig 2 simplified again 2026-04-25 (afternoon)**: H1 mega-figure went from 4 panels (panel a was itself 3 sub-bar-charts for GPS / Compass / DtG) → 3 cleaner panels: (a) grouped GPS bars × {Gibson, MP3D}, (b) temporal probe, (c) per-layer. Compass + DtG referenced via Table 1 + appendix supp figs. Total Fig 2 sub-axes: 6 → 3.
-
-**Trajectory visualization 2026-04-25 (afternoon, Phase A + B)**:
-- **Phase A (DONE, commit 84a81fc)**: Modified Fig 1 setup to include 5-condition trajectory overlay on the same Gibson val episode (scene 92, ep 414, selected because all 5 conditions succeeded with SPL within ±0.10 of their per-condition median). Bottleneck conditions take winding paths (blind 231 / matched 146 steps); rich-encoder conditions take direct paths (~80 steps). Fig 1 now visualises input ablation AND behavioural consequence on page 1.
-- **Phase B (IN-FLIGHT, jobs 2849306-10)**: New `scripts/eval/shortcut_with_trajectories.py` re-runs the shortcut paired-episode eval but saves per-episode trajectories (positions, dtg). Submitted 5 jobs using the same ckpts as original shortcut eval. When complete: render paired-episode figure for §4.5 showing reset-memory vs persistent-memory trajectories on the same scene/goal — visualizes the "LSTM locks onto previous goal" interpretation of the matched/uniform anomalies.
-
-**Population coding 2026-04-25**: pulled `population_coding_det.json` + summary figure from Izar (job 2849188 done). Replaced broken `place_cells.pdf` with `population_coding_summary.pdf` in App A; updated §4.6 paragraph. **Data correctness flag**: old `place_cells.pdf` was showing impossible per-unit info (mean $\bar s = 65$ bits/unit, max 150) — but a 20×20 grid is bounded at $\log_2(400) \approx 8.6$ bits per unit. The new analysis (capped at ~2 bits max) is correct. The old figure's qualitative ordering (bottleneck > rich-encoder for n_above_1bit) was also REVERSED by the corrected analysis: rich-encoder conditions actually have MORE high-info units (16-18 vs blind's 1), but those units don't decode GPS — they encode position-correlated features. New paper §4.6 reflects this: blind has compressed broad spatial code, rich-encoder has higher-dim representations with peaked landmark-like units that don't translate to GPS readout. This is consistent with the encoder-memory race story (rich-encoder uses encoder for landmarks, doesn't compress to position).
-
-### Main figures (current)
 | Filename | Section | Status |
 |---|---|---|
-| `fig_blind.png`, `fig_uniform.png`, `fig_foveated.png` + `trajectory_overlay.pdf` (with topdown) | Fig 1 setup + trajectory overlay (§1, §4.2 preview) | ✅ Fig 1d uses topdown floor plan, scene E9uDoFAP3SH ep 414 (commit `01c4933`) |
-| `h1_mega.pdf` | Fig 2 (§4.2 H1) — 3-panel: bars / temporal / per-layer / MP3D | ✅ |
-| `h2_cka_heatmap.pdf` + `transplant_5x5.pdf` | Fig 3 (§4.3 H2) — CKA heatmap + 5×5 cross-condition transplant matrix | ✅ — 33/37 cells populated; 4 matched-recipient cells pending (commit `6ecc508`) |
-| `encoder_feature_probe.pdf` | Fig 4 (§4.4 foveation, encoder feature-map probe) — 3 conditions × GPS/Compass | ✅ matched/uniform/foveated all done (commit `409e6bd`) |
-| `shortcut_scatter.pdf` | Fig 5 (§4.5 H3) — 2×2 dissociation: probe vs behavioural memory | ✅ (commit `4d9ee81`) |
-| `shortcut_paired_traj.pdf` | Fig 6 (§4.5 H3) — paired-trajectory failure visualisation, 3 conditions | ✅ (commit `d97eda9`) |
+| `fig1_setup.pdf` (with topdown floor plan) | Fig 1 (§1, §3) | ✅ |
+| `fig2_h1_mega.pdf` (3-panel: bars / temporal / per-layer + MLP zone) | Fig 2 (§4.2 H1) | ✅ |
+| `fig3_substitution_dynamics.pdf` (2-panel GPS/Compass training-dyn) | Fig 3 (§4.2 H1) | ✅ |
+| `fig4_h2_probe_transfer.pdf` + `fig4_transplant_5x5.pdf` (uniform aspect) | Fig 4 (§4.3 H2) | ✅ matched col/row 6/8 cells, last 2 in flight |
+| `fig5_shortcut_canonical.pdf` (1×4 with map backgrounds) | Fig 5 (§4.4 behaviour) | ✅ |
+| `fig6_synthesis_2axes.pdf` (3-axis quadrant scatter) | Fig 6 (§4.6 synthesis) | ✅ |
+| `appfig_shortcut_catalog.pdf` (4×4 paired-traj catalog with maps) | App (§4.4 extended) | ✅ |
+| `appfig7-12.pdf` (training curves, t-SNE, CKA, transplant sweep, extra states, pop coding, goal vector, layerwise) | App A | ✅ |
 
-### Appendix A figures (after restructure)
-| Filename | Source | Status |
-|---|---|---|
-| `training_curves.pdf` + `h2_hidden_embedding_tsne.pdf` | TB / det NPZs | ✅ |
-| `population_coding_summary.pdf` + `goal_vector_probe.pdf` | det JSONs | ✅ |
-| `layerwise_decay.pdf` + `mp3d_generalization.pdf` | det JSONs (companions to h1_mega panels c, d) | ✅ moved to appendix |
-| `temporal_probe_evolution.pdf` (standalone) | `temporal_probe_det.json` | ✅ — also in h1_mega panel (b) |
-| `transplant_sweep.pdf` (NEW App location) | midpoint-sweep view of 3 representative pairs (commit `6ecc508`) | ✅ supports the t=30 main matrix |
+**Pending placeholders** (data in flight):
+- F1-F4 σ-sweep, F3 log-polar foveation figures (scripts ready, await training)
+- Foveated-shifted control figure (awaits H100-A retrain)
+- Encoder-resolution scaling sweep figure (awaits H100-B)
 
-### Foveation slot figures (placeholders for §4.4 sub-paragraphs; data in flight)
-| Filename | Source | Status |
-|---|---|---|
-| `foveation_strength_sweep.pdf` | F1-F4 probe results | 🆕 SCRIPT READY (`make_foveation_strength_figure.py`); awaits training + probe |
-| `logpolar_vs_blur.pdf` | F3 log-polar probes | 🆕 awaits log-polar checkpoint to be probable |
-| `foveated_shifted_results.pdf` | fov-shifted training + probe | 🆕 awaits fov-shifted training |
-
-### Other in-flight figures (scripts ready)
-| Filename | Section | Status |
-|---|---|---|
-| `training_dynamics.pdf` | §4.6 / App | 🆕 SCRIPT READY (`make_training_dynamics_figure.py`); 1/22 ckpt landed |
-| `transplant_5x5.pdf` (current) | Fig 3 right | ✅ partial; will refresh as 4 matched-recipient cells land |
-| `scaling_sweep.pdf` | App E | ❌ Friend's H100 |
+**Wijmans replication figures** (§5.7, queued): probe-agent SPL bar chart, memory-length sweep curve, occupancy decoder visualization, t-SNE per-condition, Bug-baseline summary, excursion-forgetting analysis.
 
 ---
 
@@ -373,22 +145,13 @@ For each figure: source, freshness, paper-section, ready-to-publish.
 
 ### 5.1 Awaiting cluster results (in flight on Izar)
 
-| Code | Experiment | What it answers | Paper section affected | Submission |
-|---|---|---|---|---|
-| F1 | Foveation $\sigma_{\max}=2$ | Low-blur foveated $\to$ does it look like uniform? | §4.4.2 | submitted |
-| F2 | Foveation $\sigma_{\max}=4$ | Same gradient, lower σ | §4.4.2 | submitted |
-| F3 | Log-polar foveation | Spatial-sampling vs blur bottleneck distinction; predict LSTM GPS R² ≥ 0.3 (encoder 2×2 spatial output, between matched 1×1 and uniform 8×8) | §4.4.3 | training (14M/250M, ETA 2-3 days). **At ~125M (1.5 days) do early probe to check trend** |
-| F4a | Foveation $\sigma_{\max}=12$ | High-blur foveated $\to$ approaches matched? | §4.4.2 | submitted |
-| F4b | Foveation $\sigma_{\max}=20$ | Strongest foveation in sweep | §4.4.2 | submitted |
-| F-shift | Foveated-shifted (gaze $(0.49, 0.62)$) | Gaze location as 2nd content axis (H3 causal) | §4.4.4 + §4.5 | submitted |
-| F-norm | Foveated with normaliser re-enabled | Normaliser-invariance control | §3.2 implementation note | submitted |
-| A | 5×5 transplant matrix (cross-pairs at midpoint=30) | Replace "we tested 3 pairs" with complete matrix | §4.3 | LANDED 33 cells; 4 matched-recipient cells re-submitted 2850299-2850305 |
-| H | Per-step transplant (extended midpoints 200/400/800) | Does mismatch cost grow with midpoint? | App `fig:transplant_sweep_supp` | LANDED |
-| J | Training dynamics (22 ckpt probes across 5 conds) | When does encoder-memory race emerge in training? | §4.6 / App | 1/22 LANDED; 22 re-submitted 2850318-2850340 normal QOS |
-| D | Encoder feature-map probe (matched, uniform, foveated) | Where world-frame info sits encoder vs LSTM | §4.4.4 | **LANDED 3/3** + integrated |
-| ST | Shortcut + trajectories (5 conds) | Phase B paired-episode trajectory figure for §4.5 | §4.5 | **LANDED 5/5** + integrated |
+| Code | Experiment | What it answers | Paper § |
+|---|---|---|---|
+| F1-F4 | Foveation σ-sweep $\{2, 4, 12, 20\}$ + F3 log-polar + F-norm normaliser | Encoder-memory race as continuous lever; F3 log-polar prediction $R^2 \geq 0.3$ | §4.4 (App D placeholder) |
+| Multi-seed | uniform_seed2 / foveated_seed2 (running) + blind/matched/foveated_learned seed=2 (queued) | All single-seed claims gated on N=2 replication | All §4 numbers |
+| Transplant tail | Last 2 matched-recipient cells (blind→matched, uniform→matched) | Final 2 cells of Coarse column in Fig 4b | Fig 4b |
 
-### 5.2 ⚠️ Friend's H100 — REQUIRED experiments (block paper, see §1.3 above)
+### 5.2 ⚠️ Friend's H100 — REQUIRED experiments (block paper, see §1.2 above)
 
 Reduced to 2 experiments (multi-seed moved off H100 to Izar 2026-04-26).
 
@@ -428,6 +191,23 @@ For each: which paper claim is currently held by hedging that this experiment wo
 - Selectivity-with-within-episode-shuffle as alternative to label-permutation Hewitt-Liang (B2 audit, minor)
 - Foveated-learned MP3D compass +1.75 swing (Gibson −1.34 → MP3D +0.41) — single-seed; multi-seed would test
 - Population coding finding "rich-encoder peaked units encode position-correlated features" depends on threshold (1 bit); robustness under threshold sweep would help
+
+### 5.7 Wijmans 2023 replication / extension plan (queued 2026-04-27)
+
+After re-reading Wijmans et al. 2023 ("Emergence of Maps in the Memories of Blind Navigation Agents", ICLR), the following experiments port their methodology to our 5-condition setup. Each strengthens a specific claim in our paper. **Priority: do all in order. Deadline 2026-05-06.**
+
+| Code | Experiment | Wijmans figure | Tightens our claim | Effort |
+|---|---|---|---|---|
+| **WJ-B** | **Probe agent**: train a 2nd agent (same arch as recipient) initialised with the recipient's final memory $(\mathbf{h}_T, \mathbf{c}_T)$, task it with SecondNav(S→T). Measure probe SPL vs agent SPL. | Wijmans Fig 3A/B | §4.5 dissociation: rich-encoder memory may be USEFUL even though linearly unreadable. If uniform/foveated probe SPL > agent SPL → memory contains policy-relevant info → "linearly unreadable ≠ useless". | 2-3 days; eval-only (no retrain) |
+| **WJ-A** | **Memory-length sweep**: at eval time, clip the LSTM hidden-state to the last $k$ steps for $k \in \{1, 4, 16, 64, 256, 1000\}$; re-probe GPS at each $k$. | Wijmans Fig 2 | H1: bottleneck conditions need long-horizon memory to integrate GPS. Curve shape per condition shows whether the GPS code accumulates gradually or arises locally. | 1-2 days; analysis-only |
+| **WJ-C** | **Occupancy grid decoder**: train a decoder to predict allocentric free-space occupancy maps from $(\mathbf{h}_T, \mathbf{c}_T)$ for each condition. Report IoU per condition + side-by-side ground-truth/predicted visualisation. | Wijmans Fig 4 | H1 mechanism: bottleneck encodes metric maps; rich-encoder does not. **Strongest reviewer evidence** for "memory contains a map" claim — currently we only show linear-probe R² which is more abstract. | 3-5 days; new decoder + train + per-condition analysis |
+| **WJ-E** | **t-SNE per condition**: t-SNE of $(\mathbf{h}_t, \mathbf{c}_t)$ pooled across $n=500$ episodes per condition. Colour by action × collision-state (Wijmans 4-cluster) OR by distance-to-goal bin. | Wijmans Fig 1C | H2 visual demonstration: per-condition embeddings should look qualitatively different. Easy + impactful. | 0.5 days; analysis-only |
+| **WJ-D** | **Bug algorithm baseline**: implement the clairvoyant Bug variant (always-right / always-left / oracle) on our scenes. Add to summary table. | Wijmans Fig 1B / Table 1 | Pre-empts "task too easy" reviewer concern; contextualises 96-99% success rates. | 1 day; classical algorithm + eval pipeline |
+| **WJ-F** | **Forgetting / excursion analysis**: train decoder $f_k(\mathbf{h}_t, \mathbf{c}_t) \to s_{t-k}$ for $k \in [1, 256]$. Compare excursion vs non-excursion error per condition. | Wijmans Fig 5A/B | H2: do conditions differ in WHAT they remember? Foveated wandering trajectories may forget more than blind wall-following. | 2-3 days; per-condition decoder + excursion labelling |
+
+**Order of implementation** (user-confirmed 2026-04-27): WJ-B (probe agent) → WJ-A (memory length) → WJ-C (occupancy grid) → WJ-E (t-SNE) → WJ-D (Bug baseline) → WJ-F (excursion forgetting).
+
+Rationale: B + A directly strengthen the §4.5 dissociation and H1 (the story's weakest pillar); C is the highest-impact figure (occupancy maps as direct mechanism evidence); E/D are quick wins; F is the most exploratory.
 
 ### 5.6 Mined-from-existing-data side observations (single-seed; verify with multi-seed)
 - **Persistent-failure terminal locations** (Table 4 in §4.5, commit `fab08b3`): only uniform's persistent-memory failures cluster around the previous-episode goal location (margin +1.83m); blind/matched/foveated terminal positions are closer to the new goal but not at it (n=27/35/16 same-floor failures). This refines the "having-vs-using" 2×2 dissociation: uniform's memory anchors on visual landmarks; blind's memory interferes through position-mis-reporting rather than location-anchor.

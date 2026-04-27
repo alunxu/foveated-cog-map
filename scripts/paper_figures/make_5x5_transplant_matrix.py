@@ -25,10 +25,16 @@ import argparse
 import json
 from pathlib import Path
 
+import sys
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
+from _style import apply_paper_style  # noqa: E402
+
+apply_paper_style()
 import numpy as np
 
 CONDS = [
@@ -36,7 +42,7 @@ CONDS = [
     ("matched",          "Coarse\n(1×1)"),
     ("uniform",          "Uniform"),
     ("foveated",         "Foveated\n(fix)"),
-    ("foveated_learned", "Foveated (learned)"),
+    ("foveated_learned", "Foveated\n(learned)"),
 ]
 
 
@@ -99,41 +105,42 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(6.4, 5.4))
     vmax = max(0.05, np.nanmax(np.abs(matrix))) if not np.all(np.isnan(matrix)) else 0.5
     im = ax.imshow(matrix, cmap="RdBu_r", vmin=-vmax, vmax=vmax,
-                   aspect="auto")
+                   aspect="equal")
 
     ax.set_xticks(np.arange(n))
     ax.set_yticks(np.arange(n))
-    ax.set_xticklabels([c[1] for c in CONDS], fontsize=8.5)
-    ax.set_yticklabels([c[1] for c in CONDS], fontsize=8.5)
-    ax.set_xlabel("Recipient", fontsize=10)
-    ax.set_ylabel("Donor", fontsize=10)
+    ax.set_xticklabels([c[1] for c in CONDS])
+    ax.set_yticklabels([c[1] for c in CONDS])
+    ax.set_xlabel("Recipient")
+    ax.set_ylabel("Donor")
 
     # Diagonal annotation
     for i in range(n):
         for j in range(n):
             v = matrix[i, j]
             if np.isnan(v):
-                ax.text(j, i, "—", ha="center", va="center",
-                        fontsize=9, color="grey")
+                # Light-grey hatched overlay so missing data is clearly
+                # distinguishable from a near-zero coloured cell.
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1,
+                                           facecolor="#e8e8e8",
+                                           edgecolor="none", zorder=2))
+                ax.text(j, i, "n/a", ha="center", va="center",
+                        fontsize=9, color="#888", zorder=3, style="italic")
                 continue
             colour = "white" if abs(v) > 0.6 * vmax else "black"
             label = f"{v:+.2f}"
             if i == j:
-                label = f"\\textit{{self}}\n{v:+.2f}"
                 ax.text(j, i, f"self\n{v:+.2f}", ha="center", va="center",
-                        fontsize=7.5, color=colour)
+                        fontsize=8.5, color=colour, style="italic")
             else:
                 ax.text(j, i, label, ha="center", va="center",
-                        fontsize=8.5, color=colour, fontweight="bold")
+                        fontsize=10, color=colour, fontweight="bold")
 
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label("SPL gap (cross $-$ self;\nself $-$ baseline on diag)",
-                   fontsize=8.5)
-    cbar.ax.tick_params(labelsize=7.5)
+    cbar.set_label("SPL gap (cross $-$ self)")
+    cbar.ax.tick_params(labelsize=9)
 
-    ax.set_title("5$\\times$5 cross-condition transplant matrix\n"
-                 "(midpoint $=30$ steps; isolated condition-mismatch effect)",
-                 fontsize=9.5)
+    ax.set_title("Cross-condition memory transplants")
 
     plt.tight_layout()
     out = args.out_dir / "fig4_transplant_5x5.pdf"

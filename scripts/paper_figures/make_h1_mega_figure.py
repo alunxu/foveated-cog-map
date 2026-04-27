@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -35,6 +36,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent))
+from _style import apply_paper_style  # noqa: E402
+
+apply_paper_style()
 
 # ─── Shared condition styling ─────────────────────────────────────────
 CONDS = [
@@ -72,47 +78,74 @@ def panel_a(ax, results_dir: Path) -> None:
                 transform=ax.transAxes, color="grey")
         return
 
-    # Bottleneck / pass-through shading
+    # Bottleneck / rich-encoder shading + explicit labels (fix D)
     ax.axvspan(-0.5, 1.5, color="#bcd4ec", alpha=0.40, zorder=0)
     ax.axvspan(1.5, 4.5, color="#dddddd", alpha=0.45, zorder=0)
+    ax.text(0.5, 1.04, "bottleneck",
+            ha="center", va="bottom", fontsize=10, fontweight="bold",
+            color="#3a5a85",
+            bbox=dict(boxstyle="round,pad=0.25", fc="white",
+                      ec="#3a5a85", alpha=0.9, lw=0.8))
+    ax.text(3.0, 1.04, "rich-encoder pass-through",
+            ha="center", va="bottom", fontsize=10, fontweight="bold",
+            color="#555",
+            bbox=dict(boxstyle="round,pad=0.25", fc="white",
+                      ec="#555", alpha=0.9, lw=0.8))
 
     x = np.arange(len(rows))
-    w = 0.36
+    w = 0.38
     g_clip = [max(r["g"], CLIP_MIN) for r in rows]
     m_clip = [max(r["m"], CLIP_MIN) for r in rows]
     g_err  = [r["gs"] for r in rows]
     m_err  = [r["ms"] for r in rows]
     colours = [r["colour"] for r in rows]
 
+    # Fix C: replace hatch with edge-distinction
+    # Gibson: solid full color, dark edge.  MP3D: same color at alpha=0.40,
+    # bold same-colour edge — visually distinct at any rendering size.
     ax.bar(x - w / 2, g_clip, w, color=colours, edgecolor="black",
-           linewidth=0.5, label="Gibson", yerr=g_err, capsize=2.5,
-           error_kw={"linewidth": 0.6})
-    ax.bar(x + w / 2, m_clip, w, color=colours, edgecolor="black",
-           linewidth=0.5, hatch="///", alpha=0.7, label="MP3D (held out)",
-           yerr=m_err, capsize=2.5, error_kw={"linewidth": 0.6})
+           linewidth=0.6, label="Gibson", yerr=g_err, capsize=2.5,
+           error_kw={"linewidth": 0.7})
+    ax.bar(x + w / 2, m_clip, w, color=colours, edgecolor=colours,
+           linewidth=2.0, alpha=0.40, label="MP3D (held out)",
+           yerr=m_err, capsize=2.5, error_kw={"linewidth": 0.7})
 
-    # Annotate clipped values
+    # Fix A: annotate clipped values prominently
     for i, r in enumerate(rows):
         if r["g"] < CLIP_MIN:
-            ax.annotate(f"{r['g']:.1f}", (i - w / 2, CLIP_MIN + 0.10),
-                        ha="center", fontsize=6.5, color="darkred")
+            ax.annotate(f"{r['g']:.2f}", (i - w / 2, CLIP_MIN + 0.04),
+                        ha="center", va="bottom",
+                        fontsize=10, fontweight="bold", color="darkred")
         if r["m"] < CLIP_MIN:
-            ax.annotate(f"{r['m']:.1f}", (i + w / 2, CLIP_MIN + 0.10),
-                        ha="center", fontsize=6.5, color="darkred")
+            ax.annotate(f"{r['m']:.2f}", (i + w / 2, CLIP_MIN + 0.04),
+                        ha="center", va="bottom",
+                        fontsize=10, fontweight="bold", color="darkred")
 
-    ax.axhline(0, color="black", linewidth=0.4)
+    ax.axhline(0, color="black", linewidth=0.5)
     ax.set_xticks(x)
-    ax.set_xticklabels([r["label"] for r in rows], rotation=25,
-                       ha="right", fontsize=8)
-    ax.set_ylabel("GPS $R^2$ (5-fold CV)", fontsize=9)
-    ax.set_ylim(CLIP_MIN - 0.05, 1.05)
-    ax.tick_params(axis="y", labelsize=8)
-    ax.set_title("GPS encoding ordering, robust to dataset shift\n"
-                 "(bottleneck | pass-through)", fontsize=9)
+    # Use abbreviated labels for tighter layout (no rotation needed at 9pt)
+    abbrev_labels = {
+        "Blind": "Blind",
+        "Coarse (1×1)": "Coarse",
+        "Uniform": "Uniform",
+        "Foveated (fix)": "Fov-fix",
+        "Foveated (learned)": "Fov-learn",
+    }
+    ax.set_xticklabels([abbrev_labels.get(r["label"], r["label"]) for r in rows],
+                       rotation=0, ha="center", fontsize=11)
+    ax.set_ylabel(r"GPS $R^2$ (5-fold CV)", fontsize=12, fontweight="bold")
+    ax.set_ylim(CLIP_MIN - 0.05, 1.10)
+    ax.tick_params(axis="y", labelsize=11)
+    ax.set_title("(a) Bottleneck retains GPS",
+                 fontsize=12, fontweight="bold", loc="left", x=0.0, pad=8)
     ax.grid(axis="y", linestyle=":", alpha=0.35)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
-    ax.legend(fontsize=7, loc="lower right", frameon=False, ncol=1)
+    # Place legend at upper-right inside the bottleneck region (where there's
+    # no data competition) to avoid clipping-annotation overlap.
+    ax.legend(fontsize=10, loc="upper right",
+              bbox_to_anchor=(1.0, 0.92),
+              frameon=True, framealpha=0.92, ncol=1)
 
 
 def panel_b(ax, results_dir: Path) -> None:
@@ -124,6 +157,9 @@ def panel_b(ax, results_dir: Path) -> None:
         return
     d = json.loads(p.read_text())
     per_cond = d["per_condition"]
+
+    # Track clipped points so we can annotate them (fix B)
+    clipped_pts = []  # list of (x, true_y, condition_label, colour)
     for cond_key, label, colour, marker in CONDS:
         long_key = f"{cond_key}_gibson"
         if long_key not in per_cond:
@@ -136,18 +172,27 @@ def panel_b(ax, results_dir: Path) -> None:
             xmid = (b["lo"] + min(b["hi"], 1600)) / 2.0
             xs.append(xmid)
             ys.append(max(b["r2"], CLIP_MIN))
+            if b["r2"] < CLIP_MIN:
+                clipped_pts.append((xmid, b["r2"], label, colour))
         ax.plot(xs, ys, marker=marker, label=label,
-                color=colour, linewidth=1.6, markersize=4.5)
-    ax.axhline(0, ls=":", color="grey", alpha=0.5, lw=0.7)
-    ax.set_xlabel("step in episode (bin midpoint)", fontsize=9)
-    ax.set_ylabel("GPS $R^2$", fontsize=9)
-    ax.set_title("Temporal stability of top-layer GPS code", fontsize=9)
+                color=colour, linewidth=1.8, markersize=5)
+
+    # Fix B: annotate clipped points
+    for x, true_y, _, colour in clipped_pts:
+        ax.annotate(f"{true_y:.1f}", (x, CLIP_MIN + 0.04),
+                    ha="center", va="bottom",
+                    fontsize=10, fontweight="bold", color="darkred")
+
+    ax.axhline(0, ls=":", color="grey", alpha=0.6, lw=0.8)
+    ax.set_xlabel("step in episode (log-binned)", fontsize=12, fontweight="bold")
+    ax.set_title("(b) Long-tail collapse",
+                 fontsize=12, fontweight="bold", loc="left", x=0.0, pad=8)
     ax.set_xscale("log")
-    ax.set_ylim(CLIP_MIN - 0.05, 1.05)
-    ax.tick_params(axis="both", labelsize=8)
+    ax.set_ylim(CLIP_MIN - 0.05, 1.10)
+    ax.tick_params(axis="both", labelsize=11)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
-    ax.legend(loc="lower left", fontsize=7, frameon=False, ncol=1)
+    ax.legend(loc="lower left", fontsize=10, frameon=False, ncol=1)
 
 
 def panel_c(ax, results_dir: Path) -> None:
@@ -205,7 +250,23 @@ def panel_c(ax, results_dir: Path) -> None:
     ax.axvspan(-0.4, 0.5, color="#f0f0f0", alpha=0.6, zorder=0)
     ax.axvline(0.5, color="#999", linestyle="--", lw=0.6, alpha=0.6,
                zorder=0)
-    ax.axhline(0, ls=":", color="grey", alpha=0.5, lw=0.7)
+    ax.axhline(0, ls=":", color="grey", alpha=0.6, lw=0.8)
+
+    # Fix H: shaded "MLP probe recovers GPS" zone at L2 column.
+    # Paper §4.2 reports MLP recovers R² ∈ [0.51, 0.73] for rich-encoder
+    # conditions on the same L2 hidden states. The shaded band visualises
+    # this as a hidden-but-non-linear signal the linear probe misses.
+    ax.axhspan(0.51, 0.73, xmin=(2.6 + 0.4) / (3.4 + 0.4),
+               xmax=(3.4 + 0.4) / (3.4 + 0.4),
+               color="#a25cb4", alpha=0.20, zorder=0)
+    # Place the label OUTSIDE the band, to the left, with an arrow pointing in.
+    ax.annotate("MLP probe\nrecovers GPS",
+                xy=(2.95, 0.62), xytext=(2.3, 0.95),
+                ha="center", va="center", fontsize=10,
+                color="#5a2580", style="italic", fontweight="bold",
+                arrowprops=dict(arrowstyle="->", color="#5a2580",
+                                lw=1.0, connectionstyle="arc3,rad=-0.2"),
+                zorder=5)
 
     # Plot one line per condition
     for cond_key, label, colour, marker in CONDS:
@@ -221,22 +282,21 @@ def panel_c(ax, results_dir: Path) -> None:
                     ys.append(float(np.clip(val, CLIP_MIN, 1.05)))
         if xs:
             ax.plot(xs, ys, marker=marker, label=label,
-                    color=colour, linewidth=1.6, markersize=6)
+                    color=colour, linewidth=1.8, markersize=6.5)
 
-    # X-axis labels
+    # X-axis labels (slightly larger, single line where possible)
     x_labels = ["Encoder\n(post ResNet)", "L0\n(LSTM in)",
                 "L1\n(mid)", "L2\n(top, policy)"]
     ax.set_xticks([0, 1, 2, 3])
-    ax.set_xticklabels(x_labels, fontsize=7.5)
-    ax.set_ylabel("GPS $R^2$ (5-fold CV)", fontsize=9)
+    ax.set_xticklabels(x_labels, fontsize=10)
     ax.set_xlim(-0.4, 3.4)
     ax.set_ylim(CLIP_MIN - 0.05, 1.10)
-    ax.set_title("GPS along the agent's information pipeline",
-                 fontsize=9)
-    ax.tick_params(axis="y", labelsize=8)
+    ax.set_title("(c) Pipeline view",
+                 fontsize=12, fontweight="bold", loc="left", x=0.0, pad=8)
+    ax.tick_params(axis="y", labelsize=11)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
-    ax.legend(loc="lower left", fontsize=7, frameon=False)
+    ax.legend(loc="lower left", fontsize=10, frameon=False)
 
 
 def main() -> None:
@@ -249,12 +309,12 @@ def main() -> None:
 
     # 1×3 row. Wider (a) for the bar+condition labels; (b) and (c) are
     # line plots that each take comparable horizontal space.
-    fig = plt.figure(figsize=(13.5, 3.8))
+    fig = plt.figure(figsize=(14.5, 4.6))
     gs = fig.add_gridspec(
         1, 3,
         width_ratios=[1.3, 1.1, 1.2],
-        wspace=0.32,
-        top=0.86, bottom=0.20, left=0.05, right=0.99,
+        wspace=0.22,  # tighter — y-labels removed on (b)(c)
+        top=0.82, bottom=0.20, left=0.06, right=0.99,
     )
     ax_a = fig.add_subplot(gs[0, 0])
     ax_b = fig.add_subplot(gs[0, 1])
@@ -264,9 +324,8 @@ def main() -> None:
     panel_b(ax_b, args.results_dir)
     panel_c(ax_c, args.results_dir)
 
-    for ax, lbl in [(ax_a, "(a)"), (ax_b, "(b)"), (ax_c, "(c)")]:
-        ax.text(-0.14, 1.18, lbl, transform=ax.transAxes,
-                fontsize=12, fontweight="bold", va="top", ha="left")
+    # Fix F: panel labels are now baked into each panel's title via
+    # set_title("(a) ...", loc="left"). No separate transAxes labels.
 
     out = args.out_dir / "fig2_h1_mega.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
