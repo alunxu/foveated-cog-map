@@ -42,6 +42,83 @@ User-set rules:
 
 (Each /loop iteration writes one block here.)
 
+### Tick 16:30 (WJ-A Option B — matched full sweep landed, pattern more nuanced than expected)
+
+Full matched (paper's Coarse, 48×48 → 1×1) sweep:
+| K | R² | σ |
+|---|---|---|
+| 1 | +0.802 | 0.067 |
+| 4 | +0.722 | 0.074 |
+| 16 | +0.704 | 0.191 |
+| 64 | +0.709 | 0.169 |
+| 256 | −0.051 | **0.951** |
+| 1000 | −1.513 | **4.246** |
+
+**Pattern**: matched preserves GPS through K=1..64 (R² ~ 0.70-0.80, σ < 0.20). At K=256+ the **variance explodes** (σ ≥ 0.95) and the mean drops, but with such wide variance the K=256/1000 numbers can't be trusted.
+
+**Comparison to Blind** (clean preservation across K=1..1000, σ ≤ 0.13):
+- Blind K=1..1000: 0.89, 0.91, 0.79, 0.90, 0.93, 0.92 — all tight + high
+- Matched K=1..1000: 0.80, 0.72, 0.70, 0.71, −0.05±0.95, −1.51±4.24
+
+So matched is **partially preserved** (clean for K ≤ 64) but degrades at long K with high noise. Not as clean as blind's full-range preservation.
+
+**Possible interpretations**:
+- (a) matched genuinely loses GPS code at very long K (substitution-like effect, but slower)
+- (b) noise artifact: at K=256+ in a 100-episode sample, the LSTM state distribution at "fresh-after-reset" + "near-end-of-episode-buffer" creates folds with very different hidden state geometries → probe fits some folds but fails others → high variance
+- Distinguishing requires multi-seed or 500-episode collection.
+
+**Uniform K=1 still pending** (running 27min in last tick); will update once landed.
+
+**Decision**: still hold off paper integration. Pattern is "blind preserves; matched mostly preserves; foveated/uniform destroy" but with variance complications at long K. Cleaner story than morning, but not yet bulletproof.
+
+### Tick 15:10 (WJ-A Option B partial — matched paper-Coarse landed, pattern strengthening)
+
+Matched (paper's Coarse, 48×48 → 1×1 spatial) memlen jobs first 3 K landed:
+
+| Cond | K=1 R² | K=∞ R² (std probe) | Δ | Verdict |
+|---|---|---|---|---|
+| Blind | +0.89 | +0.95 | +0.06 | **preserved** (slight gain) |
+| **Coarse (matched 1×1)** | **+0.80** | +0.78 | **−0.02** | **preserved** ✓ |
+| matched128 (4×4 intermediate) | +0.69 | −0.85 | −1.54 | destroyed |
+| Foveated | +0.78 | +0.06 | −0.72 | destroyed |
+| Uniform | (pending K=1) | −0.31 | — | — |
+
+**3/4 paper conditions show clean substitution pattern**: bottleneck (Blind, Coarse) preserves GPS through LSTM accumulation; rich-encoder (Foveated) destroys. Awaiting uniform K=1 to complete the 4-condition picture.
+
+**Bonus**: matched128 (4×4 spatial intermediate variant — not in paper's main conditions) ALSO destroys, suggesting the substitution threshold is below 4×4 spatial output. Consistent with the encoder-resolution scaling sweep prediction in §5.4. matched128 might warrant a brief mention in App E as supporting evidence.
+
+**Plan once uniform_k1 lands**:
+- If uniform K=1 R² is high (~0.7-0.9, similar to others) → "encoder destroys" claim holds for all 4 conditions → integrate as a substantive paper finding
+- Possible §4.2 paragraph: "the K=1 vs K=∞ comparison directly localises the substitution event to the LSTM's recurrent updates: at K=1 every condition's hidden state preserves the GPS sensor pass-through (R² ≥ 0.69), but bottleneck conditions retain this through trained accumulation while rich-encoder conditions overwrite it."
+
+Currently still: §4.2 stub commented out. Will update once uniform_k1 lands.
+
+### Tick 13:50 (WJ-A reframe attempt — partial, do NOT integrate without more data)
+
+**Reinterpretation**: instead of "memory budget K needed to decode GPS", compare **K=1 (single-step LSTM, no integration history)** vs **K=∞ (full trained accumulation)**. The delta tells whether the trained policy's recurrent updates **preserve or discard** the per-step GPS-sensor signal that enters at L0.
+
+| | K=1 R² | K=∞ R² | Δ | n |
+|---|---|---|---|---|
+| Blind | +0.89 | +0.95 | **+0.06 preserved** | 100 vs 500 |
+| Foveated | +0.78 | +0.06 | **−0.72 destroyed** | 100 vs 500 |
+| matched128 (NOT paper Coarse) | +0.69 | −0.85 | −1.54 destroyed | 100 vs 500 |
+| Uniform | N/A | −0.31 | — | K=1 still pending |
+| Coarse (matched, paper's 1×1) | N/A | +0.78 | — | not run |
+
+**Issues blocking integration**:
+1. **matched128 ≠ paper's Coarse (matched)**: WJ-A used matched128 (128×128 RGB → 4×4 spatial post-pool) which is structurally closer to rich-encoder than to the paper's "Coarse" (matched 48×48 → 1×1 spatial). So WJ-A's matched128 result doesn't speak to the paper's Coarse condition. To get a paper-condition comparison we'd need to re-run WJ-A on matched (the actual paper condition).
+2. **Uniform K=1 didn't land**: only 2 paper-condition pairs (Blind preserved, Foveated destroyed) are cleanly comparable. Insufficient for a robust claim.
+3. **K=∞ standard probe variance** is high for rich-encoder (σ ≈ 0.86 for foveated), so single-seed Δ is uncertain.
+
+**What can stand alone**: the Blind vs Foveated contrast (preserved vs destroyed by ~0.72 SPL) is consistent with the substitution mechanism, but it's a single contrast, not a 4-condition pattern. Stronger evidence already exists in our paper's per-layer probe (Fig 2c) and substitution-dynamics figure (Fig 3).
+
+**Decision for user review**:
+- Option A: skip WJ-A entirely — temporal probe + per-layer probe already make the substitution case.
+- Option B: re-run WJ-A on `matched` (paper's Coarse) and finish uniform_k1, then revisit.
+- Option C: include the K=1 vs K=∞ comparison as appendix-only "what does LSTM accumulation do to the GPS code" supplementary observation, with all caveats.
+
+Currently: §4.2 stub still commented out. No paper change made.
+
 ### Tick 09:15 (WJ-A first pass — UNEXPECTED, do not paper-integrate yet)
 
 memlen NPZs analyzed (n=21 of 24, foveated_k1000 + uniform_k1/k4 still running). GPS R² per (cond, K):
