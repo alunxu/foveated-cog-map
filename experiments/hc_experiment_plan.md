@@ -1,8 +1,14 @@
 # HC cluster experiment plan — friend's 14 trainings (with rationale)
 
-**Author**: wxu (paper lead).  **For**: friend running on hc cluster (4× H100 + 1× H200).
+**For**: friend running on hc cluster (1× H200 + 4× A100).
 **Deadline**: 2026-05-06 (NeurIPS submission).  **Today**: 2026-04-27.
 **Net working days**: ~9.
+
+**Hardware note**: A100 is ~1.5–2× slower than H100 on this workload, so
+the per-training wall times below (originally written for H100) may
+extend.  Realistic budget: H200 trainings 2–3 days, A100 trainings
+**3–4.5 days**.  Re-prioritise downward: if Tier 3 doesn't fit, drop
+it.  Tier 1 must finish; Tier 2 strongly preferred.
 
 This document is the single source of truth for what to run, why, and how to
 ship results back.  It is verbose on purpose: when a training fails or the
@@ -33,7 +39,7 @@ The 14 trainings below answer those five questions.  Tier 1 (5 trainings)
 covers the must-haves; Tier 2 (5) fills out the scaling sweep + falsifiable
 test; Tier 3 (4) is foveation completeness if time allows.
 
-ETA per H100 / H200 training: **2–3 days** (vs ~5 on V100).
+ETA per training: **2–3 days on H200**, **3–4.5 days on A100** (vs ~5 on V100).
 
 ---
 
@@ -92,8 +98,8 @@ should not duplicate them.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_foveated_stochastic_gibson` |
-| GPU | H200 (highest priority — most novel architecture) |
-| Wall | ~2-3 days @ 250M frames |
+| GPU | H200 if available (most novel architecture); else A100 |
+| Wall | ~2–3 days on H200, ~3–4 days on A100 @ 250M frames |
 | Submit | `sbatch <flags> scripts/cluster/submit_train.sh pointnav/ddppo_pointnav_foveated_stochastic_gibson` |
 
 **Motivation**:  Our H3 hypothesis is that *gaze dynamics* — not just static
@@ -158,8 +164,8 @@ wxu before continuing.  This was a known failure mode in earlier pilots.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_matched64_gibson` |
-| GPU | H100 |
-| Wall | ~2 days @ 250M frames |
+| GPU | A100 |
+| Wall | ~3–4 days @ 250M frames on A100 |
 | Submit | `sbatch <flags> scripts/cluster/submit_train.sh pointnav/ddppo_pointnav_matched64_gibson` |
 
 **Motivation**:  The H1 substitution mechanism predicts that **encoder
@@ -213,8 +219,8 @@ information?) — would force a re-think.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_matched32_gibson` |
-| GPU | H100 |
-| Wall | ~2 days @ 250M frames |
+| GPU | A100 |
+| Wall | ~3–4 days @ 250M frames on A100 |
 | Submit | `sbatch <flags> scripts/cluster/submit_train.sh pointnav/ddppo_pointnav_matched32_gibson` |
 
 **Motivation**:  K=32 produces a $1{\times}1$ encoder feature map (same as
@@ -260,8 +266,8 @@ This is the **lower-end anchor** for the scaling sweep figure.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_blind_gibson` (with `seed=2` override) |
-| GPU | H100 |
-| Wall | ~2-3 days @ 342M frames (blind takes more frames to converge) |
+| GPU | A100 |
+| Wall | ~4–5 days @ 342M frames on A100 (blind takes more frames; consider H200 if available) |
 | Submit | `sbatch <flags> scripts/cluster/submit_train_seeded.sh pointnav/ddppo_pointnav_blind_gibson 2` |
 
 **Motivation**:  Every cross-condition R² number in the paper is **single
@@ -306,8 +312,8 @@ robustness confirmed → main paper §4.1 number gets `±std` upgrade.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_matched_gibson` (with `seed=2` override) |
-| GPU | H100 |
-| Wall | ~2 days @ 250M frames |
+| GPU | A100 |
+| Wall | ~3–4 days @ 250M frames on A100 |
 | Submit | `sbatch <flags> scripts/cluster/submit_train_seeded.sh pointnav/ddppo_pointnav_matched_gibson 2` |
 
 **Motivation**:  Same as blind seed=2, but for the *coarse* (matched 48×48
@@ -351,8 +357,8 @@ H1 numbers replicate to within ±0.10 across seeds" caveat upgrade.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_matched96_gibson` |
-| GPU | H100 |
-| Wall | ~2 days |
+| GPU | A100 |
+| Wall | ~3–4 days on A100 |
 
 **Motivation**:  Mid-sweep filling.  K=96 produces $\sim 3{\times}3$
 encoder output.  Together with K=64 (~$2{\times}2$) and K=128 (~$4{\times}4$)
@@ -388,8 +394,8 @@ adjusts accordingly.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_matched192_gibson` |
-| GPU | H100 |
-| Wall | ~2 days |
+| GPU | A100 |
+| Wall | ~3–4 days on A100 |
 
 **Motivation**:  High-end of the scaling sweep (close to uniform's K=256).
 K=192 → ~$6{\times}6$ encoder output.  Tests whether R² has *bottomed out*
@@ -422,8 +428,8 @@ visual style) but a continuous extrapolation of the matched-K series.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_foveated_learned_gibson` (with `seed=2`) |
-| GPU | H100 |
-| Wall | ~2-3 days @ 250M frames |
+| GPU | A100 |
+| Wall | ~3–4.5 days @ 250M frames on A100 (or 2–3 if scheduled on H200) |
 | Submit | `sbatch <flags> scripts/cluster/submit_train_seeded.sh pointnav/ddppo_pointnav_foveated_learned_gibson 2` |
 
 **Motivation**:  Foveated_learned is the **H3 anchor** in the paper — gaze
@@ -472,8 +478,8 @@ explicitly flag results to wxu.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_foveated_logpolar_gibson` |
-| GPU | H100 |
-| Wall | ~2 days |
+| GPU | A100 |
+| Wall | ~3–4 days on A100 |
 
 **Motivation**:  This is the **falsifiable core of H1**.  Gaussian-blur
 foveation (our standard `foveated_gibson`) preserves the encoder's
@@ -526,8 +532,8 @@ this is a real falsifiable test, not post-hoc.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_foveated_v2_gibson` |
-| GPU | H100 |
-| Wall | ~2-3 days @ 250M frames |
+| GPU | A100 |
+| Wall | ~3–4.5 days @ 250M frames on A100 (or 2–3 if scheduled on H200) |
 
 **Motivation**:  Our seed=1 `foveated_gibson` ckpt.36 (174M frames) was
 hit by a silent NaN-gradient corruption mode in DD-PPO that we discovered
@@ -559,8 +565,8 @@ SPL within [0.72, 0.80].
 - ✅ §5.5(ii) limitations + appendix dedicated section 解释 NaN-bug + v2 fix 的完整 timeline；明示 v2 数据替换 ckpt.36 数据，Fig 3 标注 "(from v2, NaN-fixed)"
 
 若 **SPL 偏移 > 0.05**（训练 stability 改变了）：
-- 怀疑 H100 vs V100 hardware artifact
-- 跑 sanity check：用同一个 ckpt 在 H100 和 V100 上做 forward pass，看 logits 是否 bit-exact
+- 怀疑 A100 vs V100 hardware artifact
+- 跑 sanity check：用同一个 ckpt 在 A100 和 V100 上做 forward pass，看 logits 是否 bit-exact
 - 若 hardware 一致但 SPL 仍偏 → 就是 NaN-fix 影响了 training dynamics（合理的，bug 修了行为变了）
 - paper 更新所有 foveated SPL number；尤其 §4.5 transplant、shortcut analysis 都要重做
 
@@ -576,8 +582,8 @@ SPL within [0.72, 0.80].
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_foveated_strong_gibson` |
-| GPU | H100 |
-| Wall | ~2 days |
+| GPU | A100 |
+| Wall | ~3–4 days on A100 |
 
 **Motivation**:  F4 *foveation strength* sweep, **high-blur endpoint**.
 At σ_max = 20 the periphery is so blurred that the encoder's $8{\times}8$
@@ -615,8 +621,8 @@ substitution dynamics within the foveation family.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_foveated_sigma2_gibson` |
-| GPU | H100 |
-| Wall | ~2 days |
+| GPU | A100 |
+| Wall | ~3–4 days on A100 |
 
 **Motivation**:  F1 *foveation strength* sweep, **low-blur endpoint**.
 σ=2 is barely-foveated (peripheral degradation is mild).  Predicted to
@@ -650,8 +656,8 @@ condition reverts to uniform-like substitution.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_foveated_sigma12_gibson` |
-| GPU | H100 |
-| Wall | ~2 days |
+| GPU | A100 |
+| Wall | ~3–4 days on A100 |
 
 **Motivation**:  F1c mid-strength.  Fills the σ ∈ {2, 8, 12, 20} sweep
 between standard (σ=8) and strong (σ=20).  Useful for the F1c monotonicity
@@ -680,8 +686,8 @@ plot in App E.
 | | |
 |---|---|
 | Config | `pointnav/ddppo_pointnav_foveated_shifted_gibson` |
-| GPU | H100 |
-| Wall | ~2 days |
+| GPU | A100 |
+| Wall | ~3–4 days on A100 |
 
 **Motivation**:  Static gaze hardcoded at $(0.49, 0.62)$ rather than image
 center $(0.5, 0.5)$.  This is the **H3 static control** — same architecture
@@ -842,11 +848,11 @@ flags an unexpected result.
 
 | Symptom | Likely cause | Action |
 |---|---|---|
-| `nan_sanitised > 0` in TB metrics | Numerical instability (rare on H100/H200; we patched the worst case). | Continue training; the fix absorbs it. |
+| `nan_sanitised > 0` in TB metrics | Numerical instability (rare on A100/H200; we patched the worst case). | Continue training; the fix absorbs it. |
 | Stochastic gaze: σ → 0.05 (its lower bound) and pinned | PPO is suppressing exploration. | Continue 50M more frames; if still pinned, ping wxu. |
 | Stochastic gaze: SPL < 0.5 by 50M frames | Too much gaze noise hurting navigation. | Continue but flag — may need to reduce σ_max. |
 | Scaling sweep K=N converges to coarse-1×1 R² when expected to be lower | Encoder collapsing earlier than predicted. | Continue, this would actually *support* the substitution mechanism (good!) — flag for paper. |
-| OUT_OF_MEMORY on H100 | Batch size / num_envs mismatch. | Reduce `num_environments` from 4 → 2 in sbatch wrapper, ping wxu. |
+| OUT_OF_MEMORY on A100 | Batch size / num_envs mismatch (A100 has 40GB or 80GB; some configs assumed H100's 80GB). | Reduce `num_environments` from 4 → 2 in sbatch wrapper, ping wxu. |
 | Job killed by walltime | Just resubmit from latest ckpt. | The training picks up from `latest.pth`. |
 | Probe-pipeline output (on Izar) stalls for 24h after ship | wxu's cron may have died. | Ping wxu. |
 
@@ -855,17 +861,21 @@ flags an unexpected result.
 ## Rough daily schedule
 
 ```
-Day 1 (today)    Pre-flight checks. Launch Tier 1 (5 trainings).
+Day 1 (today)    Pre-flight checks. Launch Tier 1 (5 trainings; assign blind s2 to H200).
 Day 2-3          Tier 1 training; first ckpts ship to Izar at ~125M frames.
-Day 3-4          Tier 1 finishes. Ship final ckpts. Launch Tier 2 (5).
-Day 5-6          Tier 2 training. wxu probes Tier 1 results.
-Day 6-7          Tier 2 finishes. Launch Tier 3 (4) if on schedule.
-Day 8            Tier 3 finishes. Final ship. wxu probes everything.
+Day 4-5          Tier 1 finishes (A100 ~3.5 days; blind on H200 ~3 days).
+                 Ship final ckpts. Launch Tier 2 (5).
+Day 6-7          Tier 2 training. wxu probes Tier 1 results.
+Day 8-9          Tier 2 finishes. Skip Tier 3 (won't fit on A100 timeline).
 Day 9 (2026-05-06) Final paper integration. Submit.
 ```
 
-Slip allowance: each tier has 1 day of slack.  If Tier 1 takes 4 days
-instead of 3, drop Tier 3 entirely and run only Tier 1+2.
+**Tier 3 reality check**: with 4× A100 + 1× H200 and ~3.5–4 days per
+training, 14 trainings need 3 sequential rounds × 5 GPUs = ~10–12 days
+to fully clear.  We have **9 days**.  So **Tier 3 likely won't fit** —
+plan around Tier 1+2 (10 trainings) and only launch Tier 3 if Tier 1+2
+finishes ahead of schedule, which requires H200 + lucky cluster
+availability.
 
 Submission target: clean NeurIPS submission with **multi-seed (3 conditions)
 + scaling sweep (5 K-points) + stochastic gaze H3 + falsifiable log-polar**.
