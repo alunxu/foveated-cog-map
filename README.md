@@ -184,7 +184,7 @@ To understand which factors drive the H1 / H2 / H3 results, we run a structured 
 | **Foveation strength sweep** | `foveated_sigma{2,4,12}_gibson` (σ=2/4/12) + existing `foveated_gibson` (σ=8) + `foveated_strong_gibson` (σ=20) | σ=20 RUNNING; σ=2/4/12 PENDING in queue | H1 as continuous lever; falsifiable bound on encoder–memory race |
 | **Log-polar foveation** (F3) | `foveated_logpolar_gibson` | RUNNING (~22h / 72h walltime) | Test "spatial sampling" as the H1 mechanism (vs. blur strength). Predicted GPS R² ≥ 0.3 (between coarse +0.78 and uniform ~0). If matches uniform, H1 mechanism story needs reframing. |
 | **Foveated-shifted (H3 control)** | `foveated_shifted_gibson` | PENDING | Static gaze hardcoded at (0.49, 0.62), matching the position learned-gaze collapsed to. Isolates static-gaze-location effect from learned-gaze dynamics. |
-| **Stochastic gaze policy** | `foveated_stochastic_gibson` (FoveatedStochasticGazePolicy) | Queued for collaborator's hc cluster (see `docs/hc_launch_recipe.md`) | Reparameterized bounded-σ Gaussian gaze sampling; designed to fix gaze collapse without aux loss. Re-tests H3 with a working learned gaze. |
+| **Stochastic gaze policy** | `foveated_stochastic_gibson` (FoveatedStochasticGazePolicy) | Queued for collaborator's hc cluster (see `docs/hc_experiment_plan.md`) | Reparameterized bounded-σ Gaussian gaze sampling; designed to fix gaze collapse without aux loss. Re-tests H3 with a working learned gaze. |
 | **Encoder-capacity scaling sweep** | `matched{32,64,96,192}_gibson` (Coarse at 4 input resolutions) | Pending hc cluster | Bridges Coarse (1×1 collapse @ 48×48) to Uniform (8×8 @ 256×256). Causal H1 test: GPS R² should monotonically decrease with input resolution. |
 | **Multi-seed replication** | `{blind,uniform,foveated,foveated_learned}_gibson_seed2` + matched | RUNNING (5 conditions on Izar) | Gates strength of every quantitative claim |
 | **fov_v2 (clean re-run)** | `foveated_v2_gibson` | RUNNING | Re-train fov-fix from scratch on the post-NaN-fix clean ckpt chain (current `foveated_gibson` uses ckpt.36 = ~174M frames, last clean before NaN-corruption window) |
@@ -316,7 +316,8 @@ Project/
 │   │   ├── MASTER_TRACK.md             # Single source of truth for project state
 │   │   ├── literature.bib
 │   │   └── fig/                        # 21 figures, named figN_*/appfigN_*
-│   ├── hc_launch_recipe.md             # Friend's high-compute cluster launch recipe
+│   ├── hc_experiment_plan.md           # Friend's high-compute cluster 14-training plan w/ rationale
+│   ├── DATASET_SETUP.md                # Friend's Habitat dataset setup walkthrough
 │   ├── foveation_design.md             # Foveation PoC design rationale
 │   └── ...
 │
@@ -787,7 +788,8 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 - Source: `docs/NeurIPS_2026/neurips_2026.tex`
 - Build: 28 pages, 6 main figures + 7 appendix figures (PDF-only, named `figN_*` / `appfigN_*`)
 - Master tracker: `docs/NeurIPS_2026/MASTER_TRACK.md`
-- Friend's high-compute launch recipe: `docs/hc_launch_recipe.md`
+- Friend's high-compute experiment plan: `docs/hc_experiment_plan.md`
+- Friend's dataset setup: `docs/DATASET_SETUP.md`
 
 ---
 

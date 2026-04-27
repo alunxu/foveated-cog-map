@@ -615,7 +615,6 @@ That's the minimum credible set per our review-risk analysis.
 
 ## Quick links
 
-- Operational quick-ref: [docs/hc_launch_recipe.md](hc_launch_recipe.md)
 - Dataset setup: [docs/DATASET_SETUP.md](DATASET_SETUP.md)
 - Paper TeX: [docs/NeurIPS_2026/neurips_2026.tex](NeurIPS_2026/neurips_2026.tex)
 - Sleep log (wxu's autonomous overnight progress): [docs/NeurIPS_2026/SLEEP_LOG.md](NeurIPS_2026/SLEEP_LOG.md)
