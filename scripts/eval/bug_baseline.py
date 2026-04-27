@@ -65,30 +65,51 @@ HEADING_TOLERANCE_RAD = 0.087  # ~5°
 RECOVERY_BUDGET = 20
 
 
-def _pointgoal_rho_theta(obs):
-    """Extract (rho, theta) from PointGoalWithGPSCompass sensor.
+def _pointgoal_rho_theta(env, obs):
+    """Compute (rho, theta) of goal in agent frame.
 
-    Habitat returns the goal as (delta_x, delta_y) or polar — depends on
-    config. The default is polar (rho, theta_radians).
+    Try standard PointGoalWithGPSCompass sensor first; fall back to
+    computing directly from env.sim agent state + episode goal — this
+    works for the Wijmans-faithful sensor stack (goal_in_start_frame +
+    GPS + compass) which doesn't expose pointgoal_with_gps_compass.
     """
     g = obs.get("pointgoal_with_gps_compass")
     if g is None:
         g = obs.get("pointgoal")
-    if g is None:
-        # Fall back: compute from agent state. (Less accurate; rare path.)
-        raise RuntimeError("no pointgoal sensor in obs")
-    g = np.asarray(g)
-    if g.shape == (2,):
-        # Polar: (rho, theta).
-        return float(g[0]), float(g[1])
-    elif g.shape == (3,):
-        # Cartesian (rare): convert.
-        dx, _, dz = g
-        rho = float(np.sqrt(dx * dx + dz * dz))
-        theta = float(np.arctan2(-dx, -dz))  # habitat convention
-        return rho, theta
-    else:
-        raise RuntimeError(f"unexpected pointgoal shape {g.shape}")
+    if g is not None:
+        g = np.asarray(g)
+        if g.shape == (2,):
+            return float(g[0]), float(g[1])
+        elif g.shape == (3,):
+            dx, _, dz = g
+            rho = float(np.sqrt(dx * dx + dz * dz))
+            theta = float(np.arctan2(-dx, -dz))
+            return rho, theta
+
+    # Fallback: compute from env state. Agent frame: +z = forward, +x = right.
+    agent_state = env.sim.get_agent_state()
+    pos = np.asarray(agent_state.position, dtype=np.float64)
+    goal = np.asarray(env.current_episode.goals[0].position, dtype=np.float64)
+    delta_world = goal - pos
+    rho = float(np.linalg.norm(delta_world))
+
+    # Rotate world delta into agent frame using agent rotation quaternion.
+    # Habitat convention: agent looks along -z when heading=0; heading
+    # increases counter-clockwise around y axis. Use a robust quaternion
+    # rotation via quaternion arithmetic.
+    import quaternion as quat
+    rot = agent_state.rotation
+    if not isinstance(rot, quat.quaternion):
+        rot = quat.quaternion(rot.real, *rot.imag)
+    inv = rot.inverse()
+    # Rotate delta_world into agent frame.
+    delta_q = quat.quaternion(0, *delta_world)
+    rotated = inv * delta_q * rot
+    dx_agent = rotated.x
+    dz_agent = rotated.z  # forward axis
+    # theta: angle from agent forward (-z) to goal direction. Positive = left.
+    theta = float(np.arctan2(-dx_agent, -dz_agent))
+    return rho, theta
 
 
 def bug_step(env, obs, in_recovery: bool, recovery_steps: int) -> tuple[int, bool, int]:
@@ -96,7 +117,7 @@ def bug_step(env, obs, in_recovery: bool, recovery_steps: int) -> tuple[int, boo
 
     Returns (action, new_in_recovery, new_recovery_steps).
     """
-    rho, theta = _pointgoal_rho_theta(obs)
+    rho, theta = _pointgoal_rho_theta(env, obs)
 
     # 1. Close enough → STOP.
     if rho < SUCCESS_DIST:
@@ -123,8 +144,8 @@ def bug_step(env, obs, in_recovery: bool, recovery_steps: int) -> tuple[int, boo
     return ACT_FORWARD, False, 0
 
 
-def run_episode(env, max_steps: int = 2000) -> dict:
-    obs = env.reset()
+def run_episode(env, obs, max_steps: int = 2000) -> dict:
+    """Run a Bug episode given starting obs (env should already be reset/pinned)."""
     episode = env.current_episode
     start_pos = np.array(episode.start_position)
     goal_pos = np.array(episode.goals[0].position)
@@ -223,8 +244,8 @@ def main() -> None:
 
     results = []
     for ei, ep in enumerate(sampled):
-        _pin(ep)
-        m = run_episode(env, max_steps=args.max_steps)
+        obs = _pin(ep)
+        m = run_episode(env, obs, max_steps=args.max_steps)
         results.append(m)
         if (ei + 1) % 25 == 0:
             spl = float(np.mean([r["spl"] for r in results]))
