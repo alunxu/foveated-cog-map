@@ -17,7 +17,7 @@ Writes: <out-dir>/transplant_5x5.{pdf,png}
 Usage:
     python scripts/paper_figures/make_5x5_transplant_matrix.py \\
         --results-dir /tmp/transplant_local \\
-        --out-dir docs/NeurIPS_2026/fig
+        --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

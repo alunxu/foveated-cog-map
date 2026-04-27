@@ -1,7 +1,6 @@
 # How Foveated Vision Shapes Cognitive Maps in Navigation Agents
 
 **CS503 Visual Intelligence — EPFL, Spring 2026**
-**Submission target: NeurIPS 2026**
 
 > Holding task and architecture fixed, does the structure of the visual sensor reshape what an agent's memory encodes?
 
@@ -310,9 +309,9 @@ Project/
 │       └── ...
 │
 ├── docs/
-│   ├── NeurIPS_2026/                   # Paper source + final figures
-│   │   ├── neurips_2026.tex
-│   │   ├── neurips_2026.pdf
+│   ├── manuscript/                   # Paper source + final figures
+│   │   ├── main.tex
+│   │   ├── main.pdf
 │   │   ├── MASTER_TRACK.md             # Single source of truth for project state
 │   │   ├── literature.bib
 │   │   └── fig/                        # 21 figures, named figN_*/appfigN_*
@@ -351,7 +350,7 @@ Each design choice in our pipeline has alternatives grounded in recent literatur
 | **Stochastic + entropy bonus** | Sample gaze from Normal distribution, add log-prob to PPO loss | Standard RL approach (cf. `src/models/policy.py`) | Encourages gaze exploration | Requires action space extension; more variance |
 | **Return-guided contrastive** | Self-supervised contrastive signal from returns guides where to look | "Gaze on the Prize" (2025, arXiv:2510.08442) | Principled task-relevant gaze objective | Adds contrastive loss complexity |
 | **Information-gain maximizing** | Saccade targets selected by maximizing expected information gain | "Joint Learning of Saccades by Active Efficient Coding" (2017, Front Neurorobot) | Bayesian-optimal gaze; connects to H3 analysis | Requires maintaining explicit belief state |
-| **Privileged-sensor training** | Train gaze with access to full-res images; deploy with foveated only | "Real-World RL of Active Perception" (2025, NeurIPS, arXiv:2512.01188) | Better gaze signal during training | Train/deploy mismatch; may not transfer |
+| **Privileged-sensor training** | Train gaze with access to full-res images; deploy with foveated only | "Real-World RL of Active Perception" (2025, arXiv:2512.01188) | Better gaze signal during training | Train/deploy mismatch; may not transfer |
 | **Fixed-center (ablation)** | Gaze always at image center | Ablation baseline | Isolates foveation from gaze learning | No active vision |
 | **Random gaze (ablation)** | Gaze uniformly random each step | Ablation baseline | Isolates learned gaze from random foveation | No task-relevant attention |
 
@@ -373,7 +372,7 @@ Each design choice in our pipeline has alternatives grounded in recent literatur
 | **LSTM 3x512 (ours)** | Standard recurrent memory | Wijmans et al. (ICLR 2023) | Matches Wijmans; fair comparison across conditions | No spatial inductive bias |
 | **SRU (Spatially-Enhanced RNN)** | RNN with spatial registration of egocentric observations | Yang et al. (2025, IJRR, arXiv:2506.05997) | Explicit spatial structure; designed for long-range nav | Harder to compare with Wijmans baseline |
 | **DNC (Differentiable Neural Computer)** | External read/write memory with attention addressing | Graves et al. (2016, Nature) | Explicit memory slots = interpretable cognitive map | Complex; may not scale to DD-PPO |
-| **Decision Transformer** | RL as sequence modeling; attention over past states | Chen et al. (2021, NeurIPS) | Attention patterns reveal which past states matter | Offline RL paradigm; different training setup |
+| **Decision Transformer** | RL as sequence modeling; attention over past states | Chen et al. (2021) | Attention patterns reveal which past states matter | Offline RL paradigm; different training setup |
 | **Topological GNN memory** | Graph-structured memory: nodes = visited locations | "Cognitive Navigation via TMFT" (2024, IEEE/CAA) | Most natural cognitive map substrate | Graph construction requires explicit localization |
 | **Multi-timescale memory** | Fast episodic + slow semantic memory (hippocampal model) | "Memory-Augmented Transformers" survey (2025, arXiv:2508.10824) | Parallels hippocampal fast/slow consolidation | Architectural complexity; unclear probing targets |
 
@@ -387,7 +386,7 @@ Each design choice in our pipeline has alternatives grounded in recent literatur
 | **MDL probing** | Minimum description length of labels given representations | Voita & Titov (2020, EMNLP) [code](https://github.com/lena-voita/description-length-probing) | Measures *ease of access* to info, not just presence |
 | **CKA** | Representation similarity across conditions/layers | Kornblith et al. (2019, ICML, arXiv:1905.00414) | Compare which LSTM layers are similar across blind/uniform/foveated |
 | **RSA** | Representational dissimilarity matrices | Kriegeskorte et al. (2008, Front Syst Neuro) | Compare LSTM geometry against theoretical spatial geometry |
-| **SVCCA** | Canonical correlation after SVD denoising | Raghu et al. (2017, NeurIPS) | Track how representations converge during training |
+| **SVCCA** | Canonical correlation after SVD denoising | Raghu et al. (2017) | Track how representations converge during training |
 | **Nonlinear probes** | Multi-layer MLP probes at varying complexity | "Probing Classifiers: Promises, Shortcomings" (2022, Comp Ling, MIT Press) | Reveals nonlinearly encoded spatial info that linear probes miss |
 | **MINE** | Mutual information via neural estimation | Belghazi et al. (2018, ICML, arXiv:1801.04062) | Quantify bits of spatial info in hidden states per condition |
 | **IB analysis** | Information plane (I(X;T) vs I(T;Y)) tracking | Shwartz-Ziv & Tishby (2017, arXiv:1503.02406) | Compare compression-prediction trade-offs across conditions |
@@ -746,7 +745,7 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 
 ## 8. Current Status & Results
 
-**Snapshot — 2026-04-26.** Paper at NeurIPS 2026 submission stage (~2 weeks from deadline). All 5 main conditions trained (single seed). Multi-seed replication, σ_max sweep, log-polar control, foveated-shifted, and stochastic gaze in flight.
+**Snapshot — 2026-04-26.** Paper at submission stage (~2 weeks from deadline). All 5 main conditions trained (single seed). Multi-seed replication, σ_max sweep, log-polar control, foveated-shifted, and stochastic gaze in flight.
 
 ### Single-seed final metrics (Table 1 of paper)
 
@@ -785,9 +784,9 @@ To render "what all 4 agents see on the same episode," use a fixed random seed s
 
 ### Paper artefacts
 
-- Source: `docs/NeurIPS_2026/neurips_2026.tex`
+- Source: `docs/manuscript/main.tex`
 - Build: 28 pages, 6 main figures + 7 appendix figures (PDF-only, named `figN_*` / `appfigN_*`)
-- Master tracker: `docs/NeurIPS_2026/MASTER_TRACK.md`
+- Master tracker: `docs/manuscript/MASTER_TRACK.md`
 - Friend's high-compute experiment plan: `experiments/hc_experiment_plan.md`
 - Friend's dataset setup: `docs/DATASET_SETUP.md`
 
@@ -844,7 +843,7 @@ Phases 1–3 below are the original course-era milestones. We are now in **Phase
 | **Optimal gaze in RL** | Radulescu et al. (2022); Zhou & Eckstein (2022) | Show RL agents converge to Bayesian-optimal fixation strategies | They don't probe internal memory — we study what the memory encodes, not just where the agent looks |
 | **Spatial cognition benchmark** | Ramakrishnan, Wijmans et al. (ICLR 2025, SPACE) | Show frontier models fail at spatial cognition (route retracing, shortcut discovery, map sketching) | They test disembodied models; we study *embodied* agents where spatial representations emerge. Their tasks inspire our path-history and visited-region probes |
 | **Sensor design & task perf.** | Atanov et al. (ECCV 2024, VILAB) | Show photoreceptor design critically shapes task performance | We extend from "sensor shapes performance" to "sensor shapes memory content" |
-| **Perception-action-memory** | Beker et al. (NeurIPS 2022, PALMER) | Study perception-action loops with memory for planning | We specifically study how foveation constrains what memory encodes |
+| **Perception-action-memory** | Beker et al. (2022, PALMER) | Study perception-action loops with memory for planning | We specifically study how foveation constrains what memory encodes |
 
 **The gap we fill**: Prior emergent-cognitive-maps work uses either no vision (blind) or spatially uniform vision; prior foveated-RL work doesn't probe internal memory. No existing work systematically varies *sensor structure* (no vision → resolution-collapsed → uniform → foveated fix → foveated learned) holding task and architecture fixed and asks how the structure of the visual sensor reshapes the *format* of learned spatial memory. Our paper isolates this principle in a controlled silicon case study and links it to convergent biological evidence (paper §5.2).
 
@@ -873,7 +872,7 @@ Phases 1–3 below are the original course-era milestones. We are now in **Phase
 
 **VILAB Connections:**
 - Atanov et al., "Photoreceptor design shapes task performance," ECCV 2024
-- Beker et al., "PALMER: Perception-Action Loop with Memory for Planning," NeurIPS 2022
+- Beker et al., "PALMER: Perception-Action Loop with Memory for Planning," 2022
 
 **Foundations:**
 - Tolman, "Cognitive maps in rats and men," Psychological Review 1948

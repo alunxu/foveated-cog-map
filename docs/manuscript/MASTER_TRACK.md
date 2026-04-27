@@ -1,4 +1,4 @@
-# Master Track — NeurIPS 2026 submission
+# Master Track — manuscript submission
 
 Single source of truth for: cluster jobs, experiment status, paper
 claims, figure freshness, open questions, decision log.
@@ -13,7 +13,7 @@ Update this file when state changes — do NOT rely on memory.
 | Dimension | Status |
 |---|---|
 | Paper version | v1 polished; figure pass complete (Fig 2-6 + appendix); refs working; 28-29 pages |
-| Page count | **28-29 pages**; build clean via `make` (Makefile in docs/NeurIPS_2026/) |
+| Page count | **28-29 pages**; build clean via `make` (Makefile in docs/manuscript/) |
 | Submission deadline | **2026-05-06** (9 days out) |
 | Cluster: jobs RUNNING | 2 trainings (uni-s2 / fov-s2) + transplant tail (matched-recipient cells, last 2) |
 | Cluster: jobs PENDING | 0 |
@@ -354,10 +354,10 @@ Useful one-liners to refresh state:
 ssh izar "squeue -u wxu --format='%.10i %.20j %.5T %.10q %.10M'"
 
 # Recent commits affecting paper
-git log --oneline -10 -- docs/NeurIPS_2026/neurips_2026.tex
+git log --oneline -10 -- docs/manuscript/main.tex
 
 # Figure freshness (date-sorted)
-ls -la docs/NeurIPS_2026/fig/*.pdf | sort -k 6,8
+ls -la docs/manuscript/fig/*.pdf | sort -k 6,8
 
 # Pending det probe analyses
 ssh izar "ls /scratch/izar/wxu/probing_results/*_det_analysis.json | wc -l"

@@ -1,7 +1,7 @@
 # HC cluster experiment plan — friend's 14 trainings (with rationale)
 
 **For**: friend running on hc cluster (1× H200 + 4× A100).
-**Deadline**: 2026-05-06 (NeurIPS submission).  **Today**: 2026-04-27.
+**Deadline**: 2026-05-06 (manuscript submission).  **Today**: 2026-04-27.
 **Net working days**: ~9.
 
 **Hardware note**: A100 is ~1.5–2× slower than H100 on this workload, so
@@ -877,7 +877,7 @@ plan around Tier 1+2 (10 trainings) and only launch Tier 3 if Tier 1+2
 finishes ahead of schedule, which requires H200 + lucky cluster
 availability.
 
-Submission target: clean NeurIPS submission with **multi-seed (3 conditions)
+Submission target: clean manuscript with **multi-seed (3 conditions)
 + scaling sweep (5 K-points) + stochastic gaze H3 + falsifiable log-polar**.
 That's the minimum credible set per our review-risk analysis.
 
@@ -886,8 +886,8 @@ That's the minimum credible set per our review-risk analysis.
 ## Quick links
 
 - Dataset setup: [../docs/DATASET_SETUP.md](../docs/DATASET_SETUP.md)
-- Paper TeX: [../docs/NeurIPS_2026/neurips_2026.tex](../docs/NeurIPS_2026/neurips_2026.tex)
-- Sleep log (wxu's autonomous overnight progress): [../docs/NeurIPS_2026/SLEEP_LOG.md](../docs/NeurIPS_2026/SLEEP_LOG.md)
+- Paper TeX: [../docs/manuscript/main.tex](../docs/manuscript/main.tex)
+- Sleep log (wxu's autonomous overnight progress): [../docs/manuscript/SLEEP_LOG.md](../docs/manuscript/SLEEP_LOG.md)
 - One-time cluster setup helper: [setup.md](setup.md)
 
 ---

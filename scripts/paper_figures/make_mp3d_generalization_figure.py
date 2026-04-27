@@ -9,7 +9,7 @@ Targets shown: GPS, compass, distance-to-goal.
 
 Usage:
     python scripts/paper_figures/make_mp3d_generalization_figure.py \\
-        --results-dir /tmp/probing_results --out-dir docs/NeurIPS_2026/fig
+        --results-dir /tmp/probing_results --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

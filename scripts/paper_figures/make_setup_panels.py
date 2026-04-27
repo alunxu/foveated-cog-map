@@ -13,8 +13,8 @@ Conditions:
     collapsed-gaze location of the trained learned-gaze module; gaze
     marker drawn
 
-Reads:  docs/NeurIPS_2026/fig/fig_uniform.png  (base scene)
-Writes: docs/NeurIPS_2026/fig/setup_<cond>.{png,pdf}
+Reads:  docs/manuscript/fig/fig_uniform.png  (base scene)
+Writes: docs/manuscript/fig/setup_<cond>.{png,pdf}
 
 Run from project root:
     python scripts/paper_figures/make_setup_panels.py
@@ -31,7 +31,7 @@ import numpy as np
 from PIL import Image
 from scipy.ndimage import gaussian_filter
 
-OUT_DIR = Path("docs/NeurIPS_2026/fig")
+OUT_DIR = Path("docs/manuscript/fig")
 BASE = OUT_DIR / "fig_uniform.png"  # the existing 256x256 RGB scene
 
 

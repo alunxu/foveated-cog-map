@@ -24,7 +24,7 @@ Writes: <out-dir>/trajectory_overlay.{pdf,png}
 Usage:
     python scripts/paper_figures/make_trajectory_overlay_figure.py \\
         --traj-dir /tmp/traj \\
-        --out-dir docs/NeurIPS_2026/fig \\
+        --out-dir docs/manuscript/fig \\
         --episode-id 414 --scene-id 92 \\
         --topdown-png /tmp/scene92_topdown.png \\
         --topdown-json /tmp/scene92_topdown.json

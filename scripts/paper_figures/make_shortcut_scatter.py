@@ -16,7 +16,7 @@ Usage:
     python scripts/paper_figures/make_shortcut_scatter.py \\
         --results-dir /tmp/probing_results_local \\
         --shortcut-dir data/shortcut \\
-        --out-dir docs/NeurIPS_2026/fig
+        --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

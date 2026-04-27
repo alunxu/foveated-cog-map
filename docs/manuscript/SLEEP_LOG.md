@@ -42,6 +42,22 @@ User-set rules:
 
 (Each /loop iteration writes one block here.)
 
+### Tick 17:05 (resumed after compact — friend data fire-drill + WJ-C OOM discovered)
+
+User asked about friend's missing folders: `train_extra_large` + `pointnav/mp3d/v1` both absent, `mp3d_gibson/v1` empty.
+- Diagnosis: friend grabbed standard `pointnav_gibson_v1.zip` (only 72-scene `train/`), not `pointnav_gibson_0_plus_v1.zip` (411-scene `train_extra_large/`). And didn't pull `pointnav_mp3d_v1.zip` at all → so the symlink script's prereq-check exits early.
+- Hardened DATASET_SETUP.md §3a with a CRITICAL callout. Added scripts/data/ + DATASET_SETUP.md to git (had been untracked). Pushed to main.
+
+User then asked for friend-experiment purpose + structure. Delivered ASCII diagram with 14-training Tier 1/2/3 + ship-and-probe flow. No code changes.
+
+**Cluster check at 17:05**:
+- WJ-A uniform_k1 (2858251): RUNNING 41+ min, no NPZ yet (was 27min last tick → +14min real progress in ~25min wall)
+- WJ-D bug_v2 (2858318): **RUNNING 10:49** (transitioned PD→R; no JSON yet)
+- WJ-C scene_occ (2857420): **OUT_OF_MEMORY** at 09:27 (sacct confirmed). Did NOT silently complete — it crashed. Need OOM fix + memory-bumped re-submit. Empty `/scratch/izar/wxu/scene_occupancy/`.
+- foveated_v2 retrain (2857437): still PENDING (maintenance reservation).
+
+**Next loop checkpoint**: 1200s (no immediate trigger; uniform_k1 + bug_v2 both ~30-40min to landing; sleeping past the 5-min cache window once is more efficient than 4× short checks).
+
 ### Tick 16:30 (WJ-A Option B — matched full sweep landed, pattern more nuanced than expected)
 
 Full matched (paper's Coarse, 48×48 → 1×1) sweep:

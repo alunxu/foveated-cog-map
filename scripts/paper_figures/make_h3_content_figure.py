@@ -15,7 +15,7 @@ Usage:
     python scripts/paper_figures/make_h3_content_figure.py \\
         --goal-vector data/goal_vector.json \\
         --shortcut-dir data/shortcut \\
-        --out docs/NeurIPS_2026/fig/h3_content.pdf
+        --out docs/manuscript/fig/h3_content.pdf
 """
 from __future__ import annotations
 

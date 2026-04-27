@@ -23,7 +23,7 @@ Writes: <out-dir>/foveation_strength.{pdf,png}
 Usage:
     python scripts/paper_figures/make_foveation_strength_figure.py \\
         --results-dir /tmp/probing_results_local \\
-        --out-dir docs/NeurIPS_2026/fig
+        --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

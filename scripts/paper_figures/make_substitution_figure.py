@@ -12,7 +12,7 @@ readability over training. Showing both GPS and compass demonstrates
 the substitution applies to spatial codes broadly (not just position).
 
 Reads:  /tmp/ckpt_sweep_data/<cond>_ckpt<N>.json  (analyze.py output)
-Writes: docs/NeurIPS_2026/fig/fig3_substitution_dynamics.pdf
+Writes: docs/manuscript/fig/fig3_substitution_dynamics.pdf
 
 Each JSON corresponds to a probing run on a *single training
 checkpoint* of one condition; we extract {gps,compass}_cv_r2_mean and

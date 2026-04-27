@@ -25,7 +25,7 @@ Writes: <out-dir>/encoder_feature_probe.{pdf,png}
 Usage:
     python scripts/paper_figures/make_encoder_feature_probe_figure.py \\
         --results-dir /tmp/probing_results_local \\
-        --out-dir docs/NeurIPS_2026/fig
+        --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

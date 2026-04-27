@@ -19,7 +19,7 @@ infer training frames from the checkpoint number.
 Usage:
     python scripts/paper_figures/make_training_dynamics_figure.py \\
         --results-dir /tmp/training_dynamics_local \\
-        --out-dir docs/NeurIPS_2026/fig
+        --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

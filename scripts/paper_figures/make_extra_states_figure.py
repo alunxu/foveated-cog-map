@@ -7,7 +7,7 @@ in main results).
 
 Reads:  data/extra_states/<cond>_extra_states.json (from
         scripts/probing/analyze_extra_states.py)
-Writes: docs/NeurIPS_2026/fig/appfig10_extra_states.pdf
+Writes: docs/manuscript/fig/appfig10_extra_states.pdf
 """
 from __future__ import annotations
 

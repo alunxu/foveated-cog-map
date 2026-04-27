@@ -4,7 +4,7 @@
 # stochastic-sampling bug (collect.py previously hardcoded
 # deterministic=False, causing fov-fix/uniform probes to collapse to
 # ~4-step episodes at 0% success while their deterministic eval SPL was
-# ~0.83). See docs/NeurIPS_2026/FINDING_DETERMINISTIC_BUG.md for details.
+# ~0.83). See docs/manuscript/FINDING_DETERMINISTIC_BUG.md for details.
 #
 # The new files are written to ${PROBE_DIR}/<run_name>_det[_variant].npz
 # so we do not overwrite the stochastic collection (kept for diffing).

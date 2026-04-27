@@ -5,7 +5,7 @@ Cleaner layout: single horizontal flow per lane, no overlapping arrows
 or boxes; encoder spatial-output and sensors as small annotations rather
 than full-blown boxes.
 
-Writes: docs/NeurIPS_2026/fig/setup_pipeline.{pdf,png}
+Writes: docs/manuscript/fig/setup_pipeline.{pdf,png}
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
-OUT_DIR = Path("docs/NeurIPS_2026/fig")
+OUT_DIR = Path("docs/manuscript/fig")
 
 # ─── styling ──────────────────────────────────────────────────────────
 TRAIN_COL = "#dbe9ff"

@@ -10,7 +10,7 @@ scene history interacting with a new goal."
 
 Usage:
     python scripts/paper_figures/make_goal_vector_figure.py \\
-        --in data/goal_vector.json --out-dir docs/NeurIPS_2026/fig
+        --in data/goal_vector.json --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

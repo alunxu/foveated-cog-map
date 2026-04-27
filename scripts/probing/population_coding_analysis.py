@@ -27,7 +27,7 @@ Usage:
         --in-dir /scratch/izar/wxu/probing_data \\
         --suffix _det \\
         --out-json /scratch/izar/wxu/probing_results/population_coding_det.json \\
-        --out-fig-dir docs/NeurIPS_2026/fig
+        --out-fig-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

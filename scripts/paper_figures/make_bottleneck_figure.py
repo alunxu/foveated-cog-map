@@ -4,7 +4,7 @@ Hero figure for the encoder-bottleneck → LSTM spatial compensation finding.
 3 panels (GPS / compass / DtG), each with 5 bars ordered by bottleneck severity.
 Values from scripts/probing/ det-analysis 5-fold CV.
 
-Output: docs/NeurIPS_2026/fig/h1_bottleneck.pdf
+Output: docs/manuscript/fig/h1_bottleneck.pdf
 """
 import numpy as np
 import matplotlib
@@ -80,7 +80,7 @@ plt.tight_layout()
 
 import os
 out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
-                      "docs", "NeurIPS_2026", "fig")
+                      "docs", "manuscript", "fig")
 os.makedirs(out_dir, exist_ok=True)
 out_path = os.path.join(out_dir, "h1_bottleneck.pdf")
 plt.savefig(out_path, bbox_inches="tight", dpi=150)

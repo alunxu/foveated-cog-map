@@ -1,4 +1,4 @@
-TEX = neurips_2026
+TEX = main
 
 all: $(TEX).pdf
 

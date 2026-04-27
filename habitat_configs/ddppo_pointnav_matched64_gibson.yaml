@@ -2,7 +2,7 @@
 #
 # Encoder-capacity sweep point: 64x64 input resolution. Part of the
 # scaling-law experiment for "Visual encoder bottleneck → LSTM spatial
-# encoding". See docs/NeurIPS_2026/PAPER_REFRAME.md.
+# encoding". See docs/manuscript/PAPER_REFRAME.md.
 #
 # ResNet18 stride 32 → spatial feature map = max(1, 64/32) × max(1, 64/32).
 # Flattened and projected to 512-d visual_fc → into LSTM.

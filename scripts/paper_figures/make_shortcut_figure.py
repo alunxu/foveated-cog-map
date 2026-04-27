@@ -10,7 +10,7 @@ of the new one: larger drop = more environment-specific caching.
 
 Usage:
     python scripts/paper_figures/make_shortcut_figure.py \
-        --in-dir data/shortcut --out-dir docs/NeurIPS_2026/fig
+        --in-dir data/shortcut --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

@@ -14,7 +14,7 @@ Writes: <out-dir>/layerwise_decay.{pdf,png}
 Usage:
     python scripts/paper_figures/make_layerwise_figure.py \\
         --in-dir /scratch/izar/wxu/probing_results \\
-        --out-dir docs/NeurIPS_2026/fig
+        --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

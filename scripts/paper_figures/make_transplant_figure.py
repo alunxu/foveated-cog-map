@@ -6,7 +6,7 @@ Memory-transplant figure for §4.4 H2:
 
 Usage:
     python scripts/paper_figures/make_transplant_figure.py \
-        --in-dir data/transplant --out-dir docs/NeurIPS_2026/fig
+        --in-dir data/transplant --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

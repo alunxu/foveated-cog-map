@@ -10,7 +10,7 @@ SPL depends on transplant midpoint. Key illustrations:
 
 Usage:
     python scripts/paper_figures/make_transplant_sweep_figure.py \\
-        --in-dir data/transplant --out-dir docs/NeurIPS_2026/fig
+        --in-dir data/transplant --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

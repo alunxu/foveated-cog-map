@@ -18,7 +18,7 @@ Writes: <out-dir>/temporal_probe_evolution.{pdf,png}
 Usage:
     python scripts/paper_figures/make_temporal_probe_figure.py \\
         --in /scratch/izar/wxu/probing_results/temporal_probe_det.json \\
-        --out-dir docs/NeurIPS_2026/fig
+        --out-dir docs/manuscript/fig
 """
 from __future__ import annotations
 

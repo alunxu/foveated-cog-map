@@ -21,7 +21,7 @@ its Y is single-cell, marked with a hollow marker + footnote in caption.
 Reads:  /tmp/transplant_local/<donor>_to_<recipient>.json (mid=30)
         /tmp/probing_results_local/<cond>_gibson_det_analysis.json
         data/shortcut/<cond>_gibson.json
-Writes: docs/NeurIPS_2026/fig/fig6_synthesis_2axes.pdf
+Writes: docs/manuscript/fig/fig6_synthesis_2axes.pdf
 """
 from __future__ import annotations
 

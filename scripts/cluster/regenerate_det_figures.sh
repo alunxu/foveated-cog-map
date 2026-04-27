@@ -16,7 +16,7 @@
 #      analyze_cross.py, unaligned_cka.py, goal_vector_probe.py on
 #      the det NPZs if needed).
 #   2. Re-runs every paper-figure script pointing at det inputs and
-#      writes outputs directly to docs/NeurIPS_2026/fig/.
+#      writes outputs directly to docs/manuscript/fig/.
 #
 # Run this from the repo root after det NPZs are in place:
 #   sbatch scripts/cluster/regenerate_det_figures.sh
@@ -36,7 +36,7 @@
 set -e
 source "${SLURM_SUBMIT_DIR}/scripts/cluster/common.sh"
 
-FIG_OUT="${PROJECT_DIR}/docs/NeurIPS_2026/fig"
+FIG_OUT="${PROJECT_DIR}/docs/manuscript/fig"
 PY="python -u"
 
 # ---- Step 0: ensure det analysis JSONs exist ----
@@ -117,4 +117,4 @@ ${PY} "${PROJECT_DIR}/scripts/paper_figures/make_training_curves.py" \
 
 echo ""
 echo "=== All figures regenerated into ${FIG_OUT} at $(date) ==="
-echo "Re-compile the paper: cd docs/NeurIPS_2026 && pdflatex neurips_2026.tex && bibtex neurips_2026 && pdflatex neurips_2026.tex && pdflatex neurips_2026.tex"
+echo "Re-compile the paper: cd docs/manuscript && pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex"
