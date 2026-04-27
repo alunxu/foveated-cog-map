@@ -142,20 +142,34 @@ def main() -> None:
               f"({n_cells.get(k, 0)} cells) | "
               f"shortcut SPL drop={shortcut_drop.get(k, 'N/A')}%")
 
-    fig, ax = plt.subplots(figsize=(7.5, 5.4))
+    fig, ax = plt.subplots(figsize=(8.0, 5.6))
 
-    # 2x2 quadrant separators (use thresholds that visually split the 5 conds)
     GPS_THRESH = 0.4
     TOX_THRESH = 0.12  # "above" = format-isolated as donor
 
-    ax.axhline(TOX_THRESH, ls="--", color="#888", lw=0.9, zorder=1)
-    ax.axvline(GPS_THRESH, ls="--", color="#888", lw=0.9, zorder=1)
+    # Quadrant background tints — make the 4 regions visually distinct.
+    Q_COLORS = {
+        "ul": (0.97, 0.93, 1.00),   # no-GPS + isolated  (light purple)
+        "ur": (0.93, 1.00, 0.93),   # GPS + isolated     (light green)
+        "ll": (1.00, 0.95, 0.92),   # no-GPS + shared    (light salmon)
+        "lr": (1.00, 0.99, 0.86),   # GPS + shared       (light gold)
+    }
+    ax.axhspan(TOX_THRESH, 1, xmin=0, xmax=(GPS_THRESH - (CLIP_X_MIN - 0.05)) /
+               (1.10 - (CLIP_X_MIN - 0.05)), color=Q_COLORS["ul"], zorder=0)
+    ax.axhspan(TOX_THRESH, 1, xmin=(GPS_THRESH - (CLIP_X_MIN - 0.05)) /
+               (1.10 - (CLIP_X_MIN - 0.05)), xmax=1, color=Q_COLORS["ur"], zorder=0)
+    ax.axhspan(-1, TOX_THRESH, xmin=0, xmax=(GPS_THRESH - (CLIP_X_MIN - 0.05)) /
+               (1.10 - (CLIP_X_MIN - 0.05)), color=Q_COLORS["ll"], zorder=0)
+    ax.axhspan(-1, TOX_THRESH, xmin=(GPS_THRESH - (CLIP_X_MIN - 0.05)) /
+               (1.10 - (CLIP_X_MIN - 0.05)), xmax=1, color=Q_COLORS["lr"], zorder=0)
+
+    ax.axhline(TOX_THRESH, ls="--", color="#666", lw=1.2, zorder=1)
+    ax.axvline(GPS_THRESH, ls="--", color="#666", lw=1.2, zorder=1)
 
     # Marker-size scaling: behavioural memory reliance (shortcut SPL drop %).
-    # Linear from a base size (smallest drop) to a max (largest drop).
     drop_min = min(shortcut_drop.values())
     drop_max = max(shortcut_drop.values())
-    SIZE_MIN, SIZE_MAX = 80.0, 480.0
+    SIZE_MIN, SIZE_MAX = 110.0, 600.0
 
     def size_for(drop_pct: float) -> float:
         if drop_max == drop_min:
@@ -168,29 +182,28 @@ def main() -> None:
         if cond_key not in gps_r2 or cond_key not in avg_cost:
             continue
         x = max(gps_r2[cond_key], CLIP_X_MIN)
-        y = -avg_cost[cond_key]   # higher Y = more toxic = more format-isolated
+        y = -avg_cost[cond_key]
         drop = shortcut_drop.get(cond_key)
-        s = size_for(drop) if drop is not None else 180
+        s = size_for(drop) if drop is not None else 200
         clipped = gps_r2[cond_key] < CLIP_X_MIN
         n = n_cells[cond_key]
-        # Hollow marker for single-cell measurement (coarse)
         if n < 3:
             facecolor = "white"
             edgecolor = colour
-            edge_lw = 2.0
+            edge_lw = 2.4
         else:
             facecolor = colour
             edgecolor = "black"
-            edge_lw = 0.9
+            edge_lw = 1.1
         ax.scatter(x, y, s=s, c=facecolor, edgecolor=edgecolor,
                    linewidths=edge_lw, marker=marker, zorder=4)
-        # Label offset
+        # Label
         offsets = {
-            "Blind":          (-0.05, +0.014),
-            "Coarse (1×1)":   (+0.06, +0.018),
-            "Uniform":        (-0.05, +0.013),
-            "Foveated (fix)": (+0.05, -0.012),
-            "Foveated (learned)": (+0.10, +0.000),
+            "Blind":              (-0.06, +0.014),
+            "Coarse (1×1)":       (+0.07, +0.018),
+            "Uniform":            (-0.06, +0.014),
+            "Foveated (fix)":     (+0.06, -0.013),
+            "Foveated (learned)": (+0.11, +0.000),
         }
         dx, dy = offsets.get(label, (0.05, 0.0))
         ha = "right" if dx < 0 else "left"
@@ -200,30 +213,30 @@ def main() -> None:
         if n < 3:
             annot = f"{label}\n($n_{{cells}}{{=}}{n}$)"
         ax.annotate(annot, (x, y), xytext=(x + dx, y + dy),
-                    ha=ha, va="center", fontsize=9, fontweight="bold")
+                    ha=ha, va="center", fontsize=11, fontweight="bold")
 
-    # Quadrant labels (corners)
-    quad_kw = dict(transform=ax.transAxes, fontsize=8.5, color="#444",
-                   style="italic", alpha=0.85)
-    ax.text(0.97, 0.97, "linear GPS code\n+ format-isolated",
+    # Quadrant labels — bigger, clearer, with concise descriptions.
+    quad_kw = dict(transform=ax.transAxes, fontsize=10, color="#222",
+                   style="italic", weight="bold", alpha=0.7)
+    ax.text(0.97, 0.96, "GPS-readable\nformat-isolated",
             ha="right", va="top", **quad_kw)
-    ax.text(0.03, 0.97, "no linear GPS\n+ format-isolated",
+    ax.text(0.03, 0.96, "no GPS\nformat-isolated",
             ha="left", va="top", **quad_kw)
-    ax.text(0.97, 0.03, "linear GPS code\n+ format-shared",
+    ax.text(0.97, 0.04, "GPS-readable\nformat-shared",
             ha="right", va="bottom", **quad_kw)
-    ax.text(0.03, 0.03, "no linear GPS\n+ format-shared",
+    ax.text(0.03, 0.04, "no GPS\nformat-shared",
             ha="left", va="bottom", **quad_kw)
 
-    ax.set_xlabel("H1 magnitude:  top-layer GPS $R^2$ (probe on $\\mathbf{h}_2$)",
-                  fontsize=10)
+    ax.set_xlabel(r"H1 magnitude: top-layer GPS $R^2$ (probe on $\mathbf{h}_2$)",
+                  fontsize=12, labelpad=6)
     ax.set_ylabel("H2 format isolation\n(avg transplant cost as donor)",
-                  fontsize=10)
+                  fontsize=12, labelpad=6)
     ax.set_xlim(CLIP_X_MIN - 0.05, 1.10)
     ax.set_ylim(-0.04, 0.32)
-    ax.tick_params(axis="both", labelsize=9)
+    ax.tick_params(axis="both", labelsize=11)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
-    ax.grid(linestyle=":", alpha=0.25)
+    ax.grid(linestyle=":", alpha=0.20)
 
     # Size legend: 3 reference circles (small / mid / large drop) placed
     # OUTSIDE the data area to avoid covering the Coarse marker in the
@@ -240,13 +253,13 @@ def main() -> None:
                    markersize=(s ** 0.5), label=f"{d:.0f}%")
         handles.append(h)
     leg = ax.legend(handles=handles,
-                    title="shortcut SPL drop\n(behavioural memory\nreliance)",
+                    title="shortcut SPL drop\n(behavioural\nmemory reliance)",
                     loc="upper left",
                     bbox_to_anchor=(1.02, 1.0),
-                    fontsize=7.5, title_fontsize=7.5,
-                    frameon=True, framealpha=0.95, labelspacing=1.4,
-                    handletextpad=1.2, borderpad=0.7)
-    leg.get_frame().set_edgecolor("#bbb")
+                    fontsize=9.5, title_fontsize=9.5,
+                    frameon=True, framealpha=0.95, labelspacing=1.6,
+                    handletextpad=1.4, borderpad=0.8)
+    leg.get_frame().set_edgecolor("#999")
 
     fig.tight_layout()
     out = args.out_dir / "fig6_synthesis_2axes.pdf"
