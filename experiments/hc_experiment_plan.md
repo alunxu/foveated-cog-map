@@ -37,6 +37,31 @@ ETA per H100 / H200 training: **2–3 days** (vs ~5 on V100).
 
 ---
 
+## 处理 unexpected results 的原则（中文）
+
+每个 training 下面都有 explicit 的预期数值（"Specific prediction"）。结果可能落在 4 类：
+
+1. **完全符合预期** → 整合进 paper（已有 stub 位置）。
+2. **方向对、量级偏差**（e.g. R² 预期 0.5–0.7 实际 0.3） → 多 seed / 多 ckpt 验证后用 mean ± std 报告。
+3. **方向反 / falsified** → ⚠️ **不要直接写 paper**：先 investigate 原因，弄清 mechanism 后才决定怎么写。
+4. **NaN / collapse / 训练失败** → 先排除 cluster artifact（改 seed / 改 hardware 重跑），再往 mechanism 方向挖。
+
+**第 3 类是最容易出错的**，给出 4 条铁则：
+
+- ❌ 不要直接把 negative 写成 paper limitation paragraph → 让 reviewer 觉得我们 hedging。
+- ❌ 不要改 paper claim 来 fit 单点新结果 → over-fitting to single data point。
+- ❌ 不要 over-hedge 主 claim 弱化整篇 paper → 主 claim 是基于 7+ converging 实验的，单个 anomaly 不应该撼动它。
+- ✅ 跑 additional experiments to understand the mechanism → 等 mechanism 清楚再决定 paper scope（限定 / 重写 / 维持原 claim + caveat）。
+
+**判断 anomaly 是 single-point noise 还是真 mechanism 错的标准**：
+1. 用第二个 seed 重复 — 若一致 → 真信号
+2. 跑 control / sanity check — 排除实现错误
+3. 跑邻近的 sweep 点 — 若是 isolated outlier vs 系统偏差，画出来明显
+
+每个 training 下面的 **「中文 — 不符合预期 investigation 协议」** block 给出该 training 的具体调查步骤。看到 unexpected 时先按那条协议跑实验，**别动 paper**。
+
+---
+
 ## What's already done — do NOT relaunch
 
 **On Izar (V100, our side)** — these are converged or in progress; friend
@@ -106,6 +131,26 @@ on the list.
 there, the policy has effectively reverted to deterministic gaze — flag to
 wxu before continuing.  This was a known failure mode in earlier pilots.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：per-env σ > 0.05 at convergence + SPL ≥ 0.7。
+
+若 **σ pinned 到 0.05**（lower bound，policy 退化为 deterministic）：
+- 先 sanity check entropy bonus weight 是否 zero、σ output 的 gradient path 是否被 detach（`src/habitat/foveated_stochastic_policy.py`）
+- 跑 σ_max ∈ {0.10, 0.20, 0.30} 三组 ablation 找有 surviving 多样性的 regime
+- ❌ 不要写 "stochastic gaze 不能学" 当 paper finding —— 我们只能说 reparam-Gaussian 这一具体路径不行
+- ✅ 若三组都 collapse → §App H3 写 method-level limitation（"在 reparam-Gaussian 实现下 H3 testable 不了"），主 H3 narrative **不动**
+
+若 **SPL < 0.5**（noise 太大干扰导航）：
+- 跑 σ_max=0.05 极小噪声 ablation 看是否恢复 SPL → 用来区分 "noise-too-high" vs "policy-broken"
+- 若 noise-too-high → retrain with reduced σ_max upper bound
+- 若 policy-broken（SPL 仍低）→ 与 deterministic foveated baseline 对比，定位是 architecture 还是 value-function 出问题
+
+若 **R²(GPS\|h₂) ≈ 0**（H3 实质 negative）：
+- 这是 paper 最敏感的结果之一，**多跑一组 confirm**：seed=2 + σ_max=0.20 第二个配置
+- 两次都 negative **才** 在 §4.6 carefully 写："reparam-Gaussian 这条路径下 H3 negative；不排除 attention-based gaze 等其他形式仍能产生效果"
+- ❌ 不要把它扩成 "动态 gaze 普遍不能阻止 substitution" 的强 claim → 单 architecture 的 negative 不够推
+
 ---
 
 ### Training 2: Scaling sweep K=64 (`matched64_gibson`)
@@ -140,6 +185,27 @@ gradient — paper framing would shift.
 encoder spatial output but something else (input pixel count? channel
 information?) — would force a re-think.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ∈ [0.4, 0.6]，介于 K=48 (0.78) 和 uniform (≈0)。
+
+若 **R² ≈ 0**（与 uniform 一样，跨过中间）：
+- 先 probe encoder feature map 实际维度（应该是 2×2，但要测）
+- 若实测 1×1（encoder 提前 collapse）→ K=48..64 之间 encoder bandwidth 都是 1×1，那两点 R² 应该都接近，与观察不符 → 重新 frame axis（不是 input res，是 encoder output dim）
+- 若实测 2×2 但 R² 仍 ≈ 0 → mechanism 是 phase-transition 而非 smooth；进一步跑 K=72 / K=80 在拐点附近 isolate 转变
+- ❌ 不要画 "K=48: 0.78, K=64: 0.0" 当主 figure，让 axis 看起来 cliff
+- ✅ 等 K=72 + K=80 拼出过渡区再决定 figure
+
+若 **R² ≈ 0.78**（与 coarse 一样，无下降）：
+- 说明 K=64 仍在 bottleneck regime → 跑 K=80, 96, 112 找 R² 开始降的临界点
+- ❌ 不要在 paper 里画 K=48 + K=64 同高度的 bar 而忽略 K=80+
+- ✅ 等 K=96 / K=128 落地拼出完整曲线再 finalize figure
+
+若 **non-monotonic**（K=64 R² > K=48）：
+- seed=1 outlier 嫌疑大 → 跑 seed=2 K=64 confirm
+- ❌ 单点 anomaly 不要 paper integrate
+- ✅ seed=2 一致才报；不一致就 appendix flag "K=64 high seed variance, point dropped from main curve"
+
 ---
 
 ### Training 3: Scaling sweep K=32 (`matched32_gibson`)
@@ -171,6 +237,22 @@ coarse's 0.84 (the agent has fewer pixels to even check for collisions).
 
 This is the **lower-end anchor** for the scaling sweep figure.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ≥ 0.78（甚至更高，因为 input 比 K=48 更 starved）。
+
+若 **R² 显著 < 0.78**（preserve 弱于 coarse）：
+- 先看 SPL trajectory：若 SPL < 0.7 → 没收敛，多训 50M 帧再 probe（K=32 输入小，ResNet-18 接受度可能更慢）
+- 若 SPL ≥ 0.8 但 R² 仍 < 0.5 → 真有 mechanism 含义：input resolution 本身能影响 LSTM GPS 编码，**不只是** encoder bandwidth
+- 若 (b) 成立，跑 K=24（如有 config）或在 paper 里 limit claim："encoder spatial output 在 K ≥ 48 是主导 axis；K < 48 时 input resolution 加入"
+- ❌ 不要直接 conclude "scaling axis is wrong" → 单条 K=32 数据撼动不了 K=48 + 4 个高 K 已观察到的 trend
+- ✅ paper 暂留 K=32 作为 open data point，appendix 报告，主 figure 不画
+
+若 **训练 diverge / NaN**：
+- 32×32 输入对 ResNet-18 太小，某层 spatial dim 可能已经 ≤ 1
+- 检查 numeric stability；必要时 patch encoder 处理 1×1 intermediate
+- 这是 implementation 问题，非 mechanism 问题，修了重跑就行
+
 ---
 
 ### Training 4: Multi-seed blind seed=2 (`blind_gibson seed=2`)
@@ -200,6 +282,23 @@ robustness confirmed → main paper §4.1 number gets `±std` upgrade.
 * R² inside expected range but SPL much lower → blind seed-2 didn't fully
   converge — extend training before probing.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ∈ [0.85, 0.95]，与 seed=1 (0.95) 相差 ≤ 0.10。
+
+若 **R² < 0.7**（与 seed=1 显著不一致）：
+- 先确认是否真的 converge：blind 需要 ~342M 帧到 SPL=0.47，less-frame 会让 R² 偏低
+- 看 TB success curve，若 plateau 才 probe；plateau 后仍 < 0.7 → 跑 seed=3
+- 三个 seed mean ± std 报告：
+  - 若 std ≤ 0.10 → "blind R² = 0.85 ± 0.05"，主 claim 不动
+  - 若 std > 0.20 → carefully 写 §4.1：blind 的 single-seed R² 高度变量，**主 narrative 改用 "blind preserves a strong linear GPS code (multi-seed range 0.6–0.95)" 而非具体数值**
+- ❌ 不要 paper 里直接写 "seed-1: 0.95, seed-2: 0.6"（让 reviewer 觉得 seed-1 是 outlier）
+- ❌ 不要把 outlier seed 算进 mean 然后报"mean ≈ 0.78"假装一致
+- ✅ honest 报 per-seed range + mean ± std
+
+若 **SPL < 0.40**：
+- 没收敛，extend training 100M 帧；若 walltime 不够，退而求其次报 ckpt.49 已有的，但 paper 里 caveat 写明帧数
+
 ---
 
 ### Training 5: Multi-seed matched seed=2 (`matched_gibson seed=2`)
@@ -226,6 +325,23 @@ ends of the bottleneck regime**.  With foveated_learned seed=2 added in
 Tier 2, we'll have 3-of-5 conditions with seed-2 — sufficient for an "all
 H1 numbers replicate to within ±0.10 across seeds" caveat upgrade.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ∈ [0.65, 0.85]，SPL ∈ [0.80, 0.90]。
+
+若 **R² < 0.5**（远低于 seed=1 的 0.78，比 blind seed=2 anomaly 更严重）：
+- coarse 比 blind 收敛快，250M 应足够，**所以 R² 偏低不太可能是 undertraining**
+- 跑 seed=3 confirm；若仍 < 0.5 → coarse 的 R² 高度 seed-dependent
+- 这是对 mechanism 的 serious 挑战：paper 主 claim 是 "coarse retains GPS like blind"
+- ❌ 不要把 seed=1 + seed=2 算 mean 掩盖 seed=2 异常
+- ❌ 不要直接弱化 H1 主 claim → coarse 即使 seed-noisy 仍 ≥ 0.5，与 uniform 的 ≈0 仍有 1σ 以上 separation
+- ✅ 报 per-seed + 三 seed std；若 std > 0.20 → §4.1 改写："coarse 显示 LSTM GPS code 持久存在 (seed-mean R²=0.5–0.8)，但 seed variance 比 blind 大，说明在 coarse 这种边际 bottleneck regime 训练动力学比 blind 更敏感"
+
+若 **R² ≈ 1.0**（异常高，超出预期上界）：
+- 可能 episode 不够 diverse → probe overfit
+- 跑 5-fold CV 看 σ；若 σ 极低且各 fold 都 ≈ 1.0 → 真信号但需 sanity check probe 没 leak
+- 若 σ 大 → probe instability，不能信单 fold 的高分
+
 ---
 
 ## Tier 2 — Day 3-4 (5 trainings, when Tier 1 frees up GPUs)
@@ -250,6 +366,21 @@ declining if the H1 axis is gradient-like.
 0.1 — there's a knee, suggests a phase transition, paper figure caption
 adjusts accordingly.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ∈ [0.2, 0.4]，介于 K=64 和 K=128 之间。
+
+若 **R² > 0.5**（mid-sweep 反弹）：
+- 检查 K=96 训练是否真的收敛到 SPL ≥ 0.85（与 K=64 / K=128 一致）
+- 若 SPL 异常低 → undertraining，多训 50M 帧
+- 若 SPL 正常但 R² 高 → mechanism 不严格 monotonic，可能在 K=96-128 之间有 knee
+- ❌ 不要 paper 里隐藏这个点假装 monotonic
+- ✅ 把 K=96 当 informative outlier，appendix 单独讨论；主 figure 用 mean ± std 让 reader 自己判断 axis 平滑性
+
+若 **R² ≈ 0**（比预期更早降到 floor）：
+- monotonic 但下降比预期快 → 在 K=80 附近有相变
+- 跑 K=80 拉开拐点，paper figure 在 K=64-96 之间画过渡区注解
+
 ---
 
 ### Training 7: Scaling sweep K=192 (`matched192_gibson`)
@@ -270,6 +401,19 @@ uniform.
 **What it tests**:  upper anchor of the scaling sweep figure.  Confirms
 that the **R² → 0 regime** isn't just a uniform-specific quirk (different
 visual style) but a continuous extrapolation of the matched-K series.
+
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ∈ [0, 0.15]，接近 uniform floor。
+
+若 **R² > 0.3**（仍残留 GPS code，未到 floor）：
+- 怀疑 substitution 在 K=192 还没完成 → 多训 50M 帧再 probe，看 R² 是否下降
+- 或者 6×6 encoder output 的 substitution 比 uniform 的 8×8 慢 → 与 uniform 中间还有 K=224 这个空间
+- ❌ 不要直接 paper integrate（破坏 sweep 平滑性）
+- ✅ 跑 K=224 中间点确认是否 K=192 是 isolated outlier 还是真的需要 K ≥ 224 才达 floor；若是后者，paper 写"substitution completes around K ≈ 200 in our setup"
+
+若 **R² ≈ 0**（符合预期）但 σ 大：
+- σ > 0.5 是 rich-encoder 区典型 → 用 mean ± std 报告，不用单点
 
 ---
 
@@ -304,6 +448,23 @@ to seed=1 (peak around 50M frames, decay by 100-150M).
 This is the multi-seed condition with the **biggest paper-impact risk** —
 explicitly flag results to wxu.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：early-train R² ∈ [0.55, 0.75]，~150M 帧后 decay 到 floor。
+
+若 **decay 速度与 seed=1 显著不同**（>50% 时序差异）：
+- 这是 paper 最敏感的 multi-seed claim — §4.4 "decay-rate ordering uniform > foveated_learned > foveated"
+- 立刻收集 per-ckpt probe data（10/20/30/40/49 全跑）画 dual-seed 时间曲线
+- 若 ordering 在两 seed 间不稳定 → 主文 §4.4 关于 decay-rate 的 fine-grained sentence **删除**（这是 within-condition seed noise，不是 condition-level pattern）
+- 主文留 "encoder-richer agents lose GPS faster" 的 binary claim（uniform/foveated_learned vs blind/coarse），**删除** 三 rich-encoder condition 间相对快慢的 ordering
+- ❌ 不要给 ordering 加一个 "single-seed" footnote 然后保留 → reviewer 会 pinpoint
+- ✅ honest 删除 fine-grained ordering，保留 coarse-grained binary claim
+
+若 **early-train R² < 0.4**（弱于 seed=1 的 0.67）：
+- 检查 learned-gaze 是否收敛到合理位置 → 看 gaze trajectory
+- 若 gaze 退回 (0.5, 0.5) → 与 foveated_fix 等价，结果合理（两个 seed 都收敛到 center 在情理之中）
+- 若 gaze 收敛到不同位置但 R² 低 → 异常，跑 seed=3 + 收集 per-ckpt 看 substitution 时序
+
 ---
 
 ### Training 9: Foveated log-polar (`foveated_logpolar_gibson`) — F3 falsifiable
@@ -337,6 +498,27 @@ $$
 Wxu wrote the prediction down before training started so reviewers can see
 this is a real falsifiable test, not post-hoc.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ∈ [0.30, 0.65]，**falsifiable lower bound: 0.30**。
+
+若 **R² < 0.30**（mechanism falsified — 与 uniform 一样）：
+- ⚠️ 这是整篇 paper 的 falsification，**先**别 paper-rewrite，**先** 三步 sanity check：
+  1. **Implementation check**: 跑 `tests/test_torch_foveation.py` + 视觉检查 log-polar 输出图像（应有显著的 ρ-θ 网格 artifact，与 Gaussian blur 完全不一样）
+  2. **Encoder dim check**: 实测 encoder feature map shape — 预期 2×2，但若是 8×8（grid size 配错）→ 实际并未实现 spatial subsampling，直接重跑 with 正确 grid (n_rho=64, n_theta=64)
+  3. **Seed check**: 若 (1)+(2) 都对，跑 seed=2 confirm
+- 若三步都 confirm R² < 0.30 → **真 falsified**，按以下方式改 paper（不是 panic 重写）：
+  - §App E falsifiable section 留下原预测 + 实测 + 承认 falsified（这个 honest reporting 实际上**加分**而非减分 —— "我们提前写下预测后被推翻，说明 mechanism 是 falsifiable 的，需要更细致的 axis 描述"）
+  - §H1 主 mechanism 段落改写：把 "encoder spatial output dimensionality" 软化为 "encoder feature variety per step"（保留 mechanism 直觉但 admit 准确 axis 待定）
+  - propose 后续实验（直接 measure encoder feature variety vs spatial dim）
+- ❌ 不要 silently drop log-polar 段落假装没做过
+- ❌ 不要保留 "encoder spatial output is the trigger" claim 仅加 footnote 否认
+- ❌ 不要因为这一个 negative 就把 H1 主 claim 完全 rewrite —— H1 已被 7+ 收敛实验支持
+
+若 **R² > 0.65**（超出 coarse 的 0.78）：
+- 与 coarse 一致甚至更强 → mechanism 强版本被 confirm，integrate 顺利
+- 仍要 sanity check encoder feature map 实际 shape
+
 ---
 
 ### Training 10: Foveated v2 clean re-run (`foveated_v2_gibson`)
@@ -365,6 +547,26 @@ SPL within [0.72, 0.80].
   the clean ckpt becomes the canonical foveated number, paper figures get
   updated.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² 与 ckpt.36（NaN-bug 前）相差 ≤ 0.05；SPL 相差 ≤ 0.05。
+
+若 **R² 偏移 > 0.10**（尤其是从 ≈0 跳到 >0.3）：
+- NaN bug 是 load-bearing → 之前 paper 上 foveated 那条线**不可靠**
+- **必须**做 per-ckpt 序列对比：v2 的 ckpt.10/20/30/40/49 vs 原 buggy 的 ckpt.10/20/30/36，找 divergence point
+- 替换 paper 主表 + Fig 3 substitution dynamics 中的 foveated 线为 v2 数据
+- ❌ 不要 silently 用新数 不提 ckpt.36 → reproducibility 灾难，reviewer 会问"为什么这次不一样"
+- ✅ §5.5(ii) limitations + appendix dedicated section 解释 NaN-bug + v2 fix 的完整 timeline；明示 v2 数据替换 ckpt.36 数据，Fig 3 标注 "(from v2, NaN-fixed)"
+
+若 **SPL 偏移 > 0.05**（训练 stability 改变了）：
+- 怀疑 H100 vs V100 hardware artifact
+- 跑 sanity check：用同一个 ckpt 在 H100 和 V100 上做 forward pass，看 logits 是否 bit-exact
+- 若 hardware 一致但 SPL 仍偏 → 就是 NaN-fix 影响了 training dynamics（合理的，bug 修了行为变了）
+- paper 更新所有 foveated SPL number；尤其 §4.5 transplant、shortcut analysis 都要重做
+
+若 **R² 与 ckpt.36 一致**（符合预期）：
+- 写一句 "v2 confirms ckpt.36 numbers within ±0.05" + appendix 表格对比；ckpt.36 仍作 paper 主 ckpt 不动
+
 ---
 
 ## Tier 3 — Day 6-7 (4 trainings, foveation completeness; skip if running tight)
@@ -391,6 +593,21 @@ strength (σ=8).  A 4-point strength sweep (σ ∈ {2, 4, 8, 12, 20} with σ=4
 explicitly skipped, see below) gives a continuous knob into the H1
 substitution dynamics within the foveation family.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ∈ [0.3, 0.6]（mid-bottleneck）。
+
+若 **R² ≈ 0**（与 standard foveated 一样，σ=20 没能 push 到 bottleneck）：
+- 视觉检查 σ=20 输出（peripheral 是否真的高度模糊到看不出结构）
+- 若视觉看上去 OK，说明 Gaussian blur 这个 model class 即使到 σ=20 也保留太多 spatial info → **支持** "log-polar 必要" 的论述（与 T9 形成对照）
+- ❌ 不要 paper 里写 "stronger blur didn't help" 当孤立主 claim → 与 T9 log-polar 一起讨论才有解释力
+- ✅ §App E 写 σ-sweep flat 在 R²≈0 + log-polar at R²≈0.5 → 两实验 jointly 说明 "blur strength alone insufficient; spatial subsampling necessary"
+
+若 **R² > 0.7**（接近 coarse）：
+- σ=20 把 encoder 推到 1×1-like regime → 强支持 mechanism
+- 但要 sanity check：encoder feature map 实际维度是不是真的退化到 ~2×2
+- 与 K=64 的 R² ≈ 0.5（也是 ~2×2 encoder）对比，若一致 → 确认 encoder spatial output 是 axis（不论是通过 input res 还是 blur 实现）
+
 ---
 
 ### Training 12: Foveated σ=2 (`foveated_sigma2_gibson`)
@@ -412,6 +629,20 @@ uniform.
 σ=8 isn't an artifact of *some* peripheral blur — when blur is light, the
 condition reverts to uniform-like substitution.
 
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ∈ [-0.1, 0.2]（uniform-like floor）。
+
+若 **R² > 0.4**（弱 blur 居然 preserve GPS code，异常）：
+- 视觉检查 σ=2 输出（应非常接近 uniform）
+- 若看上去和 uniform 一样，R² 却差很多 → 实现错误（可能 σ=2 实际应用时被 clip / 误用），debug source code
+- 若视觉确实有差异 → 跑 seed=2 confirm；若一致 → 就算 σ=2 也足以触发 partial bottleneck，paper 改写 σ-sweep 描述
+- ❌ 不要 paper integrate 单点 anomaly
+- ✅ 实现 + seed=2 都 confirm 才动 paper
+
+若 **R² ≈ 0**（符合预期）：
+- 与 standard foveated R² ≈ 0 + uniform R² ≈ 0 一起，formed continuous floor → 支持 "Gaussian blur in this regime doesn't trigger bottleneck"
+
 ---
 
 ### Training 13: Foveated σ=12 (`foveated_sigma12_gibson`)
@@ -427,6 +658,20 @@ between standard (σ=8) and strong (σ=20).  Useful for the F1c monotonicity
 plot in App E.
 
 **Specific prediction**:  R²(GPS\|h₂) in $[0.1, 0.4]$.
+
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R² ∈ [0.1, 0.4]，介于 σ=8 和 σ=20 之间。
+
+若 **σ-sweep 非 monotonic**（σ=12 R² 高于 σ=20 或低于 σ=8，破坏 σ → R² 单调）：
+- 多 seed 验证（最少 σ=12 第二个 seed），看是否 seed-noise 导致
+- 若仍 non-monotonic → blur strength 不是连续 axis，可能某个 σ 范围有 phase transition / encoder collapse
+- ❌ 不要画 4 个点的 sweep figure 假装 monotonic（如把 σ=12 的 anomaly 隐藏在大 error bar 内）
+- ✅ 报 raw 4 点 + 多 seed std；若没 monotonic，appendix discuss 可能的 phase transition + propose 补 σ=10/14/16 拉密 sweep
+
+若 **R² ≈ 0**（提前到 floor）：
+- 与 σ=8 一致；说明 σ=12 没多 informative，但不 contradict mechanism
+- §App E 直接报 σ-sweep flat between σ=8..20 + log-polar 突变 → 强化 "blur 不够"
 
 ---
 
@@ -451,6 +696,21 @@ is at center, or *because* gaze is fixed.
 section — static-shifted vs.\ static-center vs.\ stochastic = three points
 on the gaze-mobility axis.  Without this, we can't claim "gaze location"
 and "gaze dynamics" are separable axes.
+
+#### 中文 — 不符合预期 investigation 协议
+
+预期：R²(GPS\|h₂) 与 standard foveated 相差 ≤ 0.15；SPL 相差 ≤ 0.05。
+
+若 **shifted 与 standard 显著不同**（gaze 位置影响 H1）：
+- 这意味着 gaze location 是 H1 的 secondary axis（不只是 dynamics 才影响）
+- 跑 multi-position 验证：在 (0.3, 0.5), (0.7, 0.5), (0.5, 0.3), (0.5, 0.7) 各跑 1 次（这些是 4 个 cardinal shift；每跑 ~2 天）
+- 若各位置都有差异 → gaze location 是 axis，§4.6 改写：H3 不只是 "dynamics"，也包括 "static location"
+- ❌ 不要把 "shifted = standard, gaze location 不重要" 直接简单结论 → 单 shift 位置不足以 generalize
+- ✅ multi-position 数据更 informative，§4.6 + appendix table 完整呈现
+
+若 **shifted ≈ standard**（符合预期）：
+- gaze location 对 H1 没影响，only dynamics 才会影响 → H3 narrative 正常 integrate
+- §4.6 写 "static-foveated, static-shifted, stochastic 三点对比，前两者一致 R²≈0，stochastic R²=X" → clean three-point H3 figure
 
 ---
 
@@ -505,7 +765,7 @@ python scripts/cluster/smoke_policy.py FoveatedStochasticGazePolicy
 ls $HABITAT_DATA/datasets/pointnav/gibson/v1/train_extra_large/content/ | wc -l   # Expect 411
 ls $HABITAT_DATA/datasets/pointnav/mp3d/v1/train/content/ | wc -l                   # Expect 61
 ls $HABITAT_DATA/datasets/pointnav/mp3d_gibson/v1/train/content/ | wc -l            # Expect 472
-# If any number is wrong, see docs/DATASET_SETUP.md.
+# If any number is wrong, see ../docs/DATASET_SETUP.md.
 ```
 
 If any of (1)–(5) fails, **do not launch anything** — ping wxu first.
@@ -615,9 +875,10 @@ That's the minimum credible set per our review-risk analysis.
 
 ## Quick links
 
-- Dataset setup: [docs/DATASET_SETUP.md](DATASET_SETUP.md)
-- Paper TeX: [docs/NeurIPS_2026/neurips_2026.tex](NeurIPS_2026/neurips_2026.tex)
-- Sleep log (wxu's autonomous overnight progress): [docs/NeurIPS_2026/SLEEP_LOG.md](NeurIPS_2026/SLEEP_LOG.md)
+- Dataset setup: [../docs/DATASET_SETUP.md](../docs/DATASET_SETUP.md)
+- Paper TeX: [../docs/NeurIPS_2026/neurips_2026.tex](../docs/NeurIPS_2026/neurips_2026.tex)
+- Sleep log (wxu's autonomous overnight progress): [../docs/NeurIPS_2026/SLEEP_LOG.md](../docs/NeurIPS_2026/SLEEP_LOG.md)
+- One-time cluster setup helper: [setup.md](setup.md)
 
 ---
 

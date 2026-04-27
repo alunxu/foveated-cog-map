@@ -62,7 +62,7 @@ fi
 
 if [ ! -f "$SSH_KEY" ]; then
     echo "ERROR: SSH key $SSH_KEY not found."
-    echo "See docs/hc_experiment_plan.md § 'How to ship trained checkpoints back to Izar' for setup."
+    echo "See experiments/hc_experiment_plan.md § 'How to ship trained checkpoints back to Izar' for setup."
     exit 1
 fi
 

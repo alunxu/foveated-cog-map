@@ -7,12 +7,12 @@ Self-contained experiment briefs.
 The 14-training plan that the friend's hc cluster runs is consolidated
 into a single comprehensive doc:
 
-→ **[docs/hc_experiment_plan.md](../docs/hc_experiment_plan.md)** —
+→ **[hc_experiment_plan.md](hc_experiment_plan.md)** —
    per-training motivation, prediction, and ship-back protocol.
 
 The earlier per-experiment briefs (`multiseed_robustness.md`,
 `encoder_capacity_scaling.md`, `foveation_*.md`) that lived here have
-been **deleted** as duplicates of `docs/hc_experiment_plan.md`.  Git
+been **deleted** as duplicates of `hc_experiment_plan.md`.  Git
 history retains them if you need to recover an old version.
 
 ## Compute split
@@ -46,6 +46,6 @@ For dataset-only details (Gibson + MP3D + merged layout) see
 
 If a new experiment is large enough to need its own brief (motivation +
 plan + integration), prefer adding a section to
-[`docs/hc_experiment_plan.md`](../docs/hc_experiment_plan.md) so the
+[`hc_experiment_plan.md`](../docs/hc_experiment_plan.md) so the
 friend has a single source of truth.  Standalone files in this directory
 are reserved for setup helpers and historical observation notes.
