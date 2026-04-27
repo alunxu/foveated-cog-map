@@ -137,30 +137,61 @@ Day 9     Final integration (wxu) + paper submit
 
 ## How to ship trained checkpoints back to Izar
 
-Once a training run hits 250M frames (or hits Day 8 partial), zip the
-final `latest.pth` + tensorboard dir and rsync to Izar. wxu will run
-the probing pipeline:
+The friend's hc cluster is separate from EPFL's Izar — there is no
+shared filesystem. Workflow: **friend rsyncs to Izar via SSH** using
+a deploy key that wxu issues.
+
+### One-time setup (~5 min)
+
+1. **On friend's cluster**, generate a fresh SSH keypair (no passphrase):
+    ```bash
+    ssh-keygen -t ed25519 -f ~/.ssh/id_izar_wxu_deploy -N ''
+    ```
+
+2. **Send the public key** (`~/.ssh/id_izar_wxu_deploy.pub`, ~80 chars
+   one line) to wxu via Slack / email / whatever you have.
+
+3. **wxu** appends it to Izar's authorized_keys:
+    ```bash
+    # wxu side (on his laptop)
+    ssh izar 'echo "<friend-pubkey-line>" >> ~/.ssh/authorized_keys'
+    ```
+
+4. **Test** from friend's cluster:
+    ```bash
+    ssh -i ~/.ssh/id_izar_wxu_deploy wxu@izar.epfl.ch 'echo connected; date'
+    ```
+   Should print `connected` + current EPFL time.
+
+### Per-run shipping
+
+After a training hits 250M frames (or 8-day partial):
 
 ```bash
-# On hc cluster, for each completed run:
-RUN_NAME=foveated_stochastic_gibson      # example
-CKPT_DIR=/path/to/hc/checkpoints/${RUN_NAME}
-
-# Just send the latest checkpoint + the last few intermediate ones for
-# across-checkpoint probing (we found those very informative — see
-# fig/fig3_substitution_dynamics.pdf).
-rsync -avz \
-    "${CKPT_DIR}/latest.pth" \
-    "${CKPT_DIR}/ckpt.10.pth" \
-    "${CKPT_DIR}/ckpt.20.pth" \
-    "${CKPT_DIR}/ckpt.30.pth" \
-    "${CKPT_DIR}/ckpt.49.pth" \
-    "${CKPT_DIR}/tb/" \
-    izar.epfl.ch:/scratch/izar/wxu/habitat_checkpoints/${RUN_NAME}/
+# Convenience wrapper — see scripts/cluster/ship_to_izar.sh
+bash scripts/cluster/ship_to_izar.sh foveated_stochastic_gibson
 ```
 
-(Replace the `izar.epfl.ch:...` part with whatever ssh alias / path
-your cluster uses to reach Izar. wxu can adapt.)
+This rsyncs:
+- `latest.pth` (final converged ckpt)
+- `ckpt.10/20/30/40/49.pth` (intermediate, for substitution-dynamics figure)
+- `tb/` (training curves, used in §4.1 figure)
+
+into `wxu@izar:/scratch/izar/wxu/habitat_checkpoints/<RUN_NAME>/`.
+
+Run the wrapper once per finished training. wxu's `probe_hc_arrival.sh`
+on Izar will detect the new files and auto-submit the probing pipeline.
+
+### Fallback if SSH from friend's cluster to Izar is blocked
+
+If outbound port 22 is firewalled (rare for academic clusters but
+possible), use **rclone with a shared cloud bucket**:
+
+1. Set up a shared Google Drive folder `cs503_paper_handoff/`
+2. On friend's cluster: `rclone copy <ckpt-dir>/ shared:cs503_paper/<RUN_NAME>/`
+3. wxu on Izar: `rclone copy shared:cs503_paper/ /scratch/izar/wxu/habitat_checkpoints/`
+
+3.5 GB total transfer for all 14 runs — comfortable for any method.
 
 ---
 
