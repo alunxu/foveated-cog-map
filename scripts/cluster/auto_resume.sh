@@ -20,21 +20,13 @@ set -e
 # Map: checkpoint-folder-name → "submit-script-args"
 # These are all training runs we want to keep alive until convergence.
 declare -A RESUME_MAP=(
-    # Multi-seed (seed=2) runs
+    # Per 2026-04-27 strategy: all foveation variants + bld/mtc/fov_lrn
+    # multi-seed moved to hc cluster (4× H100 + 1× H200, ~2-3 days each).
+    # Izar only finishes uni-s2 / fov-s2 — the two multi-seed runs that
+    # were already >50% complete on Izar; restarting on hc would waste
+    # their progress (140M / 130M frames already trained).
     ["uniform_gibson_seed2"]="seeded pointnav/ddppo_pointnav_uniform_gibson 2"
     ["foveated_gibson_seed2"]="seeded pointnav/ddppo_pointnav_foveated_gibson 2"
-    ["blind_gibson_seed2"]="seeded pointnav/ddppo_pointnav_blind_gibson 2"
-    ["matched_gibson_seed2"]="seeded pointnav/ddppo_pointnav_matched_gibson 2"
-    ["foveated_learned_gibson_seed2"]="seeded pointnav/ddppo_pointnav_foveated_learned_gibson 2"
-    # Foveation variants (single seed)
-    ["foveated_v2_gibson"]="plain pointnav/ddppo_pointnav_foveated_v2_gibson"
-    ["foveated_strong_gibson"]="plain pointnav/ddppo_pointnav_foveated_strong_gibson"
-    ["foveated_logpolar_gibson"]="plain pointnav/ddppo_pointnav_foveated_logpolar_gibson"
-    ["foveated_sigma2_gibson"]="plain pointnav/ddppo_pointnav_foveated_sigma2_gibson"
-    ["foveated_sigma4_gibson"]="plain pointnav/ddppo_pointnav_foveated_sigma4_gibson"
-    ["foveated_sigma12_gibson"]="plain pointnav/ddppo_pointnav_foveated_sigma12_gibson"
-    ["foveated_shifted_gibson"]="plain pointnav/ddppo_pointnav_foveated_shifted_gibson"
-    ["foveated_stochastic_gibson"]="plain pointnav/ddppo_pointnav_foveated_stochastic_gibson"
 )
 
 CKPT_BASE="/scratch/izar/wxu/habitat_checkpoints"
