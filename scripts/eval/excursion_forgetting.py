@@ -226,7 +226,10 @@ def main() -> None:
     print(f"Sampled {n_pool} candidate episodes (target valid: {args.episodes})")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    policy, num_layers, hidden_size = load_policy(config, args.ckpt, device)
+    policy, hidden_size, num_layers, is_lstm = load_policy(
+        config, env, str(args.ckpt), device,
+    )
+    print(f"  hidden={hidden_size}, layers={num_layers}, LSTM={is_lstm}")
     policy.eval()
 
     def _pin(ep):
