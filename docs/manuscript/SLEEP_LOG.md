@@ -1,5 +1,45 @@
 # Sleep Log — autonomous overnight work 2026-04-27 ~08:15 onwards
 
+### Tick 2026-04-28 03:40 (overnight RCP setup attempt — STUCK at first env.step)
+
+**Plan**: rsync Izar env → RCP, run smoke + Tier 1 trainings on H200.
+
+**What worked**:
+- ✓ rsync from Izar to RCP /scratch (~6.6GB env + 37GB habitat-lab + 18MB project) at ~25 MB/s
+- ✓ MP3D scenes already on RCP via habitat-lab-izar/data/ rsync (21GB)
+- ✓ habitat env imports clean on H200 pod (libGL, libegl, libopengl, glib via conda-forge)
+- ✓ Editable-finder paths patched from /home/wxu/ → /scratch/wxu/ paths
+- ✓ Symlinks /home/wxu/{habitat-lab,cs503-project} → /scratch versions (for rsync'd metadata)
+- ✓ mp3d_gibson restored to 472 scenes (411 gibson + 61 mp3d) matching Izar
+- ✓ chmod 777 on hydra_runs / checkpoints / train.log so smoke pod (uid nobody) can write
+- ✓ Configs symlinked into habitat-baselines/config/pointnav/ for hydra discovery
+- ✓ EGL_DEVICE_ID=0 + __EGL_VENDOR_LIBRARY_FILENAMES set; EGL binds "found 1 EGL device, choosing for CUDA 0"
+- ✓ Trainer initializes: dataset, sim, task, agent params 5,585,925 all logged
+
+**What's stuck**: every smoke (smoke11→smoke25) crashes at the **first env.step() in rollout collection**. Sim worker (ForkServerProcess-1) dies silently with EOFError / BrokenPipe. No habitat-sim error captured. Tried `num_environments=1`, still same.
+
+**Hypothesis**: container/habitat-sim incompatibility around EGL context post-fork. On Izar bare-metal this works because system has nvidia-driver mounted at OS level. RCP container has nvidia-container-toolkit injected drivers but EGL context after fork() may not bind back to GPU properly.
+
+**Tried** (all failed same way):
+- Image: gemma-pipeline:v3 → cuda:12.1.0-devel (clean)
+- Conda env: fresh pip install → rsync from Izar
+- Multi-process: num_envs=2 → num_envs=1
+- Patches: protobuf 3.20→4.25→6.33, pillow 11.3→10.4, scipy 1.13→1.12
+
+**Recommended next steps for morning**:
+1. **Build custom Docker image** based on cuda:12.1-devel + apt install libglvnd libnvidia-container preinstalled + rebuild habitat-sim from source (1-2h work, but should solve once and for all)
+2. **Or**: switch to Izar 4-V100 multi-GPU plan for tonight's blind/matched seed=2 trainings (known to work). Wait for friend's hc cluster + RCP custom image for the rest.
+3. **Or**: probe whether RCP admin has a habitat-ready image already in registry.rcp.epfl.ch.
+
+**Izar status (still good)**:
+- uni-s2 / fov-s2 trainings continuing (24h+ each)
+- scene_occ_p2 stage 1 progressing
+- WJ-A / WJ-D paragraph drafts ready, awaiting morning OK
+- WJ-F NPZs landed, analyzer pending
+
+---
+
+
 **Plan**: 6-hour autonomous experiment-analysis-interpretation-writing loop while user sleeps.
 
 User-set rules:
