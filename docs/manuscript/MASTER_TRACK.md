@@ -10,7 +10,13 @@ claims, figure freshness, open questions, decision log.
 - M3: 411 Gibson + 61 MP3D scene counts — datasets not on local FS to verify; standard Habitat numbers but worth a one-time cross-check
 - M4: 32-d sensor + 32-d action embedding — DD-PPO Wijmans-default but worth a one-time code grep when the relevant module is loaded
 - M5: 20 scenes × 10 pairs shortcut — direct number not found in eval scripts; should verify
-- §1 cited PDFs (wirth2017gaze, rolls2024why, geva2016remapping, kupers2014blind, ramakrishnan2025space) NOT yet downloaded to literature/; per "read before claim" rule should be done in next ≥30-min audit window
+
+**§1 cited PDFs verified (commit 9c354e3):**
+- ✅ Ramakrishnan2025 SPACE — supports VLM-fail claim ("near chance level on classic animal-cognition tests")
+- ✅ Wirth2017 gaze — supports place–view–action joint coding under foveation ("hippocampal activity was best fit by a fine-grained state space comprising current position, view, and action contexts")
+- ✅ Rolls2024 view cells — supports primates-have-view-cells-because-of-foveation claim
+- ⚠️ FIXED: GevaSagiv2016 — paper actually shows non-overlapping populations only in SUBICULUM (16/27 cells) while CA1 mostly does place-field shifts. Reworded §1 ¶2 from "non-overlapping hippocampal populations" → "modality-dependent hippocampal remapping (modality-specific subicular populations + CA1 place-field shifts)".
+- ⚠️ FIXED: Kupers2014blind — review focuses on visual cortex cross-modal recruitment, NOT specifically hippocampal coupling. Added Fortin2008blind ("Wayfinding in the blind: larger hippocampal volume and supranormal spatial navigation") for the hippocampal-specific claim. Kept Kupers as broader cross-modal context citation. Fixed at both §1 ¶2 and §5.2 H1 bio precedent ¶.
 Update this file when state changes — do NOT rely on memory.
 
 ---
