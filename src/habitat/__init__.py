@@ -20,10 +20,13 @@ the global Habitat / habitat-baselines registries:
                                         foveated_learned_policy.py)
 """
 
-# Import order matters: sensors first (so the policy modules can refer to
-# them), then the base Wijmans policy, then the foveated extensions. Each
-# import has a registration side effect.
+# Import order matters: NaN-safe measure patches FIRST (must run before any
+# task construction so the original Habitat classes get monkey-patched);
+# then sensors (so the policy modules can refer to them), then the base
+# Wijmans policy, then the foveated extensions. Each import has a
+# registration side effect.
 
+from src.habitat import nan_safe_measures  # noqa: F401  (patches DistanceToGoal{,Reward} for off-navmesh inf)
 from src.habitat import wijmans_sensors  # noqa: F401  (registers sensors)
 from src.habitat.wijmans_policy import WijmansPointNavPolicy  # noqa: F401
 from src.habitat.foveated_policy import FoveatedWijmansPolicy  # noqa: F401
