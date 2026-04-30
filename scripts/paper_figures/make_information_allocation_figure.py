@@ -1,17 +1,18 @@
 """
-Information conservation figure: linear vs MLP probe per cond.
+Information allocation figure: linear vs MLP probe per cond.
 
 Linear-probe GPS R² varies wildly across conditions (-1.08 to +0.95) —
 the bandwidth--allocation tradeoff captured by Figure 2. MLP-probe GPS
-R² is far more uniform (+0.48 to +0.95) — total spatial information is
-approximately preserved across conditions; what differs is the encoding
-*format*. Bottleneck conditions encode position linearly (capacity
-allocated to direct readout direction); rich-encoder conditions encode
-it non-linearly (capacity allocated to visual features, position
-recoverable only through combinatorial readout).
+R² compresses this range (+0.48 to +0.95) — position information is
+approximately preserved by non-linear readout in rich-encoder conditions
+even when linear readability collapses. We do NOT claim strict
+information conservation: MINE-estimated total I(h; pos) still drops
+~1.5× from blind (4.6 bits) to uniform (2.9 bits). The figure shows
+allocation across linear vs non-linear readout directions; the MINE
+appendix gives the total-info nat-scale anchor.
 
 Reads:  /tmp/mlp_probe_proper.json
-Writes: docs/manuscript/fig/fig_information_conservation.pdf
+Writes: docs/manuscript/fig/fig_information_allocation.pdf
 """
 from __future__ import annotations
 import argparse

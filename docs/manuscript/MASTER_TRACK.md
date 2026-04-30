@@ -3,7 +3,7 @@
 Single source of truth for: cluster jobs, experiment status, paper
 claims, figure freshness, open questions, decision log.
 
-**Last updated**: 2026-04-30 02:50 (cog sci/neuro pivot: paper reframed for cog sci/neuro reviewer audience; Skaggs place-cell signature + comparative-cognition framing landed in §5.2; LOSO scene-invariance now primary mechanism for §4.2; multi-seed Table 2; systematic convergence criterion in §3; 4 new appendix supplementary figures; foveated seed0pre fine-tune to 250M-effective in progress (RCP 4-GPU); logpolar resubmitted post-SIGSEGV).
+**Last updated**: 2026-04-30 03:42 (routine /loop check: 3 pods auto-restarted at ~03:25-26 — foveated-seed0pre + matched-s1 + uniform-s1; logpolar untouched at 3h57m runtime. Foveated-seed0pre 23.9M/70M (~34%, ETA ~10h). Foveated SPL slid 0.928→0.846 in 13 min post-restart (rolling-window settling vs. genuine regression — watching). Matched & foveated `distance_to_goal: nan` in metric averages (success / SPL still real). WJ-A v3 K-points already exist (Apr 28); per §6 decision, NO partial figure (`--reset-every K` confound). WJ-D bug already integrated. WJ-C scene_occ decoder still not trained.).
 Update this file when state changes — do NOT rely on memory.
 
 ---
