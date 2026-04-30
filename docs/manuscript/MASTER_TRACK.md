@@ -3,7 +3,14 @@
 Single source of truth for: cluster jobs, experiment status, paper
 claims, figure freshness, open questions, decision log.
 
-**Last updated**: 2026-04-30 03:42 (routine /loop check: 3 pods auto-restarted at ~03:25-26 — foveated-seed0pre + matched-s1 + uniform-s1; logpolar untouched at 3h57m runtime. Foveated-seed0pre 23.9M/70M (~34%, ETA ~10h). Foveated SPL slid 0.928→0.846 in 13 min post-restart (rolling-window settling vs. genuine regression — watching). Matched & foveated `distance_to_goal: nan` in metric averages (success / SPL still real). WJ-A v3 K-points already exist (Apr 28); per §6 decision, NO partial figure (`--reset-every K` confound). WJ-D bug already integrated. WJ-C scene_occ decoder still not trained.).
+**Last updated**: 2026-04-30 04:05 (paper §1+§2+§3 audit pass committed; 3 commits. §1: dropped "information conservation" overclaim across 8 sites — abstract/Fig 4/§4.3/Table 2/§5.1 synthesis/App; renamed `fig:information_conservation` → `fig:information_allocation` + PDF + script; softened 6 intro overclaims (driven-by causal language, gradient-routing mechanism, "direct biological analog", etc.) — see commit fd7a510. §2: fixed "four lines" → "five" + softened "tests it" → "provides controlled analog" + "argues against" → "is one extreme on continuum" — commit 5392c01. §3: fixed lead paragraph wording to match new abstract; verified Williams shape metric implementation exists, Ridge α=10 default, n=500 episodes, n=150 transplant ep/pair, foveation ecc²·σ_max blur. RCP routine check at 03:42 found pods stable (NaN-free weights verified across all 4 latest.pth). Next loop tick at 06:28.).
+
+**Audit-flagged TODO items NOT touched in this pass:**
+- M2: 100M same-frame anchor numbers in §3 (linear R² = 0.96/0.84/0.71/0.23 vs ckpt20 data 0.956/0.880/0.784/0.025 — uniform 0.025 vs claimed 0.23 differs ~10×, may correspond to ckpt30=0.195 instead). Need to verify which exact ckpt = 100M for each cond.
+- M3: 411 Gibson + 61 MP3D scene counts — datasets not on local FS to verify; standard Habitat numbers but worth a one-time cross-check
+- M4: 32-d sensor + 32-d action embedding — DD-PPO Wijmans-default but worth a one-time code grep when the relevant module is loaded
+- M5: 20 scenes × 10 pairs shortcut — direct number not found in eval scripts; should verify
+- §1 cited PDFs (wirth2017gaze, rolls2024why, geva2016remapping, kupers2014blind, ramakrishnan2025space) NOT yet downloaded to literature/; per "read before claim" rule should be done in next ≥30-min audit window
 Update this file when state changes — do NOT rely on memory.
 
 ---
