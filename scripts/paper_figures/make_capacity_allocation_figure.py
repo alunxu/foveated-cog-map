@@ -13,7 +13,7 @@ prediction confirmation: encoder-spatial-output mechanism predicts it
 should fall in the bottleneck regime, and it does (+0.808 ± 0.048 at
 60M frames, comparable to coarse at +0.78).
 
-Foveated and uniform share encoder spatial dim (8×8) but differ
+Foveated and uniform share encoder spatial dim (4×4) but differ
 substantially in y (+0.06 vs -0.31), showing the design space is not
 1-D — channel-level information density (blurred vs unblurred) is a
 second axis.
@@ -152,7 +152,7 @@ def main():
     # Axes
     ax.set_xticks([0, 2, 6.35])
     ax.set_xticklabels(["none\n(blind)", "$1{\\times}1$\n(coarse)",
-                        "$8{\\times}8$\n(foveated /\nuniform)"])
+                        "$4{\\times}4$\n(foveated /\nuniform)"])
     ax.set_xlabel("Encoder spatial output (cells)", fontsize=12, fontweight="bold")
     ax.set_ylabel("Top-layer $h_2$ linear GPS $R^2$\n(5-fold CV; converged ckpt)",
                   fontsize=12, fontweight="bold")

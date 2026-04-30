@@ -2,21 +2,19 @@
 Foveated PointNav policy for Habitat DD-PPO.
 
 Combines the Wijmans-faithful sensor stack (g, GPS, compass, close-to-goal
-indicator) with foveated visual perception and a learned gaze controller.
+indicator) with foveated visual perception at a FIXED CENTER GAZE.
 
 Key design:
   - The agent receives the same Wijmans sensors as the blind / uniform /
     matched conditions, so the only varied factor across the four conditions
     is the structure of the visual input.
   - Foveation is applied to RGB observations BEFORE the ResNet encoder.
-  - Gaze direction is decoded from the PREVIOUS LSTM hidden state by a small
-    MLP, so the agent "decides where to look" based on its memory, then
-    processes the foveated view.
-  - Gaze is deterministic given the hidden state (no separate action / entropy
-    bonus). Gradients flow end-to-end through the foveation transform:
-    navigation loss → LSTM → gaze decoder → foveation → visual features.
-
-Member C is responsible for this module.
+  - Gaze is HARDCODED to image centre (0.5, 0.5). A learned-gaze variant
+    was originally planned (a small MLP from the previous LSTM hidden state
+    decoding gaze location) but disabled here due to a shape mismatch
+    between act() and evaluate_actions() under habitat-baselines' batched-
+    over-time RNN inputs. See FoveatedLearnedGazePolicy in
+    foveated_learned_policy.py for a separate learned-gaze experiment.
 """
 
 from collections import OrderedDict
