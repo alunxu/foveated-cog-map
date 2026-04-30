@@ -126,17 +126,12 @@ def main() -> None:
     fov_learned = foveated(img, 0.49, 0.62, sigma_max=8.0)
     fov_learned_marked = add_gaze_marker(fov_learned, 0.49, 0.62,
                                           color=(120, 180, 255))
-    save_panel(fov_learned_marked, "setup_foveated_learned")
 
-    # blind: keep as-is (existing schematic in fig_blind.png is informative)
-    # We just re-export with consistent border + sizing for visual
-    # parity with the photo panels.
-    blind_src = OUT_DIR / "fig_blind.png"
-    if blind_src.exists():
-        blind = np.array(Image.open(blind_src).convert("RGB"))
-        save_panel(blind, "setup_blind")
-    else:
-        print("WARN: fig_blind.png missing, skipping setup_blind.")
+    # blind: pure black panel — Blind has no visual input. The thumbnail
+    # is a solid black RGB array matching the dimensions of the other
+    # condition panels, with the standard border applied by save_panel.
+    black = np.zeros_like(img)
+    save_panel(black, "setup_blind")
 
 
 if __name__ == "__main__":
