@@ -3,7 +3,7 @@
 Single source of truth for: cluster jobs, experiment status, paper
 claims, figure freshness, open questions, decision log.
 
-**Last updated**: 2026-04-30 04:05 (paper §1+§2+§3 audit pass committed; 3 commits. §1: dropped "information conservation" overclaim across 8 sites — abstract/Fig 4/§4.3/Table 2/§5.1 synthesis/App; renamed `fig:information_conservation` → `fig:information_allocation` + PDF + script; softened 6 intro overclaims (driven-by causal language, gradient-routing mechanism, "direct biological analog", etc.) — see commit fd7a510. §2: fixed "four lines" → "five" + softened "tests it" → "provides controlled analog" + "argues against" → "is one extreme on continuum" — commit 5392c01. §3: fixed lead paragraph wording to match new abstract; verified Williams shape metric implementation exists, Ridge α=10 default, n=500 episodes, n=150 transplant ep/pair, foveation ecc²·σ_max blur. RCP routine check at 03:42 found pods stable (NaN-free weights verified across all 4 latest.pth). Next loop tick at 06:28.).
+**Last updated**: 2026-04-30 05:30 (Fig 1 forced to top of page 2 by relocating figure source between §1 P2 bio-precedent and P3a literature-gap with `[t]` placement — verified via pdftotext: page 2 leads with ``(A) Training Architecture'' + ``(B) Memory Analysis''. Added §5.3.2 ``Epstein cog-map engagement — relational/topological analyses (PLANNED post-retrain)'' with detailed designs for EM1 hierarchical scene clustering, EM2 same/diff-scene pair classifier, EM3 topological reachability probe, EM4 graph reconstruction (deferred). Per-analysis: goal, inputs, procedure, output, acceptance criteria (compelling vs null), risk/contingency. Decision: WAIT for unified-retrain h₂ NPZs; pre-build EM1/EM2/EM3 scripts (~1h) while waiting. Earlier today: paper §1+§2+§3 audit pass committed; 3 commits. §1: dropped "information conservation" overclaim across 8 sites — abstract/Fig 4/§4.3/Table 2/§5.1 synthesis/App; renamed `fig:information_conservation` → `fig:information_allocation` + PDF + script; softened 6 intro overclaims. §2: fixed "four lines" → "five" + softened "tests it" → "provides controlled analog" + "argues against" → "is one extreme on continuum". §3: fixed lead paragraph wording to match new abstract.
 
 **Audit-flagged TODO items NOT touched in this pass:**
 - M2: 100M same-frame anchor numbers in §3 (linear R² = 0.96/0.84/0.71/0.23 vs ckpt20 data 0.956/0.880/0.784/0.025 — uniform 0.025 vs claimed 0.23 differs ~10×, may correspond to ckpt30=0.195 instead). Need to verify which exact ckpt = 100M for each cond.
@@ -214,6 +214,152 @@ The paper is being repositioned for a cog-sci / neuroscience reviewer audience t
 | C2 | SR-eigenmap probe (compute empirical successor matrix; check $h_t$ aligns with eigenbasis) | 1.5d | Tier 3 | Stronger SR connection. |
 | G3 | Topological data analysis (persistent homology Betti numbers) | 2d | Tier 3 (risky/cool) | Curto-Itskov style; bottleneck $\to$ clean room-topology Betti, rich-encoder $\to$ noisy. |
 | D3 | Partial information decomposition (Williams-Beer) | 2d | Tier 3 | Sophisticated; decomposes (encoder, memory) $\to$ position into unique / redundant / synergistic. |
+
+### 5.3.2 Epstein cog-map engagement — relational / topological analyses (PLANNED post-retrain)
+
+**Why this section exists**: §1 footnote currently says "Full hierarchical/topological-graph analyses are left for future work" — engaging Epstein 2017's "relational/hierarchical" cognitive-map definition only via LOSO + predictive-horizon. If a quick-win (EM1+EM2) lands compellingly, that footnote becomes a Methods/Results paragraph with positive evidence rather than a hedge. Decision (2026-04-30): WAIT for unified-retrain h₂ NPZs to land before running, since pre-retrain checkpoints have known issues (foveated NaN-bug, varying frame counts, hp inconsistency). Quick-win EM1+EM2 then takes ~3h compute on clean data.
+
+**Order of execution post-retrain**: EM1 (hierarchical clustering) → EM2 (same/diff scene classifier) → if both compelling, integrate into §4 Results as new subsection "Relational structure of the position code" → if time permits, EM3 (topological probe) → EM4 (graph reconstruction) deferred to journal version.
+
+| Code | Analysis | Compute | Total time (incl. code+plot) | Tier | Engages |
+|---|---|---|---|---|---|
+| **EM1** | Hierarchical scene clustering of $\mathbf{h}_2$ | ~10 min CPU | ~1–2h | Quick-win | Relational binding (place→context) |
+| **EM2** | Same-scene vs diff-scene pair classifier from $\mathbf{h}_2$ | ~20 min CPU | ~1–2h | Quick-win | Relational discriminability |
+| **EM3** | Topological reachability probe (within-K-step) | ~30–60 min/cond × 5 | ~3–5h | Mid-add | Graph topology beyond metric |
+| **EM4** | Full navmesh graph reconstruction from $\mathbf{h}_2$ | ~1–2h/cond × 5 | ~6–12h | Full / journal | Hierarchical map structure |
+
+---
+
+#### EM1 — Hierarchical scene clustering of $\mathbf{h}_2$
+
+**Goal**: Test whether the policy-readable hidden state organises by scene (relational/contextual binding) vs by metric position alone. A rich-encoder agent that "uses visual landmarks as anchors" should cluster strongly by scene; a bottleneck agent that integrates GPS abstractly should cluster more weakly by scene (and more strongly by metric coordinate).
+
+**Engages** Epstein 2017's "relational" axis: scene-conditional structure = the map binds local geometry to scene-level context.
+
+**Inputs** (per condition):
+- $\mathbf{h}_2$ pooled across $n=500$ Gibson held-out episodes (post-retrain NPZs at `/scratch/izar/wxu/probing_data/<cond>_det.npz`).
+- Scene IDs per timestep (already saved alongside h₂ in same NPZ, key `scene_id` or `scene`).
+- ~50–100 unique Gibson held-out scenes expected.
+
+**Procedure**:
+1. Subsample 5000 timesteps per condition (stratified by scene to avoid scene-frequency bias; min 20/scene).
+2. Standardise each $\mathbf{h}_2$ feature (zero-mean, unit-variance) within condition to remove scale differences from the clustering.
+3. Compute pairwise cosine + Euclidean distance matrices.
+4. Run agglomerative clustering (Ward linkage, sklearn `AgglomerativeClustering`) for $k \in \{n_\text{scenes}/2, n_\text{scenes}, 2 n_\text{scenes}\}$.
+5. Evaluate: ARI (adjusted rand index) and AMI (adjusted mutual info) between cluster labels and ground-truth scene labels.
+6. Report per condition: ARI(scene), ARI(scene) at matched cluster count, dendrogram cophenetic correlation.
+7. Repeat under shuffle null (shuffle scene labels) — report selectivity gap (real – shuffled).
+
+**Output**:
+- Table: 5 conditions × {ARI(scene), AMI(scene), gap-vs-null}; tucked into App or new Results subsection.
+- Figure: dendrograms colour-coded by scene for blind vs uniform side-by-side (visual). Scene-labelled t-SNE companion (we already have t-SNE in App).
+
+**Reuse**: `scripts/probing/cluster_quality.py` already does silhouette + 1-NN purity by *condition* — extend it to cluster by *scene*. New script: `scripts/probing/scene_clustering.py`. <50 LOC.
+
+**Acceptance criterion (compelling)**:
+- Significant condition-ranking on ARI(scene): rich-encoder ≥ 2× bottleneck ARI, with shuffle-null gap > 0.1 in rich-encoder. → Promote to §4.6 Boundaries new paragraph "Rich encoders bind position to scene context" + integrate Epstein footnote → in-text engagement.
+- ARI(scene) ranking aligns with LOSO ranking from §4.6 (cross-validation: LOSO already shows scene-conditional rich-encoder code).
+
+**Acceptance criterion (null)**:
+- Conditions indistinguishable on ARI(scene), or ranking inverted vs LOSO. → Keep footnote as hedge; do NOT integrate. Note in App as "scene clustering ambiguous; LOSO is the cleaner relational test".
+
+**Risk**: pooled h₂ across 500 episodes may have within-scene clusters dominated by episode-trajectory geometry rather than scene identity. Mitigation: subsample 1 timestep per episode before pooling to break trajectory autocorrelation.
+
+---
+
+#### EM2 — Same-scene vs different-scene pair classifier
+
+**Goal**: Operationalise the relational claim as a binary classification: given two hidden states, can a simple model decide whether they came from the same scene? Cleaner reviewer-facing version of EM1 because it returns one number (AUC) per condition.
+
+**Engages**: Same Epstein "relational" axis as EM1, with crisper statistical readout.
+
+**Inputs**: Same NPZs as EM1.
+
+**Procedure**:
+1. Sample $N=10000$ pairs per condition: 50% same-scene, 50% different-scene (within-scene pairs sampled across different episodes when possible to avoid trajectory leakage).
+2. For each pair $(\mathbf{h}_i, \mathbf{h}_j)$: compute pair representation $\mathbf{f}_{ij} = [|\mathbf{h}_i - \mathbf{h}_j|, \mathbf{h}_i \odot \mathbf{h}_j]$ (concatenate abs-diff and Hadamard product, standard pair-encoding for Siamese models).
+3. Fit logistic regression on $\mathbf{f}_{ij} \to$ {same, diff} with 5-fold CV stratified by scene-pair identity.
+4. Report: per-condition AUC, accuracy at threshold 0.5, calibration plot.
+5. Baseline: shuffle-scene-label null; report AUC gap vs null.
+
+**Output**:
+- Table: 5 conditions × {AUC, AUC – null}.
+- Figure: ROC curves overlaid (1 panel, 5 lines).
+
+**Reuse**: New script `scripts/probing/scene_pair_classifier.py`, ~80 LOC. Reuses sklearn `LogisticRegression` + `roc_auc_score`.
+
+**Acceptance criterion (compelling)**:
+- Rich-encoder AUC ≥ 0.85 vs bottleneck AUC ≤ 0.65, with null-gap ≥ 0.3. → Integrate as a one-paragraph "scene-binding" subsubsection alongside LOSO with EM1. Updates Epstein footnote to a positive in-text claim.
+
+**Acceptance criterion (null)**:
+- AUC clusters tightly across conditions (e.g., all in [0.7, 0.85]). → Footnote stays hedged; report negative result in App.
+
+**Risk**: AUC could be inflated by trivial trajectory leakage if pairs from the same episode dominate within-scene class. Mitigation: enforce different-episode constraint for within-scene pairs.
+
+---
+
+#### EM3 — Topological reachability probe
+
+**Goal**: Decode "is state $s'$ reachable from state $s$ within $K$ navmesh steps?" from $(\mathbf{h}_s, \mathbf{h}_{s'})$ pairs. Tests whether $\mathbf{h}_2$ encodes graph topology (reachability/connectivity), not just metric distance.
+
+**Engages**: Stachenfeld 2017 successor-representation predictive map + Epstein "topological" axis. Tighter than predictive-horizon (Appendix~\ref{app:predictive_horizon}, current) because it decouples reachability from raw metric distance.
+
+**Inputs**:
+- h₂ pooled over Gibson held-out episodes (post-retrain).
+- Habitat navmesh per scene (ground-truth shortest-path distance via `pathfinder.find_path(s, s')`).
+- $K \in \{5, 10, 20\}$ step thresholds.
+
+**Procedure**:
+1. For each scene, sample pairs $(s_i, s_j)$ from the same scene at varying ground-truth navmesh-step distance.
+2. Label: $y_{ij} = 1$ if $d_\text{navmesh}(s_i, s_j) \leq K$; else $0$. Stratify pair sampling so 50% reachable, 50% not, balanced across $d_\text{navmesh}$ bins to avoid the trivial "Euclidean distance proxies for reachability" shortcut.
+3. **Critical control**: Also sample pairs with the same Euclidean distance distribution but different reachability (e.g., across-wall pairs with low Euclidean distance but high navmesh distance). The probe must differentiate these → tests topology beyond metric.
+4. Train MLP probe (2-layer, hidden 256) on pair representation $\mathbf{f}_{ij}$ → $P(y=1)$. Episode-level 5-fold CV.
+5. Report per condition × $K$: AUC, AUC on the across-wall control set, AUC vs Euclidean-distance baseline (logistic regression on $\|\mathbf{p}_i - \mathbf{p}_j\|$).
+
+**Output**:
+- Table: 5 conditions × 3 K-thresholds × {AUC, AUC-control, AUC-vs-Euclidean-baseline}.
+- Figure: bar chart per condition, K=10; control set vs main set.
+
+**Reuse**: New script `scripts/probing/topological_probe.py`. Needs habitat navmesh access — ~150 LOC including pair sampling. Estimated ~30–60 min/condition (5 condition × 3 K = 15 fits at 2 min each + pair generation).
+
+**Acceptance criterion (compelling)**:
+- Rich-encoder AUC > Euclidean-baseline AUC by ≥ 0.1 on the across-wall control set in at least one condition. → Promote to "agent encodes navigable topology, not just Euclidean position" claim, integrate into §4 Results.
+
+**Acceptance criterion (null)**:
+- All conditions perform at Euclidean-baseline level on across-wall controls. → Honest negative result in App; supports "linear-readable position" framing without overclaiming topological structure.
+
+**Risk** (high):
+- Habitat navmesh may not align with the agent's actually-traversed graph (agents can clip walls, get stuck) → ground truth itself noisy. Mitigation: filter to clean episodes (success=1, no off-mesh steps).
+- 30–60 min/cond compute estimate is rough; if MLP probe is large or pairs ≫ 10k, could blow up. Mitigation: cap $N=20000$ pairs; logistic regression baseline first before MLP.
+- Interpretation ambiguity: even if rich-encoder agents can decode reachability, this might just reflect them learning visual landmarks of door/wall locations rather than abstract topology. Mitigation: note this as a confound in the paragraph.
+
+---
+
+#### EM4 — Full navmesh graph reconstruction (DEFERRED to journal version)
+
+**Goal**: Reconstruct the navmesh adjacency graph of a scene from h₂ alone. Most ambitious — directly tests "the hidden state IS a cognitive map" rather than "encodes some property of the map".
+
+**Procedure** (sketch, not committed to running for NeurIPS):
+1. Sample $K=200$ candidate node states per scene (stratified by spatial location).
+2. Use EM3-trained reachability probe (with $K_\text{step}=5$) to predict adjacency for all $K^2 = 40000$ pairs.
+3. Build predicted graph; threshold edges at probe-prob > 0.5.
+4. Compare to ground-truth navmesh graph: graph edit distance, spectral graph similarity (Laplacian eigenvalue $\ell_2$), per-edge AUC.
+
+**Why deferred**:
+- ~6–12h compute (5 conditions × 1–2h each), and depends on EM3 working.
+- High risk of distracting from main "linear readability" finding.
+- Reviewer ROI lower than EM1/EM2 because graph reconstruction is a well-known hard problem; partial reconstruction would invite "but what about the missing edges" critique.
+
+**Acceptance criterion to revisit for NeurIPS**: Only if EM3 lands compellingly AND there is unused compute slack post-final-figures (≥1 day before submission). Otherwise queue for journal extension.
+
+---
+
+**Pre-build pipeline (~1h, can do BEFORE retrain finishes)**:
+- `scripts/probing/scene_clustering.py` (EM1) — adapt `cluster_quality.py`.
+- `scripts/probing/scene_pair_classifier.py` (EM2) — new, ~80 LOC.
+- `scripts/probing/topological_probe.py` (EM3) — new, ~150 LOC, needs Habitat navmesh hookup verification.
+- All 3 read `data/probing_results/<cond>_det.npz` (or post-retrain equivalent path); verify they expose `scene_id` per timestep before retrain finishes.
+- Smoke-test on existing pre-retrain blind NPZ (we don't trust the numbers but the pipeline should run end-to-end).
 
 ### 5.4 Out-of-scope (paper-time, not future-work)
 
