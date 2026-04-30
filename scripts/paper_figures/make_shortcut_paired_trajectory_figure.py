@@ -2,7 +2,6 @@
 Appendix figure: extended persistent-memory failure-mode catalog.
 
 Layout: 4 rows × 4 cols = 16 paired-episode failure cases. Rows are
-conditions (Blind / Coarse / Uniform / Foveated-fix; foveated_learned
 omitted because only 2 paired-failure candidates exist). Cols are
 4 representative cases per condition spanning the full range of
 "persistent-direction" margin (most-tries-new → most-locks-onto-old).
@@ -65,7 +64,7 @@ ROWS = [
         ("Alfred",       7),  # margin +1.20
         ("8WUmhLawc2A",  5),  # margin +13.23
     ]),
-    ("foveated","Foveated (fix)", "#e41a1c", [
+    ("foveated","Foveated", "#e41a1c", [
         ("Ackermanville", 5), # margin -6.10
         ("1pXnuDYAj8r",  8),  # margin +0.22
         ("Aldrich",      6),  # margin +12.73
@@ -136,12 +135,14 @@ def main() -> None:
             td = load_topdown(args.topdown_dir, scene)
             if td is not None:
                 img, lo, hi = td
-                # World extent: x = lo[0]..hi[0], z = lo[2]..hi[2].
-                # imshow with extent=[xmin, xmax, ymin, ymax] places the
-                # image in the data coords; origin="upper" puts row 0 at
-                # ymin (top-down convention).
+                # Habitat's get_topdown_map_from_sim writes array[0, *] at
+                # world z = lower_bound[2]; with imshow extent=[lo[0], hi[0],
+                # lo[2], hi[2]] this requires origin='lower' so image[0,0]
+                # lands at plot bottom-left (= world lo[0], lo[2]) and the
+                # image+trajectory share the same y-direction. origin='upper'
+                # vertically flips the image relative to trajectory data.
                 ax.imshow(img, extent=[lo[0], hi[0], lo[2], hi[2]],
-                          origin="upper", alpha=0.55, zorder=0,
+                          origin="lower", alpha=0.55, zorder=0,
                           interpolation="bilinear")
 
             # 2. Reset trajectory (solid, full colour)

@@ -50,7 +50,7 @@ CANONICAL = [
      "tries new, can't reach"),
     ("uniform", "Uniform",        "8WUmhLawc2A", 8, "#4daf4a",
      "locks onto old goal"),
-    ("foveated","Foveated (fix)", "1pXnuDYAj8r", 8, "#e41a1c",
+    ("foveated","Foveated", "1pXnuDYAj8r", 8, "#e41a1c",
      "wanders"),
 ]
 
@@ -115,8 +115,14 @@ def main() -> None:
         td = load_topdown(args.topdown_dir, scene)
         if td is not None:
             img, lo, hi = td
+            # origin='lower': Habitat's get_topdown_map_from_sim writes
+            # array[0, *] at world z = lower_bound[2]; with imshow
+            # extent=[lo[0], hi[0], lo[2], hi[2]] this requires origin='lower'
+            # so image[0,0] is placed at plot's bottom-left = world (lo[0], lo[2]).
+            # origin='upper' (the matplotlib default) would vertically flip the
+            # image relative to trajectory data, putting trajectories in walls.
             ax.imshow(img, extent=[lo[0], hi[0], lo[2], hi[2]],
-                      origin="upper", alpha=0.55, zorder=0,
+                      origin="lower", alpha=0.55, zorder=0,
                       interpolation="bilinear")
 
         # Reset trajectory (solid, full colour).
