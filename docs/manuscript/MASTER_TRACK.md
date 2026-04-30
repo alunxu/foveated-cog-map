@@ -3,7 +3,7 @@
 Single source of truth for: cluster jobs, experiment status, paper
 claims, figure freshness, open questions, decision log.
 
-**Last updated**: 2026-04-27 06:50 (Wijmans replication plan added §5.7).
+**Last updated**: 2026-04-30 02:50 (cog sci/neuro pivot: paper reframed for cog sci/neuro reviewer audience; Skaggs place-cell signature + comparative-cognition framing landed in §5.2; LOSO scene-invariance now primary mechanism for §4.2; multi-seed Table 2; systematic convergence criterion in §3; 4 new appendix supplementary figures; foveated seed0pre fine-tune to 250M-effective in progress (RCP 4-GPU); logpolar resubmitted post-SIGSEGV).
 Update this file when state changes — do NOT rely on memory.
 
 ---
@@ -12,50 +12,53 @@ Update this file when state changes — do NOT rely on memory.
 
 | Dimension | Status |
 |---|---|
-| Paper version | v1 polished; figure pass complete (Fig 2-6 + appendix); refs working; 28-29 pages |
-| Page count | **28-29 pages**; build clean via `make` (Makefile in docs/manuscript/) |
-| Submission deadline | **2026-05-06** (9 days out) |
-| Cluster: jobs RUNNING | 2 trainings (uni-s2 / fov-s2) + transplant tail (matched-recipient cells, last 2) |
-| Cluster: jobs PENDING | 0 |
-| Most recent landed | All 10 topdown maps (Fig 5 backgrounds) ✓; 6/8 matched transplant cells ✓ (patch validated) |
-| Most recent paper change | Footnote color audit (only pending claims red); Makefile for reliable bibtex; Fig 5 redesigned 4×4 + maps |
-| Next experiments queued | WJ-B (probe agent) → WJ-A (memory length) → WJ-C (occupancy decoder) → WJ-E (t-SNE) → WJ-D (Bug baseline) → WJ-F (excursion forgetting). See §5.7. |
+| Paper version | **v3** (cog sci/neuro pivot done; 41 pages; place-cell signature + comparative cognition + LOSO + multi-seed Table 2 + systematic convergence criterion landed) |
+| Page count | **41 pages** (was 31 in v2); compiles with pdflatex (no errors/warnings) |
+| Submission deadline | **2026-05-06** (6 days out) |
+| Cluster: Izar jobs | 1 PENDING: uniform_gibson_ckpt38 probe (job 2867550, blocked by INJ_MAINTENANCE 08:00–12:00 today) |
+| Cluster: RCP jobs RUNNING | 4: foveated-seed0pre (4-GPU torchrun, ~2090 fps actual, ETA ~5h to 70M+180M=250M-eff), matched-s1 num_env=8 (~5070 fps, ETA ~12h), logpolar resumed (~1349 fps, ETA ~30h, monitoring SIGSEGV recurrence), uniform-s1 (4-GPU, just resubmitted, may go Pending) |
+| Most recent landed | **§5.2 NEW**: Place-cell signature paragraph + Fig fig_place_cells.pdf (Skaggs MI per LSTM unit; blind 0.20 vs rich-encoder 0.10–0.12; broader spatial-coding population in blind: 504/512 vs ~422–434). **§5.2 NEW**: Sensory-niche framing across taxa (mole-rat / coarse-scalar / primate / insect-eye). **§5.4 NEW**: Achille-Soatto IB-invariance reading. **§4.2 NEW**: LOSO scene-invariance paragraph + fig_loso_cv.pdf as primary CAP mechanism. **§3 NEW**: systematic convergence criterion (max success/SPL/DtG plateau). **Table 2 NEW**: multi-seed (seed-0 + seed-2 × 4 conds). |
+| Most recent paper change | Place-cell signature analysis (Skaggs adapted to LSTM hidden states): Blind has highest per-unit spatial MI and largest spatial-coding population, consistent with capacity-allocation under encoder bottleneck. |
+| Critical blocker resolved | NaN bug surfaced on seed-0 foveated at ckpt.36 ($> 174$M frames cause silent weight corruption); fine-tune resume from ckpt.36 with `pretrained=True` + `lr=5e-5` + `total_num_steps=70M` (effective 250M total) running on RCP 4-GPU. |
+| Diagnostics in flight | logpolar SIGSEGV recurrence watch (resubmitted ~28 min ago, healthy so far). |
 
 ---
 
 ## 1. Cluster jobs (current snapshot)
 
-### 1.1 Running (verify with `ssh izar "squeue -u wxu"`)
-
-Snapshot 2026-04-27 06:50:
+### 1.1 Izar running (snapshot 2026-04-28 21:30)
 
 | Job ID | Name | Elapsed | Output |
 |---|---|---|---|
-| 2853101 | uni_s2 multi-seed | ~4h (cycle ~2d total) | `uniform_gibson_seed2/` |
-| 2853102 | fov_s2 multi-seed | ~4h | `foveated_gibson_seed2/` |
-| 2857277 | uniform→matched transplant | ~45min | `/scratch/izar/wxu/transplant_results/` |
-| 2857272 | blind→matched transplant | ~45min | (matched-recipient column completion) |
+| 2853101 | `uni_s2` multi-seed | ~36h, ~30h to wall | `uniform_gibson_seed2/` |
+| 2853102 | `fov_s2` multi-seed | ~36h, ~30h to wall | `foveated_gibson_seed2/` |
 
-Cron `auto_resume.sh` keeps uni-s2/fov-s2 alive across 72h walltime cycles.
-Cron `probe_hc_arrival.sh` waits for friend's hc-trained checkpoints.
+`auto_resume.sh` keeps these alive across 72h walltime cycles.
 
-### 1.2 Friend's H100 — REQUIRED experiments (separate cluster, blocks paper)
+### 1.2 RCP running — full Tier 1 + paper-critical Tier 2 + multi-seed (2026-04-28 21:30)
 
-These experiments need H100 because they require new training runs (2-7 days each on V100, faster on H100) AND we want to avoid splitting/merging multi-cluster results.
+After EGL/fork blocker resolved via custom Docker image (`registry.rcp.epfl.ch/dhlab-wxu/habitat:v2`), RCP unblocked. 12 jobs in flight as of last check:
 
-| Code | Experiment | Why needed | Paper section affected | Effort estimate |
-|---|---|---|---|---|
-| **H100-A** | Fov-shifted causal H3 retrain (clean transform) | Clean H3 causal control: foveated agent with hardcoded gaze at $(0.49, 0.62)$, the collapsed-gaze location | §4.5 H3 (currently `\TODO{Training in progress}`) + §4.4.4 in App D | 1 retrain × 2--3 days V100 |
-| **H100-B** | Encoder-resolution scaling sweep ($32, 48, 64, 96, 128, 192$ pixels at fixed encoder stack) | Tests H1 mechanism causally — directly varies encoder spatial output dimensionality with everything else held fixed | App E (currently `\TODO{Pending data}`); strengthens §4.2 mechanism + §5.4 implication (i) | 6 retrains × 2--3 days V100 = 12-18 V100-days. **H100 strongly preferred for parallelism** |
+| RCP job | hc plan | Purpose | ETA |
+|---|---|---|---|
+| `dh-probe-8` | T14 fov-shifted | H3 static control (paper-critical) | ~7h |
+| `dh-probe-11` | (scene_occ optimized v2) | WJ-C Stage 1 — fast version (~30s/scene vs old ~12min) | ~3h |
+| `dh-probe-12` | T1 stoch-gaze σ-test | Diagnostic with σ_max=0.02 quasi-deterministic | ~6h |
+| `dh-probe-13` | T2 K=64 | Scaling sweep (matched64 config) | ~7h |
+| `dh-probe-14` | **T9 log-polar ⭐** | **Falsifiable H1 mechanism test** | ~7h |
+| `dh-probe-15` | T10 fov-v2 | NaN-bug clean rerun | ~7h |
+| `dh-probe-16` | T3 K=32 | Scaling sweep low | ~7h |
+| `dh-probe-17` | T6 K=96 | Scaling sweep mid-high | ~7h |
+| `dh-probe-18` | T7 K=192 | Scaling sweep high | ~7h |
+| `dh-probe-19` | T4 blind seed=2 | Multi-seed, 342M frames | ~10h |
+| `dh-probe-20` | T5 matched seed=2 | Multi-seed | ~7h |
+| `dh-probe-21` | T8 fov-learned seed=2 | Multi-seed (biggest paper-impact risk) | ~7h |
 
-**Removed from H100 list (2026-04-26)**: ~~H100-C Multi-seed gap fills~~ — decision to keep all multi-seed work on Izar to avoid split/merge complexity. Submitted blind/matched/foveated_learned seed=2 retrains via Izar normal QOS (jobs 2850374-76); uniform/foveated seed=2 already in flight on cs-503 QOS. All 5 conditions will have N=2 multi-seed coverage by ~3 days from now.
+**`H100-*` no longer relevant**: friend's H100 was previously critical-path for H3 fov-shifted (T14) and scaling sweep (T2/T3/T6/T7). Now all running on RCP. Friend can pick up Tier 2 (T6/T7 already covered) or Tier 3 (σ-strength sweep T11/T12/T13, foveation completeness).
 
-**Decision (2026-04-25 / 26)**: 
-1. F1-F4 σ-sweep + log-polar + normaliser run on Izar (paper claims don't depend on them; they only sharpen).
-2. **All multi-seed retrains run on Izar** (avoid cross-cluster merging headaches).
-3. H100 list is now strictly: H100-A + H100-B (the 2 experiments truly best for friend's H100). 
+### 1.3 Stochastic-gaze nan diagnostic in flight
 
-**Hand-off status**: Friend has docs (`experiments/foveation_transform_fix_retrain.md`, `experiments/encoder_capacity_scaling.md`). **Critical path: H100-A and H100-B are the most blocking** — without them §4.5 H3 fov-shifted and App E scaling sweep remain TODO at submission.
+T1 `foveated_stochastic_gibson` (probe-5 → killed at update 240+, then probe-12 with σ_max=0.02). Probe-5 reward went `inf` → `nan` at update ~120 and stayed nan. Hypothesis: stochastic-gaze sampling occasionally produces "stuck pose" via random-action exploration, geodesic distance becomes `inf`, reward computation returns `nan`, gradients corrupt policy. Diagnostic test (probe-12, σ_max=0.02 quasi-deterministic): if healthy → σ size matters → can do annealing. If still nan → habitat-baselines structural issue.
 
 ---
 
@@ -177,6 +180,28 @@ For each: which paper claim is currently held by hedging that this experiment wo
 | Banino-grid | Test grid-cell periodicity / hexagonal autocorrelation in LSTM units | Compare to grid-cell literature directly | Analysis-only; ~1 hour |
 | Deep-lag | Lag-$k$ probe to $k=50, 100$ | Bound the "persistent at lags ≥20" claim | Analysis-only |
 
+### 5.3.1 Cog sci / neuro pivot — proposals from deep-research (2026-04-30)
+
+The paper is being repositioned for a cog-sci / neuroscience reviewer audience to compensate for the simple architecture (LSTM + ResNet18 + DD-PPO). Strategy: deep-RL agents as **model organisms** for testing cognitive-map / capacity-allocation theory, with neuroscience-standard analyses.  Tier-1 = high-impact & implementable on existing checkpoints; tier-2 = high-value supplementary; tier-3 = if time.
+
+| Code | Proposal | Effort | Status | Tightens / what it adds |
+|---|---|---|---|---|
+| **A1** | Skaggs spatial-info bits per LSTM unit (with shuffle null) | 0.5d | **DONE 2026-04-30 02:50** (see Fig fig_place_cells.pdf, §5.2) | Place-cell signature: blind has higher per-unit MI ($0.20$ bits) and larger spatial population ($504/512$). Mirrors enhanced occipital--hippocampal coupling under sensory deprivation. |
+| **A2** | Cross-scene preferred-bin preservation (rate-vs-global remapping analog) | 0.5d | **DONE 2026-04-30 02:50** (panel c of fig_place_cells.pdf) | Cross-scene Spearman ρ; coarse the only cond with non-trivial preservation ($+0.15$ vs others $+0.05$–$+0.07$). Nuance: bottleneck $\neq$ stable across rooms in normalised coords. |
+| **E1** | Comparative-cognition reframe: 4 conds = 4 sensory niches | 0.25d | **DONE 2026-04-30 02:50** (§5.2 NEW Sensory-niche framing paragraph) | Blind=mole-rat, coarse=acoustic/scalar, foveated=primate, uniform=insect. Cite Geva-Sagiv 2015, Toledo 2020, Kimchi 2004. Pure narrative, 0 compute, big impact. |
+| **D1** | MI capacity accounting (MINE estimator) of $I(h; \text{pos})$, $I(h; \text{pos} \mid \text{enc})$, $I(\text{enc}; \text{pos})$ | 1.5d | **PLANNED — Tier 1 must-do** | The CAP equation is currently a hypothesis. With MINE numbers showing constant total $\approx$ shifted split, CAP becomes empirically grounded. Direct test of Achille-Soatto IB framing. |
+| **F1** | Activation patching (cross-cond representational transplant) | 1.5d | **PLANNED — Tier 1** | Causal complement to current correlational cross-cond transfer. Reviewers expect ≥1 causal experiment for NeurIPS 2025+. |
+| **B1** | Detour test (Tolman 1948 in silico) | 1d | **PLANNED — Tier 1** | The cognitive-map litmus test. Foveated > Blind on detour would directly falsify CAP. Modern citation: Behrens 2018 ``What is a cognitive map?'' |
+| **C1** | Predictive-horizon probing — decode $(x,y)_{t+k}$ from $h_t$ for $k = 1, 5, 10, 20, 50$ | 1d | **PLANNED — Tier 2** | Tests SR (Stachenfeld 2017) / TEM (Whittington 2020) predictions; adds temporal axis to current static probe story. |
+| **G1** | Eigenspectrum power-law slope (Stringer 2019) | 0.5d | **PLANNED — Tier 2** | Refines the ID $\approx 3$ result; spectrum slope discriminates conditions even when ID is similar. |
+| **F3** | Causal scrubbing of GPS-coding subspace (null-space project Ridge $\beta$, re-rollout) | 1d | **PLANNED — Tier 2** | Direct test of "which conditions \emph{causally use} the linear GPS subspace". |
+| **G2** | Williams shape metric for cross-cond manifold distance | 1d | **PLANNED — Tier 2** | The rigorous answer to "are these representations the same?" Preferred over CKA in 2024+ literature. |
+| F2 | Sparse autoencoder on $h_t$ per cond | 2d | Tier 3 (if time) | Interpretability lingua franca (Bricken 2023, Templeton 2024). |
+| A3 | Grid-cell hexagonal periodicity test (Sargolini 2006) | 1d | Tier 3 (defensive) | Defends against the obvious Banino-2018 reviewer ask; expected NULL since our task lacks path-integration loss. |
+| C2 | SR-eigenmap probe (compute empirical successor matrix; check $h_t$ aligns with eigenbasis) | 1.5d | Tier 3 | Stronger SR connection. |
+| G3 | Topological data analysis (persistent homology Betti numbers) | 2d | Tier 3 (risky/cool) | Curto-Itskov style; bottleneck $\to$ clean room-topology Betti, rich-encoder $\to$ noisy. |
+| D3 | Partial information decomposition (Williams-Beer) | 2d | Tier 3 | Sophisticated; decomposes (encoder, memory) $\to$ position into unique / redundant / synergistic. |
+
 ### 5.4 Out-of-scope (paper-time, not future-work)
 
 - **Transformer-architecture replication of all 5 conditions** — would test architecture-independence of encoder–memory race. Requires retraining every condition on a transformer backbone (≥5×4 days = month). Discussed in §5.4 Discussion as a prediction.
@@ -217,6 +242,110 @@ Rationale: B + A directly strengthen the §4.5 dissociation and H1 (the story's 
 ---
 
 ## 6. Decision log (chronological, why we did what)
+
+### 2026-04-29: Narrative pivot — modern-AI-puzzle-first framing
+
+**Why pivot**: original narrative led with bio precedent ("hippocampal sensor remapping") and treated the agent's older LSTM architecture defensively. Reviewer concern: "so what?" / why does an old-architecture finding matter for current research? User directive: connect findings to modern visual intelligence — VLM spatial-reasoning failures, foundation visual encoders, transformer world models, embodied LLM agents — and frame the older architecture not as a limitation but as a deliberately controlled experimental chassis where the encoder is the only varying component (frontier systems' architectural complexity confounds encoder effects with everything else).
+
+**Central re-frame**: visual perception and downstream memory are not separable modules but a co-trained system; the encoder's structure shapes what memory can encode about space (a content-level claim about the perception–memory interface). The bio precedent stays as supporting evidence, not as the main motivation. Implications point outward to (i) a content-level alternative to the training-distribution explanation of VLM spatial-reasoning failures, (ii) re-framing foveated-perception research as cognition-enabling rather than only compute-saving, and (iii) a falsifiable prediction for transformer-based world models and embodied LLM agents.
+
+**Title**: "How Visual Sensor Shapes the Format of Spatial Memory in Navigation Agents". Alternative declarative form: "Sensor Structure Shapes the Format of Spatial Memory in Navigation Agents" (kept for now in question form; both fit narrative).
+
+**Abstract restructure** (290→229 words after several rounds): single paragraph, modern-AI-puzzle opener (foundation encoders / VLMs / world models / embodied LLM agents share an implicit pipeline premise) → VLM spatial-failure as motivating empirical pattern → structural reading (encoder + memory as co-trained system) → 1-sentence bio precedent (foveated primates ↔ echolocating bats) → comparative chassis "varied along a single axis of encoder spatial bandwidth" (no enumeration) → 3 findings (counter-intuitive substitution, format incompatibility, recall-vs-use dissociation) with `\footnote` flagging findings as provisional pending finer memory-analysis experiments → 2-sentence implications (VLM-failure alternative + falsifiable prediction for transformers/world-models/embodied-LLMs). No `\citep{}` references in abstract.
+
+**Intro restructure** (~700→~540 words, 5 paragraphs): ¶1 pipeline-vs-co-trained reframing (different angle from abstract; not verbatim repeat). ¶2 bio precedent compact 4-species (kept different scale from abstract's 1 sentence). ¶3 prior emergent-maps lit (Wijmans/Banino/Cueva) "typically reported one condition at a time" → comparative chassis framing → 4-cond high-level enumeration → "older architecture is precisely the point" closing. ¶4 (NEW, merged from former ¶4 hypotheses + ¶5 contribution): three measurements with concrete predictions for each (magnitude/H1, format/H2, behavioural memory-reliance/dissociation). ¶5 interpretive close (bottleneck-vs-rich-encoder split + foveation hybrid). Removed: explicit "We test two hypotheses" framing (felt over-engineered for ML audience; redundant with contribution paragraph; H1/H2 tags retained as section anchors).
+
+**Fig 1 update**: bottom-row pipeline schematic replaced with `\fbox{\parbox}` placeholder ("to be drawn"); caption trimmed to drop the obsolete bottom-block description. All figures and tables changed from `[!htbp]`/`[h]` to `[!t]` (force top-of-page). Page count 31→30.
+
+**Cleanup**: 5→4 condition consolidation finished — caught and fixed three stale "five" references at lines 159 ("All five agents"), 441 ("for all 5 conditions"), 541 ("5-condition spectrum"), and 215 ("Five conditions, five linearly disjoint memory geometries (H2)" → "Four conditions, four..."). All `(1×1)` / `(fix)` annotations dropped from figures and text. `foveated_learned` condition fully removed from main paper + supplementary.
+
+**Releases**: HuggingFace `alunxu/spatial-memory-checkpoints` (public, 4 conds × 5 ckpts each, 829 MB, ultra-minimal README to protect idea). GitHub link kept for code.
+
+**Loop check (WJ-A/D/C)**:
+- WJ-A memory-length sweep: 5 conds × 5–7 K-points landed in `/tmp/wj_data/wja_v3/`; figure rendered at `fig/fig_memlen_sweep.pdf` (4 conds, K = 1…full episode). Modest finding: all conds need long memory to recover GPS; rich-encoder marginally faster mid-K saturation. NOT yet integrated to main.tex (numbers somewhat inconsistent with §4.2 substitution claim — discrepancy in protocol; flagged for follow-up).
+- WJ-D Bug baseline: already integrated at line 159 (SPL 0.07, success 0.13).
+- WJ-C scene_occupancy: 106 ground-truth occupancy maps landed (inputs to decoder); decoder itself not yet trained.
+- Job 2862280 (Izar): analyze.py for blind ckpt5/25 + encoder_zeroed × 3 NPZs in flight.
+
+**TODO from this pivot** (tracked in §5):
+- Refresh Related Work §2 to genuinely engage with the new narrative (VLM spatial failures, foundation encoders, transformer world models, embodied LLM agents, encoder–memory interface lit). Currently §2 is organised around the OLD narrative (cognitive maps in RL nav + foveated vision + hidden-state probing methodology). Need fresh deep research; download relevant PDFs to `Project/literature/`; read carefully; rewrite without speculation/overclaim.
+
+### 2026-04-28 (evening): RCP unblocked, Tier 1 trainings launched, paper revision pass 1+2
+
+**RCP EGL/fork blocker resolved via custom Docker image** (commits between):
+- Persistent issue: every smoke (smoke11–smoke25) crashed at first `env.step()` in
+  rollout collection — `ForkServerProcess-1` died silently with EOFError /
+  BrokenPipe. Non-trivial, EGL/fork interaction inside container.
+- Fix: built custom image `registry.rcp.epfl.ch/dhlab-wxu/habitat:v2` via
+  kaniko on RCP — preinstalls all libs habitat-sim needs at OS level (apt
+  packages incl. `libgl1-mesa-glx`, `libegl1-mesa`, `libglib2.0-0`, etc.) plus
+  conda habitat env + habitat-lab + torch CUDA + protobuf/pillow pinned.
+- Verified via dh-spatial-smoke-v2b: forkserver child process started,
+  habitat_sim loaded, Simulator constructed, env.step() succeeded.
+- After Docker image: full Tier 1 + critical Tier 2 + multi-seed launched on
+  RCP as `dh-probe-{8,11,12,13,...,21}`. 12 jobs in flight.
+
+**Paper revision pass 1 (section-by-section)** — caption / main-text consistency:
+- Captions stripped of interpretive content; reduced to panel descriptors +
+  methodology. Interpretive claims moved to main text.
+- Main text: avoid restating figure data; describe trends, claims,
+  implications, reasoning, interpretation.
+- Section title rewrites for Results: §4.1 "Comparable navigation skill across
+  all five conditions"; §4.2 "Substitution: rich encoders crowd out the
+  integrated GPS code (H1)"; §4.3 "Five conditions, five linearly disjoint
+  memory geometries (H2)"; §4.4 "Foveation: same H1 readout as uniform,
+  distinct elsewhere"; §4.6 "Gaze location as a candidate fourth content axis
+  (H3)"; §4.7 "Boundaries: null results that bracket H1 / H2".
+- Abstract: added Finding 3 (probe-readable vs policy-used dissociation);
+  framing aligned with §4.2 title ("substitute" instead of "race"); added
+  explicit "recurrent (LSTM) PointNav agent" case-study label.
+- Intro ¶6 (supplemental refs) deleted to remove appendix refs from intro.
+  Intro & Conclusion no longer reference any appendix (per user feedback).
+
+**Paper revision pass 2 (cross-section consistency)**:
+- 0 undefined refs / 0 ?? in PDF.
+- 1 unnecessary `\TODO` (length-matching ablation) removed.
+- 1 legitimate `\TODO` (App E scaling sweep, "Pending data") kept — will fill
+  in after dh-probe-13/16/17/18 land.
+- 11 `\uncertain{}` blocks (intentional hedging) kept.
+- 8 active `\hcpending{}` claims; mapped to RCP jobs in flight.
+
+**WJ-A K-truncation methodology confound diagnosed**:
+- `--reset-every K` actively zeroes LSTM hidden state every K steps. NOT a
+  probe-time filter. This creates two confounds: (1) post-reset 1-step hidden
+  states are sensor-passthrough (any condition with GPS sensor scores ~0.9
+  R² at K=1, can't distinguish conditions); (2) at K=large, dataset mixes
+  post-reset transients with long-accumulation states, probe trained on
+  bimodal distribution overfits — matched K=1000 gives R² = -1.51 vs Table 1
+  no-reset = +0.78.
+- Decision: WJ-A figure does NOT enter paper. §4.2 "memory-length sweep"
+  remains commented out. The H100-B encoder-resolution scaling sweep is the
+  cleaner causal H1 test (different agents trained from scratch at different
+  K, no reset intervention).
+- Tried v2 (probe-time filter on full-episode NPZ): episode-level CV gives
+  negative R² for all conditions (cross-scene generalization fails);
+  step-level CV would match Table 1 baseline but trivial leakage. Probably
+  needs separate paper.
+
+**WJ-F variance-matched analyzer (v2) reveals real forgetting signal**:
+- v1 (per-segment 5-fold R²) showed all conditions recover>warmup with
+  Δ +0.14–0.23 — variance artefact (R² normalised by target variance).
+- v2 (`scripts/eval/excursion_analyze_v2.py`): one Ridge probe trained on
+  full-episode pooled hidden states (episode-level 5-fold CV), tested per
+  segment with MAE / position-spread (scale-invariant).
+- Result: all 4 conditions show forgetting; blind +0.17 (smallest, sensor
+  passthrough robust), uniform +0.31, foveated +0.34, coarse +0.43 (largest,
+  integrated GPS map fragile to action-stream noise).
+- Integrated to paper §4.7 with new figure `appfig_wjf_excursion.pdf`.
+
+**WJ-E t-SNE figure** (`appfig_tsne.pdf`) generated from existing Izar
+subsamples and integrated to paper appendix.
+
+**Build pipeline switched to `xelatex`**: TeXLive 2026/Homebrew has a
+non-deterministic segfault during 3rd-pass `pdflatex` (hyperref `\pdfendlink`
+nesting on figure floats). `xelatex` builds cleanly. Makefile updated.
+
+---
 
 ### 2026-04-25 (evening): Encoder feature-map probe + Phase B + 5×5 + H1 mechanism refinement
 
