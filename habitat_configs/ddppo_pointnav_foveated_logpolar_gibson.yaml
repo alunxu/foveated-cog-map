@@ -1,23 +1,27 @@
 # @package _global_
 #
-# Wijmans-faithful FOVEATED PointGoal navigator on Gibson.
+# Wijmans-faithful LOG-POLAR FOVEATED PointGoal navigator on Gibson
+# (paper §"log-polar foveation control", Appendix on encoder-bandwidth scaling).
 #
 # Same Wijmans sensor stack and reward shaping as the other configs, plus a
-# foveated visual encoder with a learned gaze head. The custom policy
-# (FoveatedPointNavResNetPolicy) applies an eccentricity-dependent Gaussian
-# blur to the RGB input before the ResNet, and decodes a 2-D gaze position
-# from the previous LSTM hidden state.
+# log-polar foveated visual encoder with FIXED-CENTER gaze. The custom policy
+# (FoveatedLogPolarWijmansPolicy) replaces the Gaussian-blur foveation of the
+# foveated_gibson config with log-polar resampling: the input is sampled on a
+# polar grid (n_rho=64, n_theta=64 by default) so peripheral spatial *sampling*
+# (not just blur) is reduced — yielding a ~2x2 ResNet-18 feature map vs. the
+# 4x4 of foveated/uniform. Gaze is hardcoded to image centre (0.5, 0.5),
+# matching foveated_gibson's fixed-center scheme; there is no learned gaze
+# head in this implementation.
 #
-# Uses FoveatedWijmansPolicy: combines the Wijmans sensor stack (g, GPS,
-# compass, close-to-goal indicator) with the foveation transform applied
-# inside the visual encoder, plus a learned gaze head from the LSTM hidden
-# state. See src/habitat/foveated_policy.py.
+# Uses FoveatedLogPolarWijmansPolicy. See src/habitat/foveated_logpolar_policy.py
+# (and FoveatedWijmansPolicy in foveated_policy.py — the parent class whose
+# fixed-center gaze handling is inherited).
 #
 # Training set: Gibson-0+ (411 scenes) via the train_extra_large split.
 # See ddppo_pointnav_blind_gibson.yaml for the dataset rationale.
 #
 # Submit:
-#   sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
+#   sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_logpolar_gibson
 
 defaults:
   - /benchmark/nav/pointnav: pointnav_gibson
@@ -62,10 +66,10 @@ habitat_baselines:
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   eval_ckpt_path_dir: "data/checkpoints/foveated_logpolar_gibson"
-  num_environments: 6
+  num_environments: 16             # unified across 4 retrain conditions
   checkpoint_folder: "data/checkpoints/foveated_logpolar_gibson"
   num_updates: -1
-  total_num_steps: 2.5e8
+  total_num_steps: 2.5e8           # 250M frames, unified across 4 retrain conditions
   log_interval: 10
   num_checkpoints: 50
   force_torch_single_threaded: True
@@ -90,12 +94,12 @@ habitat_baselines:
       lr: 2.5e-4
       eps: 1.0e-5
       max_grad_norm: 0.2
-      num_steps: 128
+      num_steps: 256                # unified across 4 retrain conditions
       use_gae: True
       gamma: 0.99
       tau: 0.95
       use_linear_clip_decay: False
-      use_linear_lr_decay: True
+      use_linear_lr_decay: False    # unified across 4 retrain conditions (no decay)
       reward_window_size: 50
       use_normalized_advantage: False
       hidden_size: 512

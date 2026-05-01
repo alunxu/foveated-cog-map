@@ -1,6 +1,11 @@
 # @package _global_
 #
-# Wijmans-faithful MATCHED-COMPUTE PointGoal navigator on Gibson.
+# Wijmans-faithful COARSE (matched-compute) PointGoal navigator on Gibson.
+#
+# Renamed from "matched" → "coarse" to align with paper terminology
+# (the paper consistently uses "coarse" for this 48x48 uniform low-res
+# condition; "matched-compute" remains the design rationale but is
+# ambiguous as a condition name).
 #
 # Same Wijmans sensor stack and reward shaping as the blind/uniform configs,
 # but RGB is rendered at 48x48 — a uniform low-resolution control chosen to
@@ -8,14 +13,15 @@
 # of the foveated agent. See docs/foveation_design.md §2.3 for the
 # budget calculation:
 #   sharp fovea (π·16²) + periphery / σ²  ≈ 1 816 effective pixels
-#   √1816 ≈ 43, rounded up to 48 to give matched-compute a deliberate
-#   ~1.27× advantage so a foveated > matched result is unambiguous.
+#   √1816 ≈ 43, rounded up to 48 to give the coarse (matched-compute)
+#   condition a deliberate ~1.27× advantage so a foveated > coarse result
+#   is unambiguous.
 #
 # Training set: Gibson-0+ (411 scenes) via the train_extra_large split.
 # See ddppo_pointnav_blind_gibson.yaml for the dataset rationale.
 #
 # Submit:
-#   sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_matched_gibson
+#   sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_coarse_gibson
 
 defaults:
   - /benchmark/nav/pointnav: pointnav_gibson
@@ -59,11 +65,11 @@ habitat_baselines:
   torch_gpu_id: 0
   tensorboard_dir: "tb"
   video_dir: "video_dir"
-  eval_ckpt_path_dir: "data/checkpoints/matched_gibson"
-  num_environments: 6
-  checkpoint_folder: "data/checkpoints/matched_gibson"
+  eval_ckpt_path_dir: "data/checkpoints/coarse_gibson"
+  num_environments: 16             # unified across 4 retrain conditions
+  checkpoint_folder: "data/checkpoints/coarse_gibson"
   num_updates: -1
-  total_num_steps: 2.5e8
+  total_num_steps: 2.5e8           # 250M frames, unified across 4 retrain conditions
   log_interval: 10
   num_checkpoints: 50
   force_torch_single_threaded: True
@@ -83,12 +89,12 @@ habitat_baselines:
       lr: 2.5e-4
       eps: 1.0e-5
       max_grad_norm: 0.2
-      num_steps: 128
+      num_steps: 256                # unified across 4 retrain conditions
       use_gae: True
       gamma: 0.99
       tau: 0.95
       use_linear_clip_decay: False
-      use_linear_lr_decay: True
+      use_linear_lr_decay: False    # unified across 4 retrain conditions (no decay)
       reward_window_size: 50
       use_normalized_advantage: False
       hidden_size: 512

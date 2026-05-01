@@ -10,7 +10,8 @@ the global Habitat / habitat-baselines registries:
 
   - Policies:
       * WijmansPointNavPolicy       — Wijmans-faithful PointNav policy
-                                       (blind / uniform / matched agents)
+                                       (blind / uniform / coarse [aka matched-
+                                        compute] agents)
       * FoveatedWijmansPolicy       — foveated, fixed-center gaze
                                        (the "fixed-center" leg of our
                                         gaze ablation)
