@@ -221,7 +221,7 @@ Uniform               & 250M  & \toconfirm{\textbf{0.85}} & \toconfirm{\textbf{0
 \end{table}
 
 
-\subsection{Bandwidth--allocation tradeoff: capacity into the integration route shrinks as encoder bandwidth grows (H1)}
+\subsection{Magnitude axis (H1): linear position code shrinks with encoder bandwidth}
 \label{sec:h1}
 
 \noindent\textbf{The H1 claim, precisely}\quad Rich visual input \emph{appears to reduce the linear readability of the GPS-derived world-frame position signal at the policy-readable LSTM layer}; phrased in within-episode terms, rich-vision agents do not maintain a temporally stable, linearly readable top-layer position signal across full episodes. We do \emph{not} claim rich-vision agents fail to encode positional information altogether: 2-layer MLP probes recover position from the same top-layer state at $R^2 \in [0.51, 0.73]$ in rich-encoder conditions (Appendix~\ref{app:probe-details}). The H1 contrast is specifically about whether a \emph{linear} top-layer readout --- the operation the DD-PPO policy head performs --- can recover position, not about whether position is encoded anywhere in the hidden state. Throughout this section ``GPS code'' is shorthand for ``linearly decodable top-layer GPS-derived position signal''.
@@ -274,7 +274,7 @@ Cross-training probes at $4$--$5$ training checkpoints per condition (Figure~\re
 % during training) is out of scope for this submission.
 % \noindent\textbf{Memory-length budget sweep}\quad \hcpending{...}
 
-\subsection{Scene-invariance is the precise mechanism: why bottlenecks decode linearly and rich encoders do not (H3)}
+\subsection{Format axis (H3): scene-invariance distinguishes bottleneck from rich encoders}
 \label{sec:h3-scene-invariance}
 
 The linear$\to$MLP gap (Figure~\ref{fig:information_allocation}) shows position information is approximately preserved by MLP probing across conditions even when linear readability collapses --- a format shift rather than a total-information collapse (MINE shows a more modest $\approx 1.5\times$ decrease in total $I(\mathbf{h}_2; \text{pos})$; Appendix~\ref{app:mine}). What changes \emph{format} between bottleneck and rich-encoder conditions? A leave-one-scene-out (LOSO) cross-validation localises the answer: for each held-out Gibson scene, fit Ridge on the other $\sim 30$ scenes and report test $R^2$ on the held-out scene (Figure~\ref{fig:loso_cv}). \toconfirm{Blind achieves median LOSO $R^2 = 0.92$ with $0\%$ of held-out scenes giving negative $R^2$; coarse drops to median $0.17$ ($48\%$ scenes negative); foveated $0.28$ ($38\%$); uniform $0.15$ ($44\%$).} The bottleneck-vs-rich-encoder rank ordering is preserved across the cross-training trajectory (Figure~\ref{fig:substitution_dynamics}), confirming the LOSO contrast is not specific to the 250M endpoint.
@@ -288,7 +288,7 @@ The interpretation: encoder bandwidth modulates not the \emph{availability} of p
 \label{fig:loso_cv}
 \end{figure}
 
-\subsection{Capacity targets distinct subspaces: differential allocation produces non-interchangeable memory geometries (H2)}
+\subsection{Format axis (H2): conditions allocate to non-interchangeable subspaces}
 \label{sec:h2}
 
 \begin{figure}[!t]
@@ -356,7 +356,7 @@ Uniform                        & $4.01$ & $1.91$ & $1.80$ & $1.22$ & $1.13$ & $1
 \end{figure}
 
 
-\subsection{Foveation as hybrid allocation: shared magnitude with rich-encoder, distinct geometry}
+\subsection{Foveation as a hybrid case: shared magnitude with uniform, distinct geometry}
 \label{sec:foveation}
 
 Foveation's allocation is hybrid: it groups with uniform on the bandwidth--allocation tradeoff (rich-encoder magnitude, §\ref{sec:h1}), but separates from uniform on every other measure (Table~\ref{tab:fov-vs-uni}) --- consistent with the capacity-allocation principle that the visual and integration routes are independent sinks rather than two ends of one knob, so foveation can spend capacity differently from uniform within the rich-encoder regime.
@@ -386,7 +386,7 @@ Pairwise CKA(fov, uni) & \multicolumn{2}{c}{$< 10^{-4}$} & \textbf{near-orthogon
 \uncertain{Whatever foveation does differently from uniform happens inside the LSTM, in subspaces a linear top-layer GPS probe is blind to.} The most informative single contrast is dataset shift: foveated agents recover a held-out-MP3D GPS code that uniform agents do not (a $0.71$-magnitude gap, Table~\ref{tab:fov-vs-uni} row 4) --- a \emph{transferability} difference, not just two different codes on the same training scenes. Behavioural shortcut reliance, cross-condition transplant cost, and CKA / 1-NN purity all read foveated $\neq$ uniform in the same direction. The log-polar foveation control (Appendix~\ref{app:foveation-status}) is the falsifiable next step: \hcpending{a $\sim 2{\times}2$ encoder spatial output should produce LSTM GPS $R^2 \geq 0.3$ if the encoder-spatial-output mechanism (§\ref{sec:h1}) is right; if log-polar matches uniform on H1 instead, the mechanism needs reframing.}\pendnote{The foveation-vs-uniform contrasts in Table~\ref{tab:fov-vs-uni} are single-seed; multi-seed replication is left for future work.}
 
 
-\subsection{Availability vs.\ consumption: probe-readable capacity does not predict policy reliance}
+\subsection{Consumption axis: probe-readability dissociates from policy reliance}
 \label{sec:dissociation}
 
 Probe-readable position indexes \emph{where capacity is allocated}; the shortcut-discovery experiment indexes \emph{which route the policy consumes}. Under the capacity-allocation principle, these are independent quantities and need not coincide. Paired same-scene-different-goal episodes ($20$ scenes $\times$ $10$ pairs) compare second-episode SPL under reset vs.\ persistent LSTM; the SPL drop indexes how tightly the policy couples actions to integrated recurrent memory. Plotted against probe-readable top-layer GPS, two off-diagonal cases emerge. \emph{Coarse} carries a linear top-layer GPS code yet has a low shortcut SPL drop --- its policy under-weights the readable GPS. \emph{Uniform} has no linear top-layer GPS yet has a high shortcut SPL drop; \uncertain{the policy must therefore be reading a non-spatial substitute --- plausibly scene-history features the linear-GPS probe is blind to.} ``Probe-readable'' and ``policy-relied-on'' can therefore dissociate in either direction (visualised as the marker-size axis of Figure~\ref{fig:synthesis_2axes}, §\ref{sec:discussion}). We label these as candidate dissociations rather than established anomalies.\pendnote{The 5 points are single-seed; confirming the dissociation (rather than off-diagonal points sitting within seed-to-seed noise) requires multi-seed replication left for future work.}
@@ -405,7 +405,7 @@ If uniform's memory is non-spatial, what does it anchor to? Trajectory-level ana
 \end{figure}
 
 
-\subsection{Boundaries: null results that bracket the capacity-allocation principle}
+\subsection{Boundaries: null results that bracket the principle}
 \label{sec:boundaries}
 
 What does \emph{not} discriminate also defines what our H1/H2 claims are about. Three null results bracket our findings. \emph{(i) Low-resolution (visited-region) occupancy} decodes above chance everywhere --- something coarse-grained about where the agent has been is in every condition's hidden state, regardless of sensor structure. \emph{(ii) Metric $20{\times}20$ occupancy} fails everywhere (consistent with~\citep{ramakrishnan2025space}: high-resolution metric layout needs non-linear probes). \emph{(iii) The ego-frame goal vector} is at chance everywhere, because PointGoal supplies it as a per-step input — the policy has no incentive to re-encode it. Together these say H1 / H2 are specifically about the \emph{linearly-decodable, world-frame position code at the policy readout} and not about every spatial signal that might live in the recurrent state.
