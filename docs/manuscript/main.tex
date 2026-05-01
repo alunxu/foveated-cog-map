@@ -90,8 +90,8 @@ The question is one with cognitive-neuroscience precedent. Hippocampal spatial c
 % column -> ResNet-18 -> sensor stack -> 3-layer LSTM -> policy / h_2.
 % Row 2 (analysis): three method-finding columns (probes, geometry,
 % intervention) read the frozen top-layer hidden state h_2.
-\includegraphics[width=\linewidth,trim=0 8 0 0,clip]{fig/fig_pipeline_overview_tikz.pdf}
-\vspace{-0.7em}
+\setlength{\abovecaptionskip}{4pt}
+\includegraphics[width=\linewidth]{fig/fig_pipeline_overview_tikz.pdf}
 \caption{\textbf{Experimental setup and analysis pipeline.} \emph{Row~1 (architecture):} the four main visual sensor conditions (\emph{blind}, \emph{coarse}, \emph{foveated}, \emph{uniform}; leftmost column) feed a shared ResNet-18 encoder + 3-layer LSTM (512-d hidden); \emph{blind} bypasses the encoder. A log-polar foveation control (a foveated variant; Appendix~\ref{app:scaling}) adds a 5th data point on the encoder-spatial-output axis. Train: Gibson + MP3D-train; eval: Gibson held-out + MP3D-test. \emph{Row~2 (analysis):} three method families --- linear and non-linear probes, representational geometry, and causal/behavioural intervention --- read out the frozen top-layer hidden state $\mathbf{h}_2 \in \mathbb{R}^{512}$ to test three orthogonal axes of one capacity allocation: \emph{magnitude}, \emph{format}, \emph{consumption} (defined in §\ref{sec:discussion}).}
 \label{fig:setup}
 \end{figure}
