@@ -37,38 +37,15 @@ echo "  Frames:    250M (unified retrain budget)"
 echo "  Image:     $IMAGE"
 echo "=================================================="
 
-# Mirror the dh-probe-1..4 pod command exactly. The CLI hyperparam overrides
-# are now redundant (config YAML already has unified values) but kept as
-# a defensive belt-and-suspenders against config drift.
-INNER_CMD="
-set -e
-source /opt/miniconda3/etc/profile.d/conda.sh
-conda activate habitat
-cd /scratch/wxu/dh-spatial
-export PYTHONPATH=/scratch/wxu/dh-spatial:\$PYTHONPATH
-HB_CONFIG=/opt/habitat-lab/habitat-baselines/habitat_baselines/config
-mkdir -p \$HB_CONFIG/pointnav
-for cfg in /scratch/wxu/dh-spatial/habitat_configs/*.yaml; do
-  n=\$(basename \$cfg)
-  [ ! -e \$HB_CONFIG/pointnav/\$n ] && ln -s \$cfg \$HB_CONFIG/pointnav/\$n
-done
-OUT_DIR=/scratch/wxu/habitat_checkpoints_rcp/${JOB_NAME}
-mkdir -p \$OUT_DIR
-nvidia-smi --query-gpu=name --format=csv,noheader
-torchrun --standalone --nproc_per_node=${NPROC} /scratch/wxu/dh-spatial/run_with_custom.py \\
-    --config-name pointnav/ddppo_pointnav_foveated_normaliser_gibson \\
-    habitat.seed=0 \\
-    habitat_baselines.checkpoint_folder=\$OUT_DIR \\
-    habitat_baselines.tensorboard_dir=\$OUT_DIR/tb \\
-    habitat_baselines.total_num_steps=250000000 \\
-    habitat_baselines.num_environments=16 \\
-    habitat_baselines.rl.ppo.num_steps=256 \\
-    habitat_baselines.rl.ppo.use_linear_lr_decay=False \\
-    hydra.run.dir=\$OUT_DIR/hydra_runs hydra.output_subdir=null 2>&1 | tee -a \$OUT_DIR/run.log
-"
+# Mirror the dh-probe-1..4 pod command pattern EXACTLY: a single semicolon-
+# separated command line, no embedded comments, ln -sf for symlinks (image may
+# bake stale yamls; we always want /scratch/wxu/dh-spatial yamls to win).
+OUT_DIR="/scratch/wxu/habitat_checkpoints_rcp/${JOB_NAME}"
+INNER_CMD="set -e; source /opt/miniconda3/etc/profile.d/conda.sh; conda activate habitat; cd /scratch/wxu/dh-spatial; export PYTHONPATH=/scratch/wxu/dh-spatial:\$PYTHONPATH; HB_CONFIG=/opt/habitat-lab/habitat-baselines/habitat_baselines/config; mkdir -p \$HB_CONFIG/pointnav; for cfg in /scratch/wxu/dh-spatial/habitat_configs/*.yaml; do n=\$(basename \$cfg); ln -sf \$cfg \$HB_CONFIG/pointnav/\$n; done; mkdir -p ${OUT_DIR}; echo CONFIGS_AT_LAUNCH:; ls -la \$HB_CONFIG/pointnav/ddppo_pointnav_foveated_normaliser_gibson.yaml; head -3 \$HB_CONFIG/pointnav/ddppo_pointnav_foveated_normaliser_gibson.yaml; nvidia-smi --query-gpu=name --format=csv,noheader; torchrun --standalone --nproc_per_node=${NPROC} /scratch/wxu/dh-spatial/run_with_custom.py --config-name pointnav/ddppo_pointnav_foveated_normaliser_gibson habitat.seed=0 habitat_baselines.checkpoint_folder=${OUT_DIR} habitat_baselines.tensorboard_dir=${OUT_DIR}/tb habitat_baselines.total_num_steps=250000000 habitat_baselines.num_environments=16 habitat_baselines.rl.ppo.num_steps=256 habitat_baselines.rl.ppo.use_linear_lr_decay=False hydra.run.dir=${OUT_DIR}/hydra_runs hydra.output_subdir=null 2>&1 | tee -a ${OUT_DIR}/run.log"
 
-# Submit via runai-rcp-prod with 4-GPU node
+# Submit via runai-rcp-prod with 4-GPU node, dhlab-wxu project
 RUNAI_CURRENT_CTX=rcp /usr/local/bin/runai-rcp-prod submit "$JOB_NAME" \
+    --project dhlab-wxu \
     --image="$IMAGE" \
     --gpu="$NPROC" \
     --cpu=32 \
