@@ -22,42 +22,47 @@ set -e
 
 COND="${1:?'condition required (coarse|foveated|uniform|foveated_logpolar|blind|fnorm)'}"
 EPISODES="${2:-500}"
+# Optional 3rd arg: ckpt index for cross-checkpoint substitution-dynamics
+# probing (used by substitution_dynamics figure / paper §H1 decay-rate claim
+# at L260). Default ckpt.49 (final, converged). Common sweep values:
+# 10, 20, 30, 40, 49 → 5 points across training.
+CKPT_NUM="${3:-49}"
 
-# Map condition → config name + ckpt path + numbered probe ID.
-# Job naming: probe-1..6 (numbered). Mapping:
+# Map condition → config name + ckpt dir + numbered probe ID.
+# Job naming: probe-N (numbered). Mapping:
 #   probe-1 = coarse,  probe-2 = foveated,  probe-3 = uniform,
 #   probe-4 = foveated_logpolar,  probe-5 = blind,  probe-6 = fnorm (F2)
 case "$COND" in
   coarse)
     CONFIG_NAME="pointnav/ddppo_pointnav_coarse_gibson"
-    CKPT_PATH="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-1/ckpt.49.pth"
+    CKPT_DIR="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-1"
     PROBE_ID=1
     ;;
   foveated)
     CONFIG_NAME="pointnav/ddppo_pointnav_foveated_gibson"
-    CKPT_PATH="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-2/ckpt.49.pth"
+    CKPT_DIR="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-2"
     PROBE_ID=2
     ;;
   uniform)
     CONFIG_NAME="pointnav/ddppo_pointnav_uniform_gibson"
-    CKPT_PATH="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-3/ckpt.49.pth"
+    CKPT_DIR="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-3"
     PROBE_ID=3
     ;;
   foveated_logpolar)
     CONFIG_NAME="pointnav/ddppo_pointnav_foveated_logpolar_gibson"
-    CKPT_PATH="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-4/ckpt.49.pth"
+    CKPT_DIR="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-4"
     PROBE_ID=4
     ;;
   blind)
     # Friend's blind seed=100 ckpt. Different hyperparams (num_envs=32, seed=100)
     # — see paper §limitations footnote.
     CONFIG_NAME="pointnav/ddppo_pointnav_blind_gibson"
-    CKPT_PATH="/scratch/wxu/habitat_checkpoints_rcp/blind_seed_2_friend/ckpt.49.pth"
+    CKPT_DIR="/scratch/wxu/habitat_checkpoints_rcp/blind_seed_2_friend"
     PROBE_ID=5
     ;;
   fnorm)
     CONFIG_NAME="pointnav/ddppo_pointnav_foveated_normaliser_gibson"
-    CKPT_PATH="/scratch/wxu/habitat_checkpoints_rcp/dh-fnorm/ckpt.49.pth"
+    CKPT_DIR="/scratch/wxu/habitat_checkpoints_rcp/dh-fnorm"
     PROBE_ID=6
     ;;
   *)
@@ -66,11 +71,23 @@ case "$COND" in
     ;;
 esac
 
-# Numbered job name: probe-N. Mapping in case statement above.
-JOB_NAME="probe-${PROBE_ID}"
+CKPT_PATH="${CKPT_DIR}/ckpt.${CKPT_NUM}.pth"
+
+# Numbered job name: probe-N (default ckpt.49) or probe-N-cN (specific ckpt).
+if [ "$CKPT_NUM" = "49" ]; then
+  JOB_NAME="probe-${PROBE_ID}"
+else
+  JOB_NAME="probe-${PROBE_ID}-c${CKPT_NUM}"
+fi
 IMAGE="registry.rcp.epfl.ch/dhlab-wxu/habitat:v2"
+# Output dir + npz name. Default ckpt.49 → <cond>_det.npz (final result).
+# Cross-ckpt sweep → <cond>_det_ckpt<N>.npz (preserves ckpt.49 NPZ).
 OUT_DIR="/scratch/wxu/habitat_checkpoints_rcp/probing_data_rcp"
-OUT_NPZ="${OUT_DIR}/${COND}_det.npz"
+if [ "$CKPT_NUM" = "49" ]; then
+  OUT_NPZ="${OUT_DIR}/${COND}_det.npz"
+else
+  OUT_NPZ="${OUT_DIR}/${COND}_det_ckpt${CKPT_NUM}.npz"
+fi
 
 echo "=================================================="
 echo "  Probe-collect (RCP)"
@@ -85,7 +102,8 @@ echo "=================================================="
 # Single-line INNER_CMD: same pattern as F2 launcher (no embedded comments,
 # no nested quotes). Includes USER + HABITAT_DATA_DIR env vars to fix
 # habitat_env.py:99 path resolution under nobody/nogroup pod uid.
-INNER_CMD="set -e; source /opt/miniconda3/etc/profile.d/conda.sh; conda activate habitat; cd /scratch/wxu/dh-spatial; export PYTHONPATH=/scratch/wxu/dh-spatial:\$PYTHONPATH; export USER=wxu; export HABITAT_DATA_DIR=/scratch/izar/wxu/habitat_data; HB_CONFIG=/opt/habitat-lab/habitat-baselines/habitat_baselines/config; mkdir -p \$HB_CONFIG/pointnav; for cfg in /scratch/wxu/dh-spatial/habitat_configs/*.yaml; do n=\$(basename \$cfg); ln -sf \$cfg \$HB_CONFIG/pointnav/\$n; done; mkdir -p ${OUT_DIR}; nvidia-smi --query-gpu=name --format=csv,noheader; python -u /scratch/wxu/dh-spatial/scripts/probing/collect.py --config-name=${CONFIG_NAME} --ckpt=${CKPT_PATH} --episodes=${EPISODES} --deterministic=True --out=${OUT_NPZ} 2>&1 | tee -a ${OUT_DIR}/${COND}_det.log; echo COLLECT_DONE; ls -la ${OUT_NPZ}"
+LOG_FILE="${OUT_NPZ%.npz}.log"
+INNER_CMD="set -e; source /opt/miniconda3/etc/profile.d/conda.sh; conda activate habitat; cd /scratch/wxu/dh-spatial; export PYTHONPATH=/scratch/wxu/dh-spatial:\$PYTHONPATH; export USER=wxu; export HABITAT_DATA_DIR=/scratch/izar/wxu/habitat_data; HB_CONFIG=/opt/habitat-lab/habitat-baselines/habitat_baselines/config; mkdir -p \$HB_CONFIG/pointnav; for cfg in /scratch/wxu/dh-spatial/habitat_configs/*.yaml; do n=\$(basename \$cfg); ln -sf \$cfg \$HB_CONFIG/pointnav/\$n; done; mkdir -p ${OUT_DIR}; nvidia-smi --query-gpu=name --format=csv,noheader; python -u /scratch/wxu/dh-spatial/scripts/probing/collect.py --config-name=${CONFIG_NAME} --ckpt=${CKPT_PATH} --episodes=${EPISODES} --deterministic=True --out=${OUT_NPZ} 2>&1 | tee -a ${LOG_FILE}; echo COLLECT_DONE; ls -la ${OUT_NPZ}"
 
 RUNAI_CURRENT_CTX=rcp /usr/local/bin/runai-rcp-prod submit "$JOB_NAME" \
     --project dhlab-wxu \
