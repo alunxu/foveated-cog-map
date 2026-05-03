@@ -33,6 +33,6 @@ done
 
 echo "=================================================="
 echo "  All 5 jobs submitted. Track via:"
-echo "    kubectl get pods -n runai-dhlab-wxu | grep dh-pcr-"
-echo "    RUNAI_CURRENT_CTX=rcp runai-rcp-prod list jobs --project dhlab-wxu | grep dh-pcr"
+echo "    kubectl get pods -n runai-dhlab-wxu | grep ^probe-"
+echo "    RUNAI_CURRENT_CTX=rcp runai-rcp-prod list jobs --project dhlab-wxu | grep '^probe-'"
 echo "=================================================="

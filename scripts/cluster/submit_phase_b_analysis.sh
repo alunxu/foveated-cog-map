@@ -28,7 +28,7 @@
 
 set -e
 
-JOB_NAME="dh-phase-b"
+JOB_NAME="probe-analysis-b"
 IMAGE="registry.rcp.epfl.ch/dhlab-wxu/habitat:v2"
 NPZ_DIR="/scratch/wxu/habitat_checkpoints_rcp/probing_data_rcp"
 RESULTS_DIR="/scratch/wxu/habitat_checkpoints_rcp/analysis_results"

@@ -57,9 +57,9 @@ case "$COND" in
     ;;
 esac
 
-# Verify ckpt exists locally (well, the user can verify; the pod will fail loud
-# if not). We at least check via kubectl that file exists in scratch.
-JOB_NAME="dh-pcr-${COND//_/-}"
+# Job name pattern: probe-<cond>. Distinct from dh-probe-N (training pods,
+# misleadingly named) — "probe-" prefix here actually does probing, not training.
+JOB_NAME="probe-${COND//_/-}"
 IMAGE="registry.rcp.epfl.ch/dhlab-wxu/habitat:v2"
 OUT_DIR="/scratch/wxu/habitat_checkpoints_rcp/probing_data_rcp"
 OUT_NPZ="${OUT_DIR}/${COND}_det.npz"
