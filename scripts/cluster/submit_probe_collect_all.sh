@@ -32,7 +32,12 @@ for cond in "${CONDITIONS[@]}"; do
 done
 
 echo "=================================================="
-echo "  All 5 jobs submitted. Track via:"
-echo "    kubectl get pods -n runai-dhlab-wxu | grep ^probe-"
-echo "    RUNAI_CURRENT_CTX=rcp runai-rcp-prod list jobs --project dhlab-wxu | grep '^probe-'"
+echo "  All 5 jobs submitted as probe-1..5. Mapping:"
+echo "    probe-1 = coarse,  probe-2 = foveated,  probe-3 = uniform,"
+echo "    probe-4 = foveated_logpolar,  probe-5 = blind"
+echo "    (probe-6 = fnorm/F2, launched separately when ckpt.49 ready)"
+echo
+echo "  Track via:"
+echo "    kubectl get pods -n runai-dhlab-wxu | grep -E '^probe-[0-9]'"
+echo "    RUNAI_CURRENT_CTX=rcp runai-rcp-prod list jobs --project dhlab-wxu | grep -E '^probe-[0-9]'"
 echo "=================================================="
