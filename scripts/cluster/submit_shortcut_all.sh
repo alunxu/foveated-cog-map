@@ -4,7 +4,8 @@
 set -e
 EPS_PER_SCENE="${1:-10}"
 MAX_SCENES="${2:-20}"
-CONDS=(coarse foveated uniform foveated_logpolar blind)
+# Blind excluded for now (see submit_excursion_all.sh for rationale).
+CONDS=(coarse foveated uniform foveated_logpolar)
 echo "Shortcut sweep: ${CONDS[*]}, eps_per_scene=$EPS_PER_SCENE × max_scenes=$MAX_SCENES"
 for c in "${CONDS[@]}"; do
   echo "--- $c ---"

@@ -5,10 +5,12 @@
 set -e
 EPISODES="${1:-200}"
 MIDPOINT="${2:-30}"
-CONDS=(coarse foveated uniform foveated_logpolar blind)
+# Blind excluded for now — will re-run when own dh-blind retrain ready.
+# Currently 4×4 - 4 self = 12 pairs (was 20 with blind included).
+CONDS=(coarse foveated uniform foveated_logpolar)
 
-echo "Transplant 5×5 matrix: ${CONDS[*]} (skip self), eps=$EPISODES, mid=$MIDPOINT"
-echo "Total jobs: 20 (5 donors × 5 recipients - 5 self-pairs)"
+echo "Transplant 4×4 matrix: ${CONDS[*]} (skip self), eps=$EPISODES, mid=$MIDPOINT"
+echo "Total jobs: 12 (4 donors × 4 recipients - 4 self-pairs)"
 echo
 
 n=0

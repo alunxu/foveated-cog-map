@@ -15,7 +15,8 @@
 set -e
 
 EPS="${1:-200}"
-CONDS=(coarse foveated uniform foveated_logpolar blind)
+# Blind excluded for now — will add when own dh-blind retrain ready.
+CONDS=(coarse foveated uniform foveated_logpolar)
 CKPTS=(10 20 30 40 49)
 
 echo "Substitution dynamics: ${#CONDS[@]} conds × ${#CKPTS[@]} ckpts = $((${#CONDS[@]} * ${#CKPTS[@]})) jobs"
