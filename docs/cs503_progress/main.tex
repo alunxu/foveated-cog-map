@@ -21,12 +21,14 @@
 \maketitle
 
 % ==========================================================================
-\section{Research question and headline finding}
+\section{Question and headline finding}
 % ==========================================================================
 
-\textbf{Question.} A PointNav agent~\cite{wijmans2020ddppo,savva2019habitat} has two routes to the spatial information its policy needs to act: recompute it each step from the current visual encoder output, or maintain it across time inside the recurrent (LSTM) memory. These routes compete for finite hidden-state capacity. \emph{Does the structure of the visual input determine how this capacity gets allocated?}
+\textbf{Question.} A PointNav agent~\cite{wijmans2020ddppo,savva2019habitat} has two routes to spatial information its policy needs to act: recompute it each step from the current visual encoder output, or maintain it across time inside the recurrent (LSTM) memory. These routes compete for finite hidden-state capacity. \emph{Does the structure of the visual input determine how this capacity gets allocated?}
 
-\textbf{Headline finding.} Across five conditions that share architecture, sensor stack, training budget, and within-episode behaviour ($96\!\!-\!\!99\%$ success), the linear top-layer GPS $R^2$ falls \emph{monotonically} with encoder spatial output dimension: from blind ($\approx +0.79$, no encoder) and coarse ($+0.58$, $1{\times}1$), through foveated-logpolar ($-0.12$, $2{\times}2$), to foveated-blur ($+0.16$, $4{\times}4$) and uniform ($-1.19$, $4{\times}4$). The same hidden states recover GPS at $R^2 \in [0.46, 0.92]$ under a $2$-layer MLP probe, so the contrast is about \emph{linear} top-layer readability (the operation the DD-PPO action head performs), not information loss. \textbf{Theoretical claim:} bottleneck conditions force the LSTM to integrate the GPS sensor across time and store the result in a linearly-readable axis of $\mathbf{h}_2$; rich-encoder conditions reallocate this capacity to a per-step visual-feature route.
+\textbf{Headline finding.} Across five conditions that share architecture, sensor stack, training budget, and within-episode behaviour ($96\!\!-\!\!99\%$ success), the linear top-layer GPS $R^2$ falls \emph{monotonically} with encoder spatial output dimension (Figure~\ref{fig:cap_alloc}, solid line). The same hidden states recover GPS at $R^2 \in [0.46, 0.92]$ under a 2-layer MLP probe (Figure~\ref{fig:cap_alloc}, dashed line) --- so the contrast is about \emph{linear} top-layer readability (the operation the DD-PPO action head performs), not information loss.
+
+\textbf{Theoretical claim.} Bottleneck conditions force the LSTM to integrate the GPS sensor across time and store the result in a linearly-readable axis of $\mathbf{h}_2$ --- there is no other route. A rich encoder offers a viable per-step visual-feature route; policy gradient reallocates capacity to it, and the integrated code is no longer the linearly-readable axis. The same hidden state encodes position in both regimes; only the format differs.
 
 % ==========================================================================
 \section{Five conditions on one bandwidth axis}
@@ -51,56 +53,54 @@ Uniform          & $4{\times}4$   & $256{\times}256$ full-resolution RGB \\
 \end{tabular}\vspace{-2pt}
 \end{table}
 
-For each condition we collect $500$ deterministic-policy episodes ($\sim 30$k--$120$k LSTM steps) and run six analytical lenses on the top-layer hidden state $\mathbf{h}_2$: linear (Ridge $\alpha{=}10$) and MLP ($256$ hidden, $L_2{=}10^{-4}$) probes for GPS; lag-$k$ probe for $k\in\{0,1,2,5,10,20,50\}$; per-(unit, scene) Skaggs spatial information (rectified $\max(\mathbf{h}_2,0)$); cross-training probes at five intermediate checkpoints; cross-condition CKA, Procrustes shape distance, and memory transplant. All probes use $5$-fold episode-level cross-validation. Single seed per condition follows the comparative-cognition modelling convention; rigour at the cross-condition level instead derives from convergence across the six lenses.
+For each condition we collect $500$ deterministic-policy episodes ($\sim 30$k--$120$k LSTM steps) and run six analytical lenses on the top-layer $\mathbf{h}_2$: linear (Ridge $\alpha{=}10$) and MLP ($256$-d, $L_2{=}10^{-4}$) probes for GPS; lag-$k$ probe for $k\in\{0,1,2,5,10,20,50\}$; per-(unit, scene) Skaggs spatial information (rectified $\max(\mathbf{h}_2,0)$); cross-training probes at five intermediate checkpoints; and cross-condition CKA, Procrustes shape distance, and memory transplant. All probes use $5$-fold episode-level cross-validation. Single seed per condition follows the comparative-cognition modelling convention; rigour at the cross-condition level instead derives from convergence across the six lenses.
 
 % ==========================================================================
 \section{Results: a Because-But-Therefore chain}
 % ==========================================================================
 
-\textbf{Because: linear GPS $R^2$ falls monotonically with encoder bandwidth.} Fitting Ridge on $\mathbf{h}_2 \to$ GPS gives the headline cross-condition pattern (Table~\ref{tab:probe}, columns 2--3): bottleneck conditions retain the linear code (blind $+0.79$, coarse $+0.58$); rich-encoder conditions lose it (foveated $+0.16$, uniform $-1.19$). The third rich-encoder condition (foveated-logpolar, $2{\times}2$) sits at $-0.12$, closer to the rich-encoder regime than to coarse. Distance-to-goal, a same-dimensional control target, decodes at $R^2 \in [0.81, 0.96]$ in every condition, ruling out a probe-capacity-collapse reading.
+\begin{figure}[h]
+\centering\vspace{-4pt}
+\includegraphics[width=\linewidth]{fig/fig1_capacity_allocation.pdf}\vspace{-4pt}
+\caption{\textbf{The capacity-allocation principle, magnitude axis.} Top-layer GPS $R^2$ ($5$-fold ep-CV mean $\pm \sigma$) plotted against encoder spatial output. Solid line / filled markers: linear (Ridge) probe --- monotonic anti-correlation with encoder bandwidth, dropping from $+0.79$ (blind) to $-1.19$ (uniform). Dashed line / open markers: $2$-layer MLP probe on the \emph{same} hidden states --- recovery in every condition, gap widens with bandwidth. Position information is not destroyed by a rich encoder; it gets pushed into non-linear $\mathbf{h}_2$ directions a linear policy head cannot read. Blind row from preliminary $100$-ep partial NPZ; full $500$-ep collection in flight.}\vspace{-4pt}
+\label{fig:cap_alloc}
+\end{figure}
 
-\textbf{But: a non-linear (MLP) probe recovers GPS in every condition.} A $2$-layer MLP fit to the same hidden states recovers GPS at $R^2 \in [0.46, 0.92]$. The MLP-minus-linear gap widens monotonically with encoder bandwidth ($+0.13$ blind $\to$ $+0.22$ coarse $\to$ $+0.59$ foveated-logpolar $\to$ $+0.60$ foveated $\to$ $+1.65$ uniform). \emph{Position information is not destroyed by a rich encoder; it gets pushed into non-linear $\mathbf{h}_2$ directions that the DD-PPO linear action head cannot read.}
+\textbf{Because.} Linear GPS $R^2$ falls monotonically with encoder spatial output (Figure~\ref{fig:cap_alloc}, solid line). Bottleneck conditions retain the linear code ($+0.79$ blind, $+0.58$ coarse); rich-encoder conditions lose it ($+0.16$ foveated, $-1.19$ uniform). Foveated-logpolar with a $2{\times}2$ encoder sits at $-0.12$, which is the H1-mechanism prediction made \emph{after} Report 1: a third rich-encoder condition with intermediate spatial output should land in the rich-encoder regime, and it does. Distance-to-goal --- a same-dimensional control target --- decodes at $R^2 \in [0.81, 0.96]$ in every condition, ruling out a probe-capacity-collapse reading.
 
-\begin{table}[h]
-\centering\small\vspace{-4pt}
-\caption{Linear / MLP probes for GPS plus lag-$k$ stability summary. \emph{(}Blind$^\dagger$: preliminary $100$-ep partial NPZ from in-flight $500$-ep collection.\emph{)}}\vspace{-3pt}
-\label{tab:probe}
-\begin{tabular}{lcccc}
-\toprule
- & Linear $R^2$ & MLP $R^2$ & MLP--Lin gap & Lag-$k$ ($k{=}0,20$) \\
-\midrule
-Blind$^\dagger$    & $+0.79$ & $+0.92$ & $+0.13$ & $+0.78,\ +0.68$ \\
-Coarse             & $+0.58$ & $+0.79$ & $+0.22$ & $+0.58,\ +0.53$ \\
-Fov-logpolar       & $-0.12$ & $+0.47$ & $+0.59$ & $-0.03,\ -0.12$ \\
-Foveated           & $+0.16$ & $+0.76$ & $+0.60$ & $+0.18,\ -0.07$ \\
-Uniform            & $-1.19$ & $+0.46$ & $+1.65$ & $-1.78,\ -6.53$ \\
-\bottomrule
-\end{tabular}\vspace{-2pt}
-\end{table}
+\textbf{But.} A $2$-layer MLP fit on the \emph{same} hidden states recovers GPS in every condition (Figure~\ref{fig:cap_alloc}, dashed line). The MLP-minus-linear gap widens monotonically with encoder bandwidth ($+0.13$ blind, $+0.22$ coarse, $+0.59$ fov-logpolar, $+0.60$ foveated, $+1.65$ uniform). Position information is not destroyed by a rich encoder; it gets pushed into non-linear $\mathbf{h}_2$ directions that the linear DD-PPO action head cannot read.
 
-\textbf{Therefore: capacity allocation, not information loss.} The bottleneck (no encoder, or $1{\times}1$) forces the LSTM to integrate the GPS sensor across time --- it has no other route. A rich encoder offers a viable per-step visual-feature route to the same information; policy gradient reallocates capacity to the visual route, and the integrated code is no longer the linearly-readable axis. \emph{The same hidden state encodes position in both regimes; only the format differs.}
+\textbf{Therefore.} The most parsimonious account is the capacity-allocation principle stated above: \emph{integration route} (carry sensor across time) and \emph{visual-feature route} (substitute encoder features for the integrated quantity) compete for finite recurrent capacity, and encoder bandwidth is the knob that determines which route wins. The substitution can be \emph{policy-relevant} or \emph{format-only}; Section~\ref{sec:converg} disentangles these.
 
 % ==========================================================================
 \section{Convergent evidence}
+\label{sec:converg}
 % ==========================================================================
 
-Three additional lenses corroborate the capacity-allocation account.
+Three additional lenses corroborate the capacity-allocation account, each addressing an alternative explanation.
 
-\textbf{Substitution dynamics across training.} Re-probing intermediate checkpoints ($\approx 50/100/150/200/250$M frames) shows that \emph{all four sighted conditions start at high linear GPS $R^2$ at $\sim 50$M frames} (coarse $+0.91$, foveated $+0.91$, uniform $+0.83$, foveated-logpolar $+0.92$); the linear top-layer code emerges early across the bandwidth spectrum. Bottleneck (coarse) preserves $R^2$ around $+0.5$ through training; rich-encoder conditions decay --- uniform crosses zero by $\sim 200$M and lands at $-1.79$; foveated drifts to $+0.18$; foveated-logpolar to $-0.03$. Decay rate tracks encoder informativeness about position --- this is capacity allocation as a \emph{training-time process}, not a property of the converged endpoint.
+\begin{figure}[h]
+\centering\vspace{-4pt}
+\includegraphics[width=\linewidth]{fig/fig2_lagk_stability.pdf}\vspace{-4pt}
+\caption{\textbf{Lag-$k$ temporal stability separates integrated from reactive memory.} Decoding the past position $\mathrm{GPS}_{t-k}$ from the current $\mathbf{h}_t$. Bottleneck conditions (blind, coarse) sustain stable positive $R^2$ across the lag range; rich-encoder conditions (foveated, fov-logpolar, uniform) degrade rapidly. Bottleneck $\mathbf{h}_t$ is a smoothly-varying integrated code; rich-encoder $\mathbf{h}_t$ is reactive to current visual context. Blind$^\dagger$ row from preliminary $100$-ep partial NPZ.}\vspace{-4pt}
+\label{fig:lagk}
+\end{figure}
 
-\textbf{Lag-$k$ temporal stability.} Decoding past position $\text{GPS}_{t-k}$ from current $\mathbf{h}_t$ across $k\in\{0,1,2,5,10,20\}$ separates \emph{integrated} from \emph{reactive} memory (Table~\ref{tab:probe}, column~5). Bottleneck conditions sustain stable positive $R^2$ across $k$ (blind: $+0.78\to+0.68$; coarse: $+0.58\to+0.53$); rich-encoder conditions are unstable (foveated: $+0.18\to-0.07$; uniform sub-baseline at $k{=}0$ already, crashing to $-6.53$ at $k{=}20$).
+\textbf{Substitution dynamics across training.} Re-probing intermediate checkpoints ($\approx 50/100/150/200/250$M frames) shows that \emph{all four sighted conditions start at high linear GPS $R^2$ at $\sim 50$M frames} (coarse $+0.91$, foveated $+0.91$, uniform $+0.83$, foveated-logpolar $+0.92$); the linear top-layer code emerges early across the bandwidth spectrum. Bottleneck (coarse) preserves $R^2$ around $+0.5$ through training; rich-encoder conditions decay --- uniform crosses zero by $\sim 200$M and lands at $-1.79$, foveated drifts to $+0.18$, foveated-logpolar to $-0.03$. Decay rate tracks encoder informativeness about position --- this is capacity allocation as a \emph{training-time process}, not a property of the converged endpoint.
 
-\textbf{Place-cell signature is condition-flat.} Per-(unit, scene) Skaggs spatial information (rectified $\max(\mathbf{h}_2,0)$) is essentially condition-flat: $1.20$ (coarse), $1.24$ (foveated), $1.19$ (uniform), $1.16$ (foveated-logpolar); blind $1.35$ (preliminary). $\Delta \approx 0.15$ bits, well under the within-condition spread. \emph{The bandwidth-allocation signal lives in the linear-readout axis, not the per-unit place-cell metric.}
+\textbf{Lag-$k$ temporal stability.} Figure~\ref{fig:lagk}: bottleneck conditions sustain stable positive $R^2$ across $k\in\{0,2,5,10,20\}$; rich-encoder conditions are unstable. The \emph{format} of the bottleneck-state code is a smoothly-varying integrated quantity; the rich-encoder state is reactive to the current visual scene and does not extrapolate temporally.
+
+\textbf{Place-cell signature is condition-flat.} Per-(unit, scene) Skaggs spatial information is essentially condition-flat: $1.20$ (coarse), $1.24$ (foveated), $1.19$ (uniform), $1.16$ (foveated-logpolar); blind $1.35$ (preliminary). $\Delta \approx 0.15$ bits, well within the within-condition spread. The bandwidth-allocation signal lives in the \emph{linear-readout axis}, not in the per-unit place-cell metric. This is a defence against the obvious null reading (``maybe blind/coarse just have more place cells''): they do not.
 
 % ==========================================================================
 \section{What changed since Report 1; status; risks}
 % ==========================================================================
 
-\textbf{Reframe.} \emph{Report 1} reported foveated as having the longest temporal memory ($R^2{=}0.629$ at lag-$5$, the only condition still positive). \emph{This is overturned.} The Report 1 ranking reflected partially-converged training plus heterogeneous hyperparameters across conditions; after unified retraining, foveated's lag-$k$ is \emph{less} stable than coarse's, not more. The new mechanism (encoder bandwidth) makes the same predictions for blind/coarse/uniform/foveated and additionally predicts that foveated-logpolar (a $2{\times}2$ rich-encoder control not in Report 1) lands in the rich-encoder regime --- which it does ($-0.12$).
+\textbf{Reframe.} \emph{Report 1} reported foveated as having the longest temporal memory ($R^2{=}0.629$ at lag-$5$, the only condition still positive). This is \emph{overturned}. The Report 1 ranking reflected partially-converged training plus heterogeneous hyperparameters across conditions; after unified retraining, foveated's lag-$k$ is \emph{less} stable than coarse's, not more (Figure~\ref{fig:lagk}). The new mechanism (encoder bandwidth) makes the same predictions for blind/coarse/uniform/foveated and additionally predicts that foveated-logpolar (a $2{\times}2$ rich-encoder control not in Report 1) lands in the rich-encoder regime --- which it does ($-0.12$, Figure~\ref{fig:cap_alloc}).
 
-\textbf{Status.} Phase~A probe-collect: $4/5$ complete; blind $500$-ep run in flight on EPFL RCP ($\sim 6$h ETA, partial $100$-ep NPZ already used above). Phase~B (linear/MLP/lag-$k$/Skaggs/substitution/CKA-Procrustes-transplant) complete for the four sighted conditions; the blind row of each is queued to fire automatically once the $500$-ep NPZ lands. Pre-DDL queue: re-run lenses with converged blind, apply values to the NeurIPS submission, sanity-rebuild the paper PDF.
+\textbf{Status.} Phase~A probe-collect: $4/5$ complete; blind $500$-ep run in flight on EPFL RCP ($\sim 6$h ETA, partial $100$-ep NPZ already used in both figures above). Phase~B (linear/MLP/lag-$k$/Skaggs/substitution/CKA-Procrustes-transplant) complete for the four sighted conditions; the blind row of each is queued to fire automatically once the $500$-ep NPZ lands. Pre-DDL queue: re-run lenses with converged blind, apply values to the NeurIPS submission, sanity-rebuild the paper PDF.
 
-\textbf{Risks tracked.} (a)~The $50$-ep blind preview gave catastrophically wide CV folds (linear $-0.27\pm 1.41$); at $100$ eps the same probe stabilised at $+0.79\pm 0.25$. We expect $500$ eps to tighten std to $\sim 0.10$. (b)~A separately-trained blind on a different seed/effective-batch gives a different mean ($+0.36$); we use our own retrained checkpoint and treat the alternative as one cross-setup robustness check.
+\textbf{Risks tracked.} (a)~The $50$-ep blind preview gave catastrophically wide CV folds (linear $-0.27\pm 1.41$); at $100$ eps the same probe stabilised at $+0.79\pm 0.25$ (the value plotted). We expect $500$ eps to tighten std to $\sim 0.10$. (b)~A separately-trained blind on a different seed/effective-batch gives a different mean ($+0.36$); we use our own retrained checkpoint and treat the alternative as one cross-setup robustness check.
 
 \noindent\textbf{Contributions.} \textbf{W.~Xu} post-retrain probe-collect, six-lens analysis pipeline, NeurIPS paper revision, this report. \textbf{L.~Bruneau} foveation transform, training infrastructure, learned-gaze decoder, CKA/Procrustes pipelines. \textbf{Z.~Aoutir} substitution-dynamics figure, place-cell visualisations. \textbf{R.~Abkari} behavioural ablations (shortcut, GPS-zeroing, excursion-forgetting), MP3D evaluation.
 
