@@ -69,7 +69,7 @@ data["blind"] = {
 
 
 # ===== FIGURE 1: capacity allocation (encoder dim vs linear/MLP GPS R^2) ===== #
-fig, ax = plt.subplots(figsize=(6.0, 3.0))
+fig, ax = plt.subplots(figsize=(6.0, 2.4))
 
 # Order: blind (dim=0), coarse (1), fov-logpolar (4), foveated (16), uniform (16)
 order = ["blind", "coarse", "foveated_logpolar", "foveated", "uniform"]
@@ -132,7 +132,7 @@ plt.close()
 
 
 # ===== FIGURE 2: lag-k temporal stability ===== #
-fig, ax = plt.subplots(figsize=(6.0, 3.0))
+fig, ax = plt.subplots(figsize=(6.0, 2.4))
 
 lags_paper = [0, 2, 5, 10, 20]
 ax.axhspan(-2.0, 0, color="#f4d8d4", alpha=0.25, zorder=0)
@@ -171,4 +171,48 @@ plt.tight_layout()
 out2 = Path("docs/cs503_progress/fig/fig2_lagk_stability.pdf")
 plt.savefig(out2, bbox_inches="tight")
 print(f"wrote {out2}")
+plt.close()
+
+
+# ===== FIGURE 3: substitution dynamics across training ===== #
+fig, ax = plt.subplots(figsize=(6.0, 2.4))
+
+# 5 ckpts × ~50M frames each (250M total / 49 ckpts ~= 5.1M per ckpt)
+ckpts = [10, 20, 30, 40, 49]
+frames_M = [c * 250.0 / 49.0 for c in ckpts]  # roughly 51, 102, 153, 204, 250
+
+ax.axhspan(-2.0, 0, color="#f4d8d4", alpha=0.25, zorder=0)
+ax.axhline(0, ls="-", color="grey", alpha=0.6, lw=0.8, zorder=1)
+
+# 4 sighted conds (no cross-ckpt blind data; only ckpt.34 from izar)
+for c in ["coarse", "foveated", "uniform", "foveated_logpolar"]:
+    means, stds = [], []
+    for k in ckpts:
+        path = Path(f"/tmp/_subdyn_{c}_{k}.json")
+        if not path.exists():
+            means.append(np.nan); stds.append(np.nan); continue
+        d = json.loads(path.read_text())
+        gps = d.get("1b_global_gps_compass", {})
+        means.append(gps.get("gps_cv_r2_mean", np.nan))
+        stds.append(gps.get("gps_cv_r2_std", np.nan))
+    means = np.array(means); stds = np.array(stds)
+    means_clip = np.clip(means, -2.0, None)
+    ax.errorbar(frames_M, means_clip, yerr=stds, marker=MARKER[c],
+                mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
+                ms=7, capsize=2, ls="-", lw=1.5, label=LABEL[c], zorder=3)
+
+ax.set_xlabel("Training frames (M)", fontsize=10)
+ax.set_ylabel("Linear GPS $R^2$", fontsize=10)
+ax.set_xticks([50, 100, 150, 200, 250])
+ax.set_ylim(-2.2, 1.05)
+ax.tick_params(axis="both", labelsize=9)
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+ax.legend(loc="lower left", fontsize=7.5, ncol=2, frameon=True)
+ax.set_title("All conditions start near $+0.91$ at $50$M; rich-encoder decays, bottleneck preserves",
+             fontsize=9.5, pad=4)
+plt.tight_layout()
+out3 = Path("docs/cs503_progress/fig/fig3_substitution_dynamics.pdf")
+plt.savefig(out3, bbox_inches="tight")
+print(f"wrote {out3}")
 plt.close()
