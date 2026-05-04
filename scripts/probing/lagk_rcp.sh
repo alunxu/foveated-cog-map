@@ -40,7 +40,7 @@ def lag_pairs(v, ep, k):
 
 
 CONDS = ["coarse", "foveated", "uniform", "foveated_logpolar", "blind_izar"]
-LAGS = [0, 2, 5, 10, 20]
+LAGS = [0, 1, 2, 5, 10, 20, 50]
 in_dir = "/scratch/wxu/habitat_checkpoints_rcp/probing_data_rcp"
 out_path = "/scratch/wxu/habitat_checkpoints_rcp/analysis_results/lagk_summary.json"
 
