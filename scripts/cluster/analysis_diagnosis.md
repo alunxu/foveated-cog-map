@@ -328,3 +328,48 @@ each ~600 steps, k=50 lag throws away first 50 steps from each episode
 in test fold. After 5-fold CV, may have very few k=50 pairs. This is
 sample-size noise dominating.
 
+
+## ITER 7 — blind_izar 50-ep partial preview: ALSO low R² (2026-05-04 ~17:15 UTC)
+
+After ep 50 checkpoint, ran 4-lens preview on partial NPZ (50 eps, 16458 steps).
+
+| Metric | Friend (seed=2, 50ep) | Izar (seed=100, 50ep) | Paper expected |
+|---|---|---|---|
+| Linear GPS R² | +0.362 ± 0.279 | **-0.271 ± 1.407** | +0.95 |
+| MLP GPS R² | +0.767 ± 0.074 | +0.018 ± 1.514 | +0.95 |
+| MLP-linear gap | +0.405 | +0.290 | ~0 |
+| Lag-k GPS k=0 | +0.300 | -0.271 | +0.76 |
+| Lag-k GPS k=20 | -0.642 | -2.617 | +0.72 |
+| Lag-k k=50 | -18.95 ± 34 | -22.97 ± 34 | +0.56 |
+| Compass k=0 | -0.405 | -1.326 | +0.81 |
+| DtG k=0 | +0.292 | +0.586 | n/a |
+| Skaggs (bits) | 1.43 | 1.31 | 1.25 |
+| place-units >1bit | 264 | 256 | 174 |
+
+**Two interpretations**:
+
+(a) Sample size dominates. With std=1.4 across 5 folds, SE = 0.63 — wide
+    enough that 50 eps cannot rule out true mean = +0.95.
+(b) Both retrained blind agents are genuinely different from paper's
+    reference. Paper's +0.95 claim may overstate post-retrain reality.
+
+**Decision**: WAIT for full 500 eps (~6h more). With 500 eps × 5-fold,
+std on R² should drop ~3-5x to ~0.3-0.4, which would tighten the
+estimate enough to discriminate (a) vs (b).
+
+**If 500-ep linear R² is still < 0.7**: the H1 paper claim "blind has
+the highest linear GPS R²" needs re-examination. The qualitative 
+ordering (blind > coarse > fov > uniform) might still hold but the
+absolute values would shift down significantly.
+
+**If 500-ep linear R² is ~0.95**: friend's preview was just noise; full
+run reproduces paper claim.
+
+**Skaggs**: both blind previews give ~1.3-1.4 bits, close to paper's
+1.25 and to our 4-sighted (1.16-1.24). Suggests the paper claim
+"Skaggs is condition-flat" survives; the blind row is approximately
+same as sighted (not 1.32 paper claim, but close to 1.20-1.24 sighted).
+
+**Place-units >1bit**: ~256-264 for blind (vs paper's 174). Higher.
+Skaggs threshold methodology difference (>1bit vs 99th percentile shuffle).
+
