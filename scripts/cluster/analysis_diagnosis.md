@@ -280,3 +280,51 @@ Will accumulate slowly over next iters.
 - [ ] Re-run excursion analysis on 4 conds
 - [ ] Wait Phase B → cross-check direction with excursion before any L428 edit
 - [ ] Wait ~6 substitution-dynamics conditions complete before any L260 update
+
+## ITER 6 — friend-blind preview ANOMALY (2026-05-04 ~16:50 UTC)
+
+Submitted blind-friend-preview to validate analysis pipeline using existing
+friend's blind_seed_2 NPZ at /scratch/wxu/habitat_checkpoints_rcp/probing_data_rcp/blind_det.npz
+(50 episodes, 30338 timesteps).
+
+**Result: blind values WAY off paper magnitudes:**
+
+| Metric | Friend (seed=2, 50 eps) | Paper expected | Discrepancy |
+|---|---|---|---|
+| Linear GPS R² | +0.362 ± 0.279 | +0.95 ± 0.02 | huge (-60%) |
+| MLP GPS R² | +0.767 ± 0.074 | +0.95 | -19% |
+| MLP-linear gap | +0.405 | ~0 | +0.4 (vs ~0) |
+| Lag-k GPS k=0 | +0.300 ± 0.319 | +0.76 | huge |
+| Lag-k GPS k=20 | -0.642 ± 1.234 | +0.72 | sign flip |
+| Compass k=0 | -0.405 ± 0.723 | +0.81 | sign flip |
+| Skaggs (rectified) | 1.43 bits | 1.25 bits | +0.18 (mild) |
+| place-units >1bit | 264 | 174 | +50% (close) |
+
+**Interpretation**:
+
+(a) Sample size issue: 50 eps → 5-fold CV → 10 eps/fold gives huge std on R².
+    Real underlying mean might be more stable but invisible at this n.
+
+(b) Friend's blind ≠ Wijmans-magnitude blind: friend trained with
+    different seed (2), different num_envs (likely 32), possibly different
+    other hyperparams. May have learned a meaningfully different (worse-
+    integrator) agent. Could explain why linear R² is +0.36 not +0.95.
+
+(c) Paper's +0.95 stale claim: came from a different blind run (Wijmans
+    or our prior training). Post-retrain blind value may be lower in
+    general.
+
+**Decision**:
+- Do NOT use friend's preview for paper edits (it's seed=2, not our seed=100).
+- Wait for izar probe-collect (500 episodes, seed=100) — should give
+  precise values with low std (5x smaller than 50-ep run).
+- If izar also shows linear R² ~ +0.36, we have a paper-claim mismatch
+  to address. If izar shows R² ~ +0.95, friend's was anomalous.
+- Skaggs and place-unit values are roughly in paper range (1.43 vs 1.25;
+  264 vs 174). Order of magnitude OK, just higher.
+
+**Note on lag-k catastrophic at k=50**: -18.95 R². With only 50 eps,
+each ~600 steps, k=50 lag throws away first 50 steps from each episode
+in test fold. After 5-fold CV, may have very few k=50 pairs. This is
+sample-size noise dominating.
+
