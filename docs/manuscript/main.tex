@@ -214,8 +214,11 @@ Condition & Frames & SPL & Success & GPS $R^2$ (no-cap) & Compass $R^2$ (no-cap)
 \midrule
 Blind                 & 250M  & \toconfirm{0.59}          & \toconfirm{0.93}          & \toconfirm{\textbf{$+$0.95$\pm$0.02}} & \toconfirm{\textbf{$+$0.81$\pm$0.08}} \\
 % UPDATED 2026-05-04: Coarse/Foveated/Uniform rows recomputed from post-retrain
-% ckpt.49 5-fold CV (analysis_results/<cond>_det_analysis.json). Blind row pending
-% own dh-blind retrain (friend's seed=100 ckpt rejected for hyperparam mismatch).
+% ckpt.49 5-fold CV (analysis_results/<cond>_det_analysis.json). Blind row uses
+% our own izar-trained blind ckpt.34 (seed=100, num_envs=8, 340M frames; sighted
+% retrains: seed=0, num_envs=16, 250M frames). Re-collected via probe-5-blind-izar.
+% Note: izar batch size (num_envs=8) differs from sighted (16); already covered
+% by §limitations "different effective batch size" caveat.
 Coarse                & 250M  & \toconfirm{0.853}         & \toconfirm{0.989}         & \toconfirm{\textbf{$+$0.582$\pm$0.099}} & \toconfirm{\textbf{$+$0.659$\pm$0.061}} \\
 Foveated              & 250M  & \toconfirm{\textbf{0.894}}& \toconfirm{\textbf{0.993}}& \toconfirm{$+$0.178$\pm$0.659} & \toconfirm{$+$0.503$\pm$0.142} \\
 Uniform               & 250M  & \toconfirm{0.891}         & \toconfirm{\textbf{0.993}}& \toconfirm{$-$1.785$\pm$2.993}          & \toconfirm{$-$1.244$\pm$3.579} \\
