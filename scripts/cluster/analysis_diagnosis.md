@@ -1,6 +1,74 @@
 # Overnight Loop Diagnosis Log
 
-Last updated: 2026-05-04 01:35 UTC (iter 1)
+Last updated: 2026-05-04 02:15 UTC (iter 2)
+
+## ITER 2 (2026-05-04 ~02:15 UTC) — woken by Monitor event, not /loop wakeup
+
+### Transplant: 4 sighted-only pairs available (rich-rich)
+
+| donor → recipient | baseline | self_t | cross | Δ cross | self drop | net cross |
+|---|---:|---:|---:|---:|---:|---:|
+| foveated_logpolar → foveated | 0.857 | 0.805 | 0.722 | -0.135 | -0.052 | -0.083 |
+| foveated → foveated_logpolar | 0.834 | 0.782 | 0.715 | -0.119 | -0.052 | -0.067 |
+| foveated → uniform | 0.849 | 0.801 | 0.760 | -0.089 | -0.048 | -0.041 |
+| uniform → foveated | 0.857 | 0.805 | 0.753 | -0.104 | -0.052 | -0.052 |
+
+**Pattern**: rich-rich pairs roughly symmetric (asymmetry ≤ 0.02 within
+fov↔fov_lp and fov↔uni), as expected (both regimes high-bandwidth encoder).
+Net cross-drop after self-disturbance correction: -0.04 to -0.08.
+
+**Cannot test H2 asymmetry claim (paper L321 "rich-encoder cannot use
+bottleneck hidden state"); needs coarse / blind donor or recipient.
+
+**Decision**: Do NOT update paper Figure 4. Defer until own blind ckpt + fix
+to transplant.py (cross-resolution donor/recipient).
+
+### Phase B status — stuck Pending ~5h
+
+`probe-analysis-b-0-0 Status: Pending`. Events: empty. No "Insufficient resources"
+message — but cluster has 17+ Pending jobs (16 substitution-dynamics + 1 Phase B
++ dh-blind retrain) waiting on GPU.
+
+GPU contention math:
+- F2 (dh-fnorm): 4 GPU active
+- transplant Running: 1-2 GPU at any time
+- substitution-dynamics: 1 GPU active (probe-1-c10) per scheduling round
+- dh-blind: 4 GPU Pending (high request)
+- Phase B: 1 GPU Pending
+
+Phase B and dh-blind are competing with substitution-dynamics for the 1-GPU
+slots. Substitution-dynamics 16 jobs gradually getting through.
+
+**Concern**: 8h budget might not get all 16 substitution-dynamics + Phase B done.
+Phase B is highest leverage (Table 1 + 5 lens outputs in 1 job vs 16 separate).
+
+**Action**: monitor. If Phase B still Pending after 2 more iters (~50min), kill
+some substitution-dynamics jobs to give Phase B priority. That's a hard call
+since substitution-dynamics also blocks the L260 paper update.
+
+### dh-blind retrain — Pending, blocker for full picture
+
+dh-blind-0-1 Pending — was Running earlier, now restarted. Cannot start until
+4 GPU slot available. F2 holds 4 GPU until ~05-05 morning.
+
+If dh-blind doesn't run during 8h window, blind row of all matrices remains
+unfilled. Paper §H1/H2/H3 narrative needs blind. Friend's blind ckpt is
+inconsistent (seed=100, num_envs=32) → user explicitly rejected.
+
+**Risk for deadline**: if blind retrain gets ~16h GPU + 1.5h probe + 1h
+re-analysis, total ~18-20h. With deadline 64h away (was 64 at loop start),
+still feasible IF blind retrain starts soon.
+
+**Mitigation idea**: kill F2 to free 4 GPU? F2 is at 56%. Killing wastes
+~14h of compute but also wastes ~14h more before completion. Trade-off:
+- Keep F2: F2 completes ~05-05, blind has ~24h slack. Tight.
+- Kill F2: blind starts immediately, completes ~05-04 evening. F2 lost.
+
+Defer this decision to user (mark in summary). Don't unilaterally kill F2.
+
+---
+
+
 
 ---
 
