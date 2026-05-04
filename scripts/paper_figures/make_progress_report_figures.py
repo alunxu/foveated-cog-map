@@ -213,7 +213,7 @@ frames_M = [c * 250.0 / 49.0 for c in ckpts]  # roughly 51, 102, 153, 204, 250
 ax.axhspan(-2.0, 0, color="#f4d8d4", alpha=0.25, zorder=0)
 ax.axhline(0, ls="-", color="grey", alpha=0.6, lw=0.8, zorder=1)
 
-# 4 sighted conds (no cross-ckpt blind data; only ckpt.34 from izar)
+# 4 sighted conds (full trajectory)
 for c in ["coarse", "foveated", "uniform", "foveated_logpolar"]:
     means, stds = [], []
     for k in ckpts:
@@ -230,9 +230,20 @@ for c in ["coarse", "foveated", "uniform", "foveated_logpolar"]:
                 mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
                 ms=7, capsize=2, ls="-", lw=1.5, label=LABEL[c], zorder=3)
 
+# Blind: only the 340M endpoint checkpoint is available so far. Plot as a
+# single point (no line) so the reader sees its endpoint position; the
+# trajectory back through training is still pending re-probing.
+blind_lin = blind["linear_mlp"]["linear_r2_mean"]
+blind_std = blind["linear_mlp"]["linear_r2_std"]
+ax.errorbar([340], [blind_lin], yerr=[blind_std], marker=MARKER["blind"],
+            mfc=COLOR["blind"], mec=COLOR["blind"], ecolor=COLOR["blind"],
+            ms=8, capsize=2, ls="", label="Blind$^\\dagger$ (endpoint only)",
+            zorder=4)
+
 ax.set_xlabel("Training frames (M)", fontsize=12, fontweight="bold")
 ax.set_ylabel("Linear GPS $R^2$", fontsize=12, fontweight="bold")
-ax.set_xticks([50, 100, 150, 200, 250])
+ax.set_xticks([50, 100, 150, 200, 250, 340])
+ax.set_xlim(20, 360)
 ax.set_ylim(-2.2, 1.05)
 ax.tick_params(axis="both", labelsize=9)
 ax.spines["top"].set_visible(False)
