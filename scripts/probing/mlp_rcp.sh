@@ -19,7 +19,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold
 
 
-CONDS = ["coarse", "foveated", "uniform", "foveated_logpolar"]
+CONDS = ["coarse", "foveated", "uniform", "foveated_logpolar", "blind_izar"]
 NPZ_DIR = "/scratch/wxu/habitat_checkpoints_rcp/probing_data_rcp"
 OUT = "/scratch/wxu/habitat_checkpoints_rcp/analysis_results/mlp_probe.json"
 

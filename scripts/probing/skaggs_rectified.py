@@ -56,7 +56,7 @@ def main():
     ap.add_argument("--in-dir", required=True, help="dir containing <cond>_det.npz")
     ap.add_argument("--out", required=True, help="output JSON")
     ap.add_argument("--conds", nargs="+",
-                    default=["coarse", "foveated", "uniform", "foveated_logpolar"])
+                    default=["coarse", "foveated", "uniform", "foveated_logpolar", "blind_izar"])
     args = ap.parse_args()
 
     out = {}

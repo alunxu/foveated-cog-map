@@ -8,7 +8,7 @@
 # Usage:
 #   bash scripts/cluster/submit_probe_collect_rcp.sh <condition> [episodes]
 #
-#   condition  ∈ {coarse, foveated, uniform, foveated_logpolar, blind, fnorm}
+#   condition  ∈ {coarse, foveated, uniform, foveated_logpolar, blind, blind_izar, fnorm}
 #   episodes   default 500
 #
 # Output:
@@ -54,11 +54,22 @@ case "$COND" in
     PROBE_ID=4
     ;;
   blind)
-    # Friend's blind seed=100 ckpt. Different hyperparams (num_envs=32, seed=100)
-    # — see paper §limitations footnote.
+    # Friend's blind seed=2 ckpt (path TBD - not yet uploaded to RCP).
+    # Different hyperparams (num_envs=32, seed=2) — see paper §limitations footnote.
     CONFIG_NAME="pointnav/ddppo_pointnav_blind_gibson"
     CKPT_DIR="/scratch/wxu/habitat_checkpoints_rcp/blind_seed_2_friend"
     PROBE_ID=5
+    ;;
+  blind_izar)
+    # Our own izar-trained blind on seed=100, ckpt.34 = 340M frames trained.
+    # Hyperparams: seed=100, num_envs=8, hidden=512, num_recurrent=3,
+    # max_ep_steps=2000, force_blind_policy=True, WijmansPointNavPolicy.
+    # num_envs differs from 4 sighted (16) — note in §limitations.
+    CONFIG_NAME="pointnav/ddppo_pointnav_blind_gibson"
+    CKPT_DIR="/scratch/wxu/habitat_checkpoints_rcp/blind_izar"
+    PROBE_ID=5
+    # Default to ckpt.34 (the only ckpt we uploaded; izar had ckpt.0..34).
+    CKPT_NUM="${3:-34}"
     ;;
   fnorm)
     CONFIG_NAME="pointnav/ddppo_pointnav_foveated_normaliser_gibson"
@@ -74,7 +85,10 @@ esac
 CKPT_PATH="${CKPT_DIR}/ckpt.${CKPT_NUM}.pth"
 
 # Numbered job name: probe-N (default ckpt.49) or probe-N-cN (specific ckpt).
-if [ "$CKPT_NUM" = "49" ]; then
+# blind_izar special-case: only ckpt.34 exists, treat as the final ckpt.
+if [ "$COND" = "blind_izar" ] && [ "$CKPT_NUM" = "34" ]; then
+  JOB_NAME="probe-${PROBE_ID}-blind-izar"
+elif [ "$CKPT_NUM" = "49" ]; then
   JOB_NAME="probe-${PROBE_ID}"
 else
   JOB_NAME="probe-${PROBE_ID}-c${CKPT_NUM}"
@@ -82,8 +96,11 @@ fi
 IMAGE="registry.rcp.epfl.ch/dhlab-wxu/habitat:v2"
 # Output dir + npz name. Default ckpt.49 → <cond>_det.npz (final result).
 # Cross-ckpt sweep → <cond>_det_ckpt<N>.npz (preserves ckpt.49 NPZ).
+# blind_izar w/ ckpt.34 → blind_izar_det.npz (final, no suffix).
 OUT_DIR="/scratch/wxu/habitat_checkpoints_rcp/probing_data_rcp"
-if [ "$CKPT_NUM" = "49" ]; then
+if [ "$COND" = "blind_izar" ] && [ "$CKPT_NUM" = "34" ]; then
+  OUT_NPZ="${OUT_DIR}/blind_izar_det.npz"
+elif [ "$CKPT_NUM" = "49" ]; then
   OUT_NPZ="${OUT_DIR}/${COND}_det.npz"
 else
   OUT_NPZ="${OUT_DIR}/${COND}_det_ckpt${CKPT_NUM}.npz"

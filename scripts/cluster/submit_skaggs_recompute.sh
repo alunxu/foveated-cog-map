@@ -48,7 +48,7 @@ NPZ_DIR = '/scratch/wxu/habitat_checkpoints_rcp/probing_data_rcp'
 RESULTS = '/scratch/wxu/habitat_checkpoints_rcp/analysis_results'
 out = {}
 print(f'{\"cond\":<22} {\"mean\":>10} {\"std\":>10} {\"max\":>10} {\"n_scenes\":>10} {\"place_units(>1bit)\":>20} {\"place_units(>0.5bit)\":>22}')
-for c in ['coarse', 'foveated', 'uniform', 'foveated_logpolar']:
+for c in ['coarse', 'foveated', 'uniform', 'foveated_logpolar', 'blind_izar']:
     p = f'{NPZ_DIR}/{c}_det.npz'
     if not os.path.exists(p):
         continue
