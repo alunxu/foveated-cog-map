@@ -2,7 +2,108 @@
 
 Last updated: 2026-05-04 02:15 UTC (iter 2)
 
-## ITER 2 (2026-05-04 ~02:15 UTC) — woken by Monitor event, not /loop wakeup
+## ITER 3 — major findings while user slept
+
+User session was idle 02:15→15:00 UTC; loop /loop wakeups did not fire (session
+not engaged). Cluster jobs continued running independently. On wake, found:
+
+- ✅ Phase B (probe-analysis-b-0-1): Completed, output at `/scratch/wxu/.../analysis_results/`
+- ✅ 16/16 substitution dynamics probes: Completed
+- ✅ 6/6 sighted-only transplant pairs: Completed
+- ❌ mlp_probe.json (670 B) + cka.json missing + lagk_*.json missing — Phase B
+  partial (linear analyze.py + procrustes worked; MLP/CKA/lagk failed silently)
+- 🟡 dh-blind retrain: still Pending (F2 still on 4 GPU)
+- 🟡 F2 (dh-fnorm): Running 14h, ~56%
+
+### Linear probe R² (5-fold CV mean, post-retrain ckpt.49)
+
+| Cond | GPS R² | GPS std | Compass R² | goal_dist R² | Skaggs bits |
+|---|---:|---:|---:|---:|---:|
+| coarse | **+0.582** | 0.099 | +0.659 | +0.960 | 20.83 |
+| foveated | +0.178 | 0.659 | +0.503 | +0.912 | 27.03 |
+| uniform | **−1.785** | 2.993 | −1.244 | +0.915 | 99.80 |
+| foveated_logpolar | −0.029 | 0.759 | +0.467 | +0.946 | 163.61 |
+
+Paper §H1 stale (5-cond): blind 0.95, coarse 0.72, fov 0.25, uniform −1.08
+Paper §place-cell stale: 1.25/1.32/1.18/1.16 bits per (unit, scene)
+
+**Direction match for H1 main claim**:
+- Coarse +0.58 (bottleneck): clearly preserves linear GPS code ✓
+- Uniform −1.79 (rich-encoder): collapses to negative ✓
+- Foveated +0.18, foveated_logpolar −0.03: both rich-encoder-like, near 0 ✓
+- goal_dist R² 0.91-0.96 across all 4: sanity probe target intact ✓
+
+**Anomalies (DO NOT auto-edit paper without user review)**:
+
+1. **HCPENDING falsifiable prediction (paper L811): NOT confirmed**.
+   - Paper predicted: log-polar R² ≥ 0.3 between coarse 0.78 and uniform 0
+   - Actual: foveated_logpolar R² = −0.03
+   - log-polar lands in rich-encoder regime, NOT intermediate
+   - This means the encoder-spatial-output mechanism (§H1 framing) needs
+     re-thinking — is logpolar's encoder output really 2×2 as expected?
+     Or does the encoder regime depend on more than spatial output dim?
+
+2. **Skaggs MI 100× off from paper**.
+   - Paper: 1.25/1.32/1.18/1.16 bits per (unit, scene) — narrow range
+   - Actual: 20.83/27.03/99.80/163.61 — bigger range, 100× higher absolute
+   - Likely metric definition mismatch (paper mean per-unit-per-scene vs
+     analyze.py's "mean_spatial_info_bits" aggregate). NEEDS verify.
+
+3. **Foveated > Foveated_logpolar in linear R²** (paper had logpolar > foveated
+   if encoder-spatial-output mechanism holds). Reversed.
+
+### Procrustes / CKA (3 conds: coarse + foveated + uniform; foveated_logpolar
+missing in script CONDS)
+
+theta_1 distance:
+- coarse-uniform: 1.019 (max-orthogonal)
+- coarse-foveated: 0.846 (smallest cross-cond)
+- uniform-foveated: 0.988
+
+Linear CKA:
+- coarse-foveated: **0.566** (highest — coarse and foveated MORE SIMILAR than other pairs)
+- coarse-uniform: 0.297
+- uniform-foveated: 0.332
+
+**Major reframe signal**: paper has §H2 framing where "rich-encoder pair
+(foveated/uniform) is tightest" and "blind/coarse bottleneck pair is next".
+With the post-retrain run:
+- Coarse-foveated CKA 0.566 is HIGHER than uniform-foveated 0.332.
+- Foveated representation aligns more with bottleneck (coarse) than with
+  rich-encoder (uniform).
+- Suggests foveated is "hybrid case" — paper §"Foveation as a hybrid case"
+  is REINFORCED but the specific cross-condition pairing direction may shift.
+
+### Transplant 6 sighted-only pairs (rich-rich)
+
+| pair | cross_delta | self_delta | net cross |
+|---|---:|---:|---:|
+| fov_lp → fov | -0.135 | -0.052 | -0.083 |
+| fov → fov_lp | -0.119 | -0.052 | -0.067 |
+| fov → uni | -0.089 | -0.048 | -0.041 |
+| uni → fov | -0.104 | -0.052 | -0.052 |
+| (other 2 likely similar)
+
+Roughly symmetric. Cannot test H2 bottleneck-rich asymmetry.
+
+### Substitution dynamics 16 ckpts: analysis in flight (sklearn install
+delayed by missing pip package). Background job bzszv21en.
+
+### NEXT ACTIONS NEEDED (user wake-up review)
+
+DO NOT eagerly edit paper. Multiple shifts vs stale numbers (excursion
+direction, Skaggs magnitude, Procrustes coarse-most-distant, log-polar
+prediction). User should review before any edit.
+
+When user awake, propose:
+1. Walk through these numbers together
+2. Decide which paper claims to update vs re-frame
+3. Re-think H1 mechanism if log-polar prediction is genuinely falsified
+4. dh-blind retrain still Pending — decide whether to wait or alternate path
+
+---
+
+
 
 ### Transplant: 4 sighted-only pairs available (rich-rich)
 
