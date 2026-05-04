@@ -102,8 +102,8 @@ for i, c in enumerate(order):
                 marker=MARKER[c], mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
                 ms=8, mew=1.0, capsize=2, ls="", label=LABEL[c], zorder=4)
 
-ax.set_xlabel("Encoder spatial output (# cells)", fontsize=10)
-ax.set_ylabel("GPS $R^2$ (5-fold ep-CV)", fontsize=10)
+ax.set_xlabel("Encoder spatial output (# cells)", fontsize=13, fontweight="bold")
+ax.set_ylabel("GPS $R^2$ (5-fold ep-CV)", fontsize=13, fontweight="bold")
 ax.set_xticks([0, 1, 4, 16])
 ax.set_xticklabels(["0\n(blind)", "1\n(1×1)", "4\n(2×2)", "16\n(4×4)"], fontsize=8.5)
 ax.set_ylim(-2.2, 1.05)
@@ -121,8 +121,8 @@ ax.legend(handles=[handle_lin, handle_mlp] + handles_lin,
           loc="upper right", fontsize=7.5, ncol=2, frameon=True,
           bbox_to_anchor=(1.0, 1.02))
 
-ax.set_title("Linear $R^2$ falls monotonically; MLP recovers in every condition",
-             fontsize=10, pad=4)
+ax.set_title("Top-layer GPS $R^2$ vs.\\ encoder bandwidth",
+             fontsize=13, fontweight="bold", pad=4)
 plt.tight_layout()
 out1 = Path("docs/cs503_progress/fig/fig1_capacity_allocation.pdf")
 out1.parent.mkdir(parents=True, exist_ok=True)
@@ -157,16 +157,16 @@ ax.errorbar(blind_lags, blind_means, yerr=blind_stds, marker=MARKER["blind"],
             mfc=COLOR["blind"], mec=COLOR["blind"], ecolor=COLOR["blind"],
             ms=7, capsize=2, ls="-", lw=1.5, label="Blind$^\\dagger$", zorder=4)
 
-ax.set_xlabel("Lag $k$ (decode $\\mathrm{GPS}_{t-k}$ from $\\mathbf{h}_t$)", fontsize=10)
-ax.set_ylabel("GPS $R^2$", fontsize=10)
+ax.set_xlabel("Lag $k$", fontsize=13, fontweight="bold")
+ax.set_ylabel("GPS $R^2$", fontsize=13, fontweight="bold")
 ax.set_xticks(lags_paper)
 ax.set_ylim(-2.2, 1.05)
 ax.tick_params(axis="both", labelsize=9)
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 ax.legend(loc="lower left", fontsize=7.5, ncol=2, frameon=True)
-ax.set_title("Bottleneck conditions sustain stable lag-$k$; rich-encoder ones unstable",
-             fontsize=10, pad=4)
+ax.set_title("Past-position decoding: $\\mathrm{GPS}_{t-k}$ from $\\mathbf{h}_t$",
+             fontsize=13, fontweight="bold", pad=4)
 plt.tight_layout()
 out2 = Path("docs/cs503_progress/fig/fig2_lagk_stability.pdf")
 plt.savefig(out2, bbox_inches="tight")
@@ -201,16 +201,16 @@ for c in ["coarse", "foveated", "uniform", "foveated_logpolar"]:
                 mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
                 ms=7, capsize=2, ls="-", lw=1.5, label=LABEL[c], zorder=3)
 
-ax.set_xlabel("Training frames (M)", fontsize=10)
-ax.set_ylabel("Linear GPS $R^2$", fontsize=10)
+ax.set_xlabel("Training frames (M)", fontsize=13, fontweight="bold")
+ax.set_ylabel("Linear GPS $R^2$", fontsize=13, fontweight="bold")
 ax.set_xticks([50, 100, 150, 200, 250])
 ax.set_ylim(-2.2, 1.05)
 ax.tick_params(axis="both", labelsize=9)
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 ax.legend(loc="lower left", fontsize=7.5, ncol=2, frameon=True)
-ax.set_title("All conditions start near $+0.91$ at $50$M; rich-encoder decays, bottleneck preserves",
-             fontsize=9.5, pad=4)
+ax.set_title("Linear GPS $R^2$ across training",
+             fontsize=13, fontweight="bold", pad=4)
 plt.tight_layout()
 out3 = Path("docs/cs503_progress/fig/fig3_substitution_dynamics.pdf")
 plt.savefig(out3, bbox_inches="tight")
