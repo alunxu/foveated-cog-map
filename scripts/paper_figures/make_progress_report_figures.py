@@ -132,14 +132,20 @@ lags_paper = [0, 2, 5, 10, 20]
 ax.axhspan(-2.0, 0, color="#f4d8d4", alpha=0.25, zorder=0)
 ax.axhline(0, ls="-", color="grey", alpha=0.6, lw=0.8, zorder=1)
 
-# Plot 4 sighted from lagk_summary
+# Plot 4 sighted from lagk_summary; clip negative outliers at -2.0 for vis
+LAGK_CLIP = -2.0
 for c in ["coarse", "foveated", "uniform", "foveated_logpolar"]:
     if c not in lagk:
         continue
-    means = [lagk[c]["GPS"][f"k{k}"]["mean"] for k in lags_paper if lagk[c]["GPS"].get(f"k{k}")]
-    stds = [lagk[c]["GPS"][f"k{k}"]["std"] for k in lags_paper if lagk[c]["GPS"].get(f"k{k}")]
+    means = np.array([lagk[c]["GPS"][f"k{k}"]["mean"] for k in lags_paper if lagk[c]["GPS"].get(f"k{k}")])
+    stds = np.array([lagk[c]["GPS"][f"k{k}"]["std"] for k in lags_paper if lagk[c]["GPS"].get(f"k{k}")])
     valid_lags = [k for k in lags_paper if lagk[c]["GPS"].get(f"k{k}")]
-    ax.errorbar(valid_lags, means, yerr=stds, marker=MARKER[c],
+    means_clip = np.clip(means, LAGK_CLIP, None)
+    # Cap error bars at the clip line so they don't extend off-axis
+    err_low = np.clip(means - stds, LAGK_CLIP, None)
+    err_high = means + stds
+    yerr_clip = np.array([means_clip - err_low, err_high - means_clip])
+    ax.errorbar(valid_lags, means_clip, yerr=yerr_clip, marker=MARKER[c],
                 mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
                 ms=7, capsize=2, ls="-", lw=1.5, label=LABEL[c], zorder=3)
 

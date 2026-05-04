@@ -79,7 +79,7 @@ Position information appears not to be \emph{destroyed} by a rich encoder. A non
 \begin{figure}[h]
 \centering\vspace{-4pt}
 \includegraphics[width=\linewidth]{fig/fig3_substitution_dynamics.pdf}\vspace{-4pt}
-\caption{Linear GPS $R^2$ across training ($5$ checkpoints per condition; blind has only the $340$M ckpt and is omitted). Negative-$R^2$ outliers clipped to $-2.0$.}\vspace{-4pt}
+\caption{Linear GPS $R^2$ at $5$ training checkpoints per sighted condition (blind omitted: only the $340$M endpoint checkpoint is available, no intermediate blind checkpoints exist for a trajectory). Negative-$R^2$ outliers clipped to $-2.0$.}\vspace{-4pt}
 \label{fig:subst}
 \end{figure}
 
@@ -92,7 +92,7 @@ The endpoint contrast leaves open whether bottleneck conditions ever even \emph{
 \begin{figure}[h]
 \centering\vspace{-4pt}
 \includegraphics[width=\linewidth]{fig/fig2_lagk_stability.pdf}\vspace{-4pt}
-\caption{GPS $R^2$ for past-position probes $\mathrm{GPS}_{t-k}$ from current $\mathbf{h}_t$. Blind point: preliminary $100$-ep partial NPZ.}\vspace{-4pt}
+\caption{GPS $R^2$ for past-position probes $\mathrm{GPS}_{t-k}$ from current $\mathbf{h}_t$. Uniform's mean $R^2$ falls below the visible range from $k{=}5$ onward (true values $-2.28, -3.01, -6.53$ at $k{=}5, 10, 20$); shown clipped at $-2.0$. Blind point: preliminary $100$-ep partial NPZ.}\vspace{-4pt}
 \label{fig:lagk}
 \end{figure}
 
@@ -112,7 +112,7 @@ The same format difference shows up within an episode. Decoding past position fr
 
 \textbf{Encountered and solved}\quad (i) Hyperparameter drift across Report~1 conditions confounded comparisons; resolved by unified retraining. (ii) Skaggs spatial information $\sim 100\times$ inflated on raw $\mathbf{h}_2$ (near-zero global means dominate the ratio in $I = \sum p(b)(\lambda_b/\bar\lambda)\log_2(\lambda_b/\bar\lambda)$); resolved by ReLU rectification ($\max(\mathbf{h}_2, 0)$) before computing per-bin firing rates. (iii) Coarse memory transplant failed at state-dict load (RGB shape mismatch); restricted to the $6$ sighted-only pairs. (iv) Blind probe-collect at $50$ episodes gave wide CV folds ($-0.27\pm 1.41$); diagnosed as sample-size noise ($100$ eps stabilises to $+0.79\pm 0.25$).
 
-\textbf{Forward risks}\quad Blind $500$-ep ETA overlaps the NeurIPS deadline (the $100$-ep partial is a fall-back); single-seed per condition leaves seed-variance unbounded; the transplant matrix is incomplete without coarse / blind pairs, deferring the test of the proposal's H2 (cross-condition representational divergence) until an input-padding fix lands.
+\textbf{Forward risks}\quad The blind $500$-ep collection ($\sim 6$h on RCP) is in flight; the $100$-ep partial NPZ provides a fall-back if the long run does not finish in time; single-seed per condition leaves seed-variance unbounded; the transplant matrix is incomplete without coarse / blind pairs, deferring the test of the proposal's H2 (cross-condition representational divergence) until an input-padding fix lands.
 
 \textbf{Bandwidth-allocation actions}\quad (A1) complete the blind $500$-ep probe-collect, populate the blind row across all lenses, and tighten Figures~\ref{fig:cap_alloc} and~\ref{fig:lagk}; (A2) retrain coarse with a $256{\times}256$-padded input pipeline so the cross-condition memory-transplant matrix can include the bottleneck-vs-rich-encoder asymmetry test (closes the gap on H2 evidence); (A3) two-seed validation on the coarse and uniform endpoints to bound seed-variance on the magnitude axis. \textbf{Cog-neuro methodology}\quad (A4) report the LOSO scene-invariance and excursion-forgetting results in the final write-up; (A5) place-vs-view-cell dissociation on existing rate-map data, plus an H3 reattempt with bounded-$\sigma$ stochastic gaze if time permits.
 
