@@ -28,6 +28,8 @@ A PointGoal navigation (PointNav) agent is a deep-RL system that, given a goal c
 
 Our working hypothesis (the \emph{capacity-allocation} account) is that a bottleneck at the encoder leaves the integration route as the most viable mechanism, so the LSTM tends to carry a temporally-stable, linearly-readable position code in the policy-readable layer ($\mathbf{h}_2$). A rich encoder offers a per-step visual-feature route as an alternative; under policy-gradient training, capacity tends to flow toward whichever route the agent can exploit, and the linearly-readable component of $\mathbf{h}_2$ shrinks --- though, as we show, the same hidden state still encodes position non-linearly. Same task, different cognitive-map format.
 
+This framing is an evolution of the project's original direction. The proposal and Report~1 focused on foveated vision specifically (testing whether the foveated condition shows compensatory memory). The post-retrain experiments below --- particularly the foveated-logpolar control we added \emph{after} Report~1 --- pointed instead at encoder bandwidth in general as the substantive variable: foveation \emph{per se} does not pick out a special regime. We adjusted the project scope and central question accordingly; §VI documents the shift in detail.
+
 % ==========================================================================
 \section{Setup and method}
 % ==========================================================================

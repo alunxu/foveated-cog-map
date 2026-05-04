@@ -11,6 +11,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Match IEEE body text (Times-like serif), Computer-Modern math.
+plt.rcParams.update({
+    "font.family": "serif",
+    "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
+    "mathtext.fontset": "cm",
+    "axes.unicode_minus": False,
+})
+
 
 # ----- Data: pull from current post-retrain JSONs ----- #
 MLP_JSON = Path("/tmp/mlp_probe.json")
@@ -68,61 +76,47 @@ data["blind"] = {
 }
 
 
-# ===== FIGURE 1: capacity allocation (encoder dim vs linear/MLP GPS R^2) ===== #
+# ===== FIGURE 1: capacity allocation (grouped bar: linear vs MLP per condition) ===== #
 fig, ax = plt.subplots(figsize=(6.0, 2.4))
 
-# Order: blind (dim=0), coarse (1), fov-logpolar (4), foveated (16), uniform (16)
+# Order along the bandwidth axis (left = no encoder, right = rich encoder)
 order = ["blind", "coarse", "foveated_logpolar", "foveated", "uniform"]
-xs = [ENC_DIM[c] for c in order]
-lin_means = [data[c]["lin_m"] for c in order]
-lin_stds = [data[c]["lin_s"] for c in order]
-mlp_means = [data[c]["mlp_m"] for c in order]
-mlp_stds = [data[c]["mlp_s"] for c in order]
+xs_idx = np.arange(len(order))
+bar_w = 0.36
 
-# Light grey shaded band for "policy-readable" zone (R^2 > 0)
-ax.axhspan(-2.0, 0, color="#f4d8d4", alpha=0.25, zorder=0)
+lin_means = np.array([data[c]["lin_m"] for c in order])
+lin_stds = np.array([data[c]["lin_s"] for c in order])
+mlp_means = np.array([data[c]["mlp_m"] for c in order])
+mlp_stds = np.array([data[c]["mlp_s"] for c in order])
+
+ax.axhspan(-2.0, 0, color="#f4d8d4", alpha=0.22, zorder=0)
 ax.axhline(0, ls="-", color="grey", alpha=0.6, lw=0.8, zorder=1)
 
-# Plot MLP curve (lighter, dashed) first so it's behind
-xs_jit_mlp = [x - 0.05 if x == 16 and order[i] == "foveated" else (x + 0.05 if x == 16 else x) for i, x in enumerate(xs)]
-ax.plot(xs_jit_mlp, mlp_means, ls="--", color="grey", alpha=0.6, lw=1.2, zorder=2, label="MLP probe")
-
+# Linear bars (filled) and MLP bars (hatched / lighter) per condition
 for i, c in enumerate(order):
-    # MLP point (open marker)
-    ax.errorbar(xs_jit_mlp[i], mlp_means[i], yerr=mlp_stds[i],
-                marker=MARKER[c], mfc="white", mec=COLOR[c], ecolor=COLOR[c],
-                ms=7, mew=1.5, capsize=2, ls="", zorder=3)
+    ax.bar(xs_idx[i] - bar_w/2, lin_means[i], width=bar_w, yerr=lin_stds[i],
+           color=COLOR[c], edgecolor=COLOR[c], capsize=2, zorder=3,
+           label="Linear" if i == 0 else None)
+    ax.bar(xs_idx[i] + bar_w/2, mlp_means[i], width=bar_w, yerr=mlp_stds[i],
+           color="white", edgecolor=COLOR[c], hatch="///", capsize=2,
+           linewidth=1.0, zorder=3, label="MLP" if i == 0 else None)
 
-# Linear curve (solid)
-xs_jit_lin = [x - 0.05 if x == 16 and order[i] == "foveated" else (x + 0.05 if x == 16 else x) for i, x in enumerate(xs)]
-ax.plot(xs_jit_lin, lin_means, ls="-", color="#222", alpha=0.4, lw=1.0, zorder=2)
-
-for i, c in enumerate(order):
-    ax.errorbar(xs_jit_lin[i], lin_means[i], yerr=lin_stds[i],
-                marker=MARKER[c], mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
-                ms=8, mew=1.0, capsize=2, ls="", label=LABEL[c], zorder=4)
-
-ax.set_xlabel("Encoder spatial output (# cells)", fontsize=13, fontweight="bold")
-ax.set_ylabel("GPS $R^2$ (5-fold ep-CV)", fontsize=13, fontweight="bold")
-ax.set_xticks([0, 1, 4, 16])
-ax.set_xticklabels(["0\n(blind)", "1\n(1×1)", "4\n(2×2)", "16\n(4×4)"], fontsize=8.5)
+ax.set_xticks(xs_idx)
+ax.set_xticklabels([LABEL[c].replace("Foveated-logpolar", "Fov-LP") for c in order],
+                   fontsize=8.5)
+ax.set_xlabel("Condition (ordered by encoder bandwidth $\\rightarrow$)",
+              fontsize=10, fontweight="bold")
+ax.set_ylabel("GPS $R^2$", fontsize=10, fontweight="bold")
 ax.set_ylim(-2.2, 1.05)
 ax.tick_params(axis="y", labelsize=9)
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
-# Two-column legend below the plot
-handles_lin = [plt.Line2D([0], [0], marker=MARKER[c], color=COLOR[c], mfc=COLOR[c],
-                          ms=7, ls="", label=LABEL[c]) for c in order]
-handle_mlp = plt.Line2D([0], [0], ls="--", color="grey", lw=1.2, label="MLP (dashed)")
-handle_lin = plt.Line2D([0], [0], ls="-", color="#222", alpha=0.6, lw=1.0, label="Linear (solid)")
+# Compact legend top-right
+ax.legend(loc="upper right", fontsize=8, frameon=True, ncol=1, bbox_to_anchor=(1.0, 1.0))
 
-ax.legend(handles=[handle_lin, handle_mlp] + handles_lin,
-          loc="upper right", fontsize=7.5, ncol=2, frameon=True,
-          bbox_to_anchor=(1.0, 1.02))
-
-ax.set_title("Top-layer GPS $R^2$ vs.\\ encoder bandwidth",
-             fontsize=13, fontweight="bold", pad=4)
+ax.set_title("Top-layer GPS $R^2$: linear vs MLP probe by condition",
+             fontsize=10, fontweight="bold", pad=4)
 plt.tight_layout()
 out1 = Path("docs/cs503_progress/fig/fig1_capacity_allocation.pdf")
 out1.parent.mkdir(parents=True, exist_ok=True)
@@ -157,8 +151,8 @@ ax.errorbar(blind_lags, blind_means, yerr=blind_stds, marker=MARKER["blind"],
             mfc=COLOR["blind"], mec=COLOR["blind"], ecolor=COLOR["blind"],
             ms=7, capsize=2, ls="-", lw=1.5, label="Blind$^\\dagger$", zorder=4)
 
-ax.set_xlabel("Lag $k$", fontsize=13, fontweight="bold")
-ax.set_ylabel("GPS $R^2$", fontsize=13, fontweight="bold")
+ax.set_xlabel("Lag $k$", fontsize=10, fontweight="bold")
+ax.set_ylabel("GPS $R^2$", fontsize=10, fontweight="bold")
 ax.set_xticks(lags_paper)
 ax.set_ylim(-2.2, 1.05)
 ax.tick_params(axis="both", labelsize=9)
@@ -166,7 +160,7 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 ax.legend(loc="lower left", fontsize=7.5, ncol=2, frameon=True)
 ax.set_title("Past-position decoding: $\\mathrm{GPS}_{t-k}$ from $\\mathbf{h}_t$",
-             fontsize=13, fontweight="bold", pad=4)
+             fontsize=10, fontweight="bold", pad=4)
 plt.tight_layout()
 out2 = Path("docs/cs503_progress/fig/fig2_lagk_stability.pdf")
 plt.savefig(out2, bbox_inches="tight")
@@ -201,8 +195,8 @@ for c in ["coarse", "foveated", "uniform", "foveated_logpolar"]:
                 mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
                 ms=7, capsize=2, ls="-", lw=1.5, label=LABEL[c], zorder=3)
 
-ax.set_xlabel("Training frames (M)", fontsize=13, fontweight="bold")
-ax.set_ylabel("Linear GPS $R^2$", fontsize=13, fontweight="bold")
+ax.set_xlabel("Training frames (M)", fontsize=10, fontweight="bold")
+ax.set_ylabel("Linear GPS $R^2$", fontsize=10, fontweight="bold")
 ax.set_xticks([50, 100, 150, 200, 250])
 ax.set_ylim(-2.2, 1.05)
 ax.tick_params(axis="both", labelsize=9)
@@ -210,7 +204,7 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 ax.legend(loc="lower left", fontsize=7.5, ncol=2, frameon=True)
 ax.set_title("Linear GPS $R^2$ across training",
-             fontsize=13, fontweight="bold", pad=4)
+             fontsize=10, fontweight="bold", pad=4)
 plt.tight_layout()
 out3 = Path("docs/cs503_progress/fig/fig3_substitution_dynamics.pdf")
 plt.savefig(out3, bbox_inches="tight")
