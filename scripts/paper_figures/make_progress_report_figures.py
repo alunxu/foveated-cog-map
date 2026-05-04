@@ -76,47 +76,76 @@ data["blind"] = {
 }
 
 
-# ===== FIGURE 1: capacity allocation (grouped bar: linear vs MLP per condition) ===== #
-fig, ax = plt.subplots(figsize=(6.0, 2.4))
+# ===== FIGURE 1: hybrid scatter — Linear+MLP + shaded regime, inline labels ===== #
+fig, ax = plt.subplots(figsize=(6.2, 3.0))
 
-# Order along the bandwidth axis (left = no encoder, right = rich encoder)
 order = ["blind", "coarse", "foveated_logpolar", "foveated", "uniform"]
-xs_idx = np.arange(len(order))
-bar_w = 0.36
+# x positions: blind at -0.5 for visual separation, sighted at log of encoder dim
+x_pos = {"blind": -0.5, "coarse": 0.0, "foveated_logpolar": 1.0,
+         "foveated": 2.0, "uniform": 2.6}  # foveated/uniform side-by-side at 4x4
 
 lin_means = np.array([data[c]["lin_m"] for c in order])
 lin_stds = np.array([data[c]["lin_s"] for c in order])
 mlp_means = np.array([data[c]["mlp_m"] for c in order])
 mlp_stds = np.array([data[c]["mlp_s"] for c in order])
+xs = [x_pos[c] for c in order]
 
-ax.axhspan(-2.0, 0, color="#f4d8d4", alpha=0.22, zorder=0)
-ax.axhline(0, ls="-", color="grey", alpha=0.6, lw=0.8, zorder=1)
+# Shaded regime bands
+ax.axhspan(0.4, 1.05, color="#d6ebd6", alpha=0.55, zorder=0)
+ax.axhspan(-2.2, -0.05, color="#f4d8d4", alpha=0.42, zorder=0)
+ax.axhline(0, ls="-", color="grey", alpha=0.5, lw=0.8, zorder=1)
 
-# Linear bars (filled) and MLP bars (hatched / lighter) per condition
+# Connecting curves
+ax.plot(xs, lin_means, ls="-", color="#666", alpha=0.5, lw=1.0, zorder=2)
+ax.plot(xs, mlp_means, ls=":", color="#666", alpha=0.5, lw=1.0, zorder=2)
+
+# Linear (filled) + MLP (open) markers per condition
 for i, c in enumerate(order):
-    ax.bar(xs_idx[i] - bar_w/2, lin_means[i], width=bar_w, yerr=lin_stds[i],
-           color=COLOR[c], edgecolor=COLOR[c], capsize=2, zorder=3,
-           label="Linear" if i == 0 else None)
-    ax.bar(xs_idx[i] + bar_w/2, mlp_means[i], width=bar_w, yerr=mlp_stds[i],
-           color="white", edgecolor=COLOR[c], hatch="///", capsize=2,
-           linewidth=1.0, zorder=3, label="MLP" if i == 0 else None)
+    # Linear
+    ax.errorbar(xs[i], lin_means[i], yerr=lin_stds[i],
+                marker=MARKER[c], mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
+                ms=10, mew=1.5, capsize=2.5, ls="", zorder=4)
+    # MLP (open marker, slight x offset)
+    ax.errorbar(xs[i] + 0.18, mlp_means[i], yerr=mlp_stds[i],
+                marker=MARKER[c], mfc="white", mec=COLOR[c], ecolor=COLOR[c],
+                ms=10, mew=1.5, capsize=2.5, ls="", zorder=4)
 
-ax.set_xticks(xs_idx)
-ax.set_xticklabels([LABEL[c].replace("Foveated-logpolar", "Fov-LP") for c in order],
-                   fontsize=8.5)
-ax.set_xlabel("Condition (ordered by encoder bandwidth $\\rightarrow$)",
-              fontsize=10, fontweight="bold")
-ax.set_ylabel("GPS $R^2$", fontsize=10, fontweight="bold")
-ax.set_ylim(-2.2, 1.05)
+# Inline condition labels (above filled marker)
+label_dy = {"blind": 0.10, "coarse": 0.10, "foveated_logpolar": 0.13,
+            "foveated": -0.30, "uniform": 0.13}
+for c in order:
+    ax.annotate(LABEL[c].replace("Foveated-logpolar", "Fov-LP"),
+                xy=(x_pos[c], lin_means[order.index(c)] + label_dy[c]),
+                ha="center", va="bottom", fontsize=9, fontweight="bold",
+                color=COLOR[c])
+
+# Regime labels
+ax.text(2.45, 0.78, "Bottleneck regime\n(integration carries position)",
+        fontsize=8, color="#2a6a2a", style="italic", ha="right", va="top")
+ax.text(2.45, -1.85, "Rich-encoder regime\n(visual route carries position)",
+        fontsize=8, color="#a04040", style="italic", ha="right", va="bottom")
+
+# Compact Linear-vs-MLP legend
+h_lin = plt.Line2D([0], [0], marker="o", color="grey", mfc="grey",
+                   ms=8, ls="", label="Linear (Ridge $\\alpha{=}10$)")
+h_mlp = plt.Line2D([0], [0], marker="o", color="grey", mfc="white", mec="grey",
+                   ms=8, mew=1.5, ls="", label="MLP (256, $L_2{=}10^{-4}$)")
+ax.legend(handles=[h_lin, h_mlp], loc="lower left", fontsize=8.5, frameon=True)
+
+ax.set_xticks([-0.5, 0.0, 1.0, 2.3])
+ax.set_xticklabels(["none\n(blind)", "$1{\\times}1$\n(coarse)",
+                    "$2{\\times}2$\n(fov-LP)", "$4{\\times}4$\n(fov / uniform)"],
+                   fontsize=9)
+ax.set_xlabel("Encoder spatial output", fontsize=12, fontweight="bold")
+ax.set_ylabel("Top-layer $\\mathbf{h}_2$ GPS $R^2$", fontsize=12, fontweight="bold")
+ax.set_ylim(-2.2, 1.15)
+ax.set_xlim(-0.85, 3.05)
 ax.tick_params(axis="y", labelsize=9)
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
-# Compact legend top-right
-ax.legend(loc="upper right", fontsize=8, frameon=True, ncol=1, bbox_to_anchor=(1.0, 1.0))
-
-ax.set_title("Top-layer GPS $R^2$: linear vs MLP probe by condition",
-             fontsize=10, fontweight="bold", pad=4)
+ax.set_title("Bandwidth-allocation: linear $R^2$ falls; MLP recovers the same info",
+             fontsize=12, fontweight="bold", pad=4)
 plt.tight_layout()
 out1 = Path("docs/cs503_progress/fig/fig1_capacity_allocation.pdf")
 out1.parent.mkdir(parents=True, exist_ok=True)
@@ -157,8 +186,8 @@ ax.errorbar(blind_lags, blind_means, yerr=blind_stds, marker=MARKER["blind"],
             mfc=COLOR["blind"], mec=COLOR["blind"], ecolor=COLOR["blind"],
             ms=7, capsize=2, ls="-", lw=1.5, label="Blind$^\\dagger$", zorder=4)
 
-ax.set_xlabel("Lag $k$", fontsize=10, fontweight="bold")
-ax.set_ylabel("GPS $R^2$", fontsize=10, fontweight="bold")
+ax.set_xlabel("Lag $k$", fontsize=12, fontweight="bold")
+ax.set_ylabel("GPS $R^2$", fontsize=12, fontweight="bold")
 ax.set_xticks(lags_paper)
 ax.set_ylim(-2.2, 1.05)
 ax.tick_params(axis="both", labelsize=9)
@@ -166,7 +195,7 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 ax.legend(loc="lower left", fontsize=7.5, ncol=2, frameon=True)
 ax.set_title("Past-position decoding: $\\mathrm{GPS}_{t-k}$ from $\\mathbf{h}_t$",
-             fontsize=10, fontweight="bold", pad=4)
+             fontsize=12, fontweight="bold", pad=4)
 plt.tight_layout()
 out2 = Path("docs/cs503_progress/fig/fig2_lagk_stability.pdf")
 plt.savefig(out2, bbox_inches="tight")
@@ -201,8 +230,8 @@ for c in ["coarse", "foveated", "uniform", "foveated_logpolar"]:
                 mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
                 ms=7, capsize=2, ls="-", lw=1.5, label=LABEL[c], zorder=3)
 
-ax.set_xlabel("Training frames (M)", fontsize=10, fontweight="bold")
-ax.set_ylabel("Linear GPS $R^2$", fontsize=10, fontweight="bold")
+ax.set_xlabel("Training frames (M)", fontsize=12, fontweight="bold")
+ax.set_ylabel("Linear GPS $R^2$", fontsize=12, fontweight="bold")
 ax.set_xticks([50, 100, 150, 200, 250])
 ax.set_ylim(-2.2, 1.05)
 ax.tick_params(axis="both", labelsize=9)
@@ -210,7 +239,7 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 ax.legend(loc="lower left", fontsize=7.5, ncol=2, frameon=True)
 ax.set_title("Linear GPS $R^2$ across training",
-             fontsize=10, fontweight="bold", pad=4)
+             fontsize=12, fontweight="bold", pad=4)
 plt.tight_layout()
 out3 = Path("docs/cs503_progress/fig/fig3_substitution_dynamics.pdf")
 plt.savefig(out3, bbox_inches="tight")
