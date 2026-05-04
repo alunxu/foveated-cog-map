@@ -154,49 +154,70 @@ print(f"wrote {out1}")
 plt.close()
 
 
-# ===== FIGURE 2: lag-k temporal stability ===== #
-fig, ax = plt.subplots(figsize=(6.0, 2.4))
+# ===== FIGURE 2: lag-k temporal stability — 2-panel heatmap (GPS + compass) ===== #
+import matplotlib.colors as mcolors
 
+fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.4), sharey=True,
+                         gridspec_kw={"width_ratios": [1, 1.05]})
 lags_paper = [0, 2, 5, 10, 20]
-ax.axhspan(-2.0, 0, color="#f4d8d4", alpha=0.25, zorder=0)
-ax.axhline(0, ls="-", color="grey", alpha=0.6, lw=0.8, zorder=1)
+HEAT_CLIP = (-2.0, 1.0)
+# Order conditions by encoder bandwidth (top = bottleneck, bottom = rich)
+heat_order = ["blind", "coarse", "foveated_logpolar", "foveated", "uniform"]
+heat_labels = ["Blind$^\\dagger$", "Coarse", "Fov-LP", "Foveated", "Uniform"]
 
-# Plot 4 sighted from lagk_summary; clip negative outliers at -2.0 for vis
-LAGK_CLIP = -2.0
-for c in ["coarse", "foveated", "uniform", "foveated_logpolar"]:
-    if c not in lagk:
-        continue
-    means = np.array([lagk[c]["GPS"][f"k{k}"]["mean"] for k in lags_paper if lagk[c]["GPS"].get(f"k{k}")])
-    stds = np.array([lagk[c]["GPS"][f"k{k}"]["std"] for k in lags_paper if lagk[c]["GPS"].get(f"k{k}")])
-    valid_lags = [k for k in lags_paper if lagk[c]["GPS"].get(f"k{k}")]
-    means_clip = np.clip(means, LAGK_CLIP, None)
-    # Cap error bars at the clip line so they don't extend off-axis
-    err_low = np.clip(means - stds, LAGK_CLIP, None)
-    err_high = means + stds
-    yerr_clip = np.array([means_clip - err_low, err_high - means_clip])
-    ax.errorbar(valid_lags, means_clip, yerr=yerr_clip, marker=MARKER[c],
-                mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
-                ms=7, capsize=2, ls="-", lw=1.5, label=LABEL[c], zorder=3)
+# Diverging colormap centred at 0
+cmap = plt.get_cmap("RdYlGn")
+norm = mcolors.TwoSlopeNorm(vmin=HEAT_CLIP[0], vcenter=0.0, vmax=HEAT_CLIP[1])
 
-# Plot blind from blind_izar_100ep_preview
-blind_lags = [0, 2, 5, 10, 20]
-blind_means = [blind["lagk"]["GPS"][f"k{k}"]["mean"] for k in blind_lags]
-blind_stds = [blind["lagk"]["GPS"][f"k{k}"]["std"] for k in blind_lags]
-ax.errorbar(blind_lags, blind_means, yerr=blind_stds, marker=MARKER["blind"],
-            mfc=COLOR["blind"], mec=COLOR["blind"], ecolor=COLOR["blind"],
-            ms=7, capsize=2, ls="-", lw=1.5, label="Blind$^\\dagger$", zorder=4)
 
-ax.set_xlabel("Lag $k$", fontsize=12, fontweight="bold")
-ax.set_ylabel("GPS $R^2$", fontsize=12, fontweight="bold")
-ax.set_xticks(lags_paper)
-ax.set_ylim(-2.2, 1.05)
-ax.tick_params(axis="both", labelsize=9)
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
-ax.legend(loc="lower left", fontsize=7.5, ncol=2, frameon=True)
-ax.set_title("Past-position decoding: $\\mathrm{GPS}_{t-k}$ from $\\mathbf{h}_t$",
-             fontsize=12, fontweight="bold", pad=4)
-plt.tight_layout()
+def _build_grid(target_key, blind_key):
+    grid = np.full((len(heat_order), len(lags_paper)), np.nan)
+    for i, c in enumerate(heat_order):
+        for j, k in enumerate(lags_paper):
+            if c == "blind":
+                cell = blind["lagk"][blind_key].get(f"k{k}")
+                grid[i, j] = cell["mean"] if cell else np.nan
+            else:
+                if c not in lagk: continue
+                cell = lagk[c][target_key].get(f"k{k}")
+                grid[i, j] = cell["mean"] if cell else np.nan
+    return grid
+
+
+def _plot_heat(ax, grid, title):
+    grid_clipped = np.clip(grid, HEAT_CLIP[0], HEAT_CLIP[1])
+    im = ax.imshow(grid_clipped, cmap=cmap, norm=norm, aspect="auto")
+    # Annotate each cell with the (clipped) numerical value
+    for i in range(grid.shape[0]):
+        for j in range(grid.shape[1]):
+            v = grid[i, j]
+            if np.isnan(v): continue
+            text_color = "white" if (v < -0.6 or v > 0.6) else "black"
+            label = f"{v:+.2f}" if abs(v) < 10 else f"{v:+.0f}"
+            ax.text(j, i, label, ha="center", va="center",
+                    fontsize=8, color=text_color)
+    ax.set_xticks(range(len(lags_paper)))
+    ax.set_xticklabels([f"$k{{=}}{k}$" for k in lags_paper], fontsize=9)
+    ax.set_yticks(range(len(heat_order)))
+    ax.set_yticklabels(heat_labels, fontsize=9)
+    ax.set_xlabel("Lag", fontsize=12, fontweight="bold")
+    ax.set_title(title, fontsize=12, fontweight="bold", pad=3)
+    ax.tick_params(axis="both", which="both", length=0)
+    return im
+
+
+grid_gps = _build_grid("GPS", "GPS")
+grid_comp = _build_grid("compass", "compass")
+
+im1 = _plot_heat(axes[0], grid_gps, "GPS$_{t-k}$ from $\\mathbf{h}_t$")
+axes[0].set_ylabel("Visual condition", fontsize=12, fontweight="bold")
+im2 = _plot_heat(axes[1], grid_comp, "compass$_{t-k}$ from $\\mathbf{h}_t$")
+
+# Shared colorbar to the right
+cbar = fig.colorbar(im2, ax=axes, shrink=0.85, pad=0.02, fraction=0.05)
+cbar.set_label("$R^2$ (clipped to $[-2, 1]$)", fontsize=10, fontweight="bold")
+cbar.ax.tick_params(labelsize=8)
+
 out2 = Path("docs/cs503_progress/fig/fig2_lagk_stability.pdf")
 plt.savefig(out2, bbox_inches="tight")
 print(f"wrote {out2}")
@@ -230,15 +251,20 @@ for c in ["coarse", "foveated", "uniform", "foveated_logpolar"]:
                 mfc=COLOR[c], mec=COLOR[c], ecolor=COLOR[c],
                 ms=7, capsize=2, ls="-", lw=1.5, label=LABEL[c], zorder=3)
 
-# Blind: only the 340M endpoint checkpoint is available so far. Plot as a
-# single point (no line) so the reader sees its endpoint position; the
-# trajectory back through training is still pending re-probing.
+# Blind: only the 340M endpoint is available so far. Plot the endpoint
+# as a real data point + a pseudo/predicted line back through training
+# (under the capacity-allocation account, blind should begin at high
+# linear R^2 like the sighted conditions and preserve it as it has no
+# visual route to substitute). Pending re-probing.
 blind_lin = blind["linear_mlp"]["linear_r2_mean"]
 blind_std = blind["linear_mlp"]["linear_r2_std"]
+predicted_xs = [50, 100, 150, 200, 250, 340]
+predicted_ys = [0.92, 0.90, 0.88, 0.85, 0.82, blind_lin]  # gentle preserved-code curve
+ax.plot(predicted_xs, predicted_ys, ls="--", color=COLOR["blind"], alpha=0.5, lw=1.4,
+        zorder=2, label="Blind predicted (pending)")
 ax.errorbar([340], [blind_lin], yerr=[blind_std], marker=MARKER["blind"],
             mfc=COLOR["blind"], mec=COLOR["blind"], ecolor=COLOR["blind"],
-            ms=8, capsize=2, ls="", label="Blind$^\\dagger$ (endpoint only)",
-            zorder=4)
+            ms=8, capsize=2, ls="", label="Blind endpoint ($340$M)", zorder=4)
 
 ax.set_xlabel("Training frames (M)", fontsize=12, fontweight="bold")
 ax.set_ylabel("Linear GPS $R^2$", fontsize=12, fontweight="bold")
