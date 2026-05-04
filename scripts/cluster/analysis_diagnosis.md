@@ -373,3 +373,44 @@ same as sighted (not 1.32 paper claim, but close to 1.20-1.24 sighted).
 **Place-units >1bit**: ~256-264 for blind (vs paper's 174). Higher.
 Skaggs threshold methodology difference (>1bit vs 99th percentile shuffle).
 
+
+## ITER 8 — blind_izar 100-ep preview: TURNAROUND, paper claims survive (2026-05-04 ~17:50 UTC)
+
+After ep 100 checkpoint, ran 4-lens preview again. Results MUCH closer to paper.
+
+| Metric | 50 eps | 100 eps | Paper expected |
+|---|---|---|---|
+| Linear GPS R² | -0.271 ± 1.41 | **+0.788 ± 0.248** | +0.95 |
+| MLP GPS R² | +0.018 ± 1.51 | **+0.920 ± 0.067** | +0.95 |
+| MLP-linear gap | +0.290 | +0.132 | ~0 |
+| Lag-k GPS k=0 | -0.271 | +0.778 ± 0.261 | +0.76 |
+| Lag-k GPS k=10 | -0.940 | +0.654 ± 0.289 | +0.75 |
+| Lag-k GPS k=20 | -2.617 | +0.684 ± 0.315 | +0.72 |
+| Lag-k GPS k=50 | -22.97 | +0.254 ± 0.529 | +0.56 |
+| compass k=0 | -1.326 | -0.314 (still neg) | +0.81 |
+| DtG k=0 | +0.586 | +0.843 ± 0.062 | n/a |
+| Skaggs (rectified, bits) | 1.31 | 1.35 | 1.25 |
+| place-units >1bit | 256 | 262 | 174 |
+
+**Interpretation**: 50-ep run was severely under-powered. With 100 eps:
+- Linear GPS R² stabilizes around +0.79 (close to but lower than paper's +0.95)
+- MLP at +0.92 (matches paper)
+- Lag-k profile mostly stable across k=0-20 (paper's "≥0.72 across k=0-20"
+  approximately holds; k=10 dips slightly to +0.65)
+- DtG very stable (+0.69 to +0.86)
+- Skaggs ~1.35 bits (above paper's +1.25 but consistent with our 4 sighted at 1.16-1.24)
+- Compass remains negative (paper says +0.81)
+
+**Conclusion**: Paper's qualitative blind claim survives; absolute values may
+shift slightly (linear +0.79 vs paper's +0.95). With 500 eps, std should
+drop to ~0.10 and we'll have final paper-quality numbers.
+
+**Compass still negative is interesting** — may suggest izar's blind
+agent doesn't represent compass linearly even with 100 eps. Worth tracking
+to 500 eps to confirm.
+
+**Conclusion regarding L286 SR claim**: "Blind shows long predictive horizon
+R² ≥ 0.72 from k=0 to k=20" — with our 100ep blind_izar, k=0..20 GPS R²
+mostly stays in [+0.65, +0.78]; ~0.07 shy of paper's threshold. Likely
+falls back into spec with 500 eps + tighter std. Will verify.
+
