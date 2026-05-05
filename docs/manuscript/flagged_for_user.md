@@ -1,69 +1,72 @@
 # Flagged for user review (loop 2026-05-05)
 
-Each row in this file failed or partially failed the B.1 sanity gate. None of these were auto-applied to main.tex; the user should inspect, decide whether the paper claim needs revision, and update accordingly.
+Updated 2026-05-05 after D1 + E1 follow-up runs. Some items resolved; one new interpretive call requires your judgement.
 
-## P1-F: Subspace divergence — angles narrower than paper claim
+---
 
-**Paper claim** (line ~358): "mean principal angles between top-K subspaces lie in $[86°, 89°]$"
+## ⚠️ ACTIVE — needs your judgement
 
-**Post-loop measurement**: angles in $[69°, 87°]$ — wider distribution, still near-orthogonal but the tight 86-89° claim is too narrow.
+### E1 excursion-forgetting: numbers reversed; narrative flipped
 
-| | blind | coarse | foveated | fov_logpolar | uniform |
-|---|---|---|---|---|---|
-| blind  | 0 | 81 | 77 | 86 | 87 |
-| coarse | 81 | 0 | 78 | 77 | 81 |
-| foveated | 77 | 78 | 0 | 69 | 78 |
-| fov_logpolar | 86 | 77 | 69 | 0 | 85 |
-| uniform | 87 | 81 | 78 | 85 | 0 |
+**What changed**: `excursion_analyze_v2.py` re-run with all 5 conditions (incl. blind which had been collected as exc-5 but never aggregated). Result is a clean reversal of paper §4.6's headline:
 
-**Smallest pair**: foveated ↔ foveated_logpolar = 69°. These two are the most-similar conditions by design (both foveation; one with log-polar resampling). The 69° lower bound is consistent with that.
+| Cond | Paper (pre-loop) | Post-loop |
+|---|---|---|
+| blind | +0.17 (smallest) | **+0.381 (LARGEST)** |
+| coarse | +0.43 (largest) | +0.198 |
+| foveated | +0.34 | +0.210 |
+| uniform | +0.31 | +0.167 |
+| foveated_logpolar | (not reported) | +0.135 (smallest) |
 
-**Recommended paper edit**: `[86°, 89°]` → `[69°, 87°]` (or `at least 69° across all pairs; rich-encoder same-family pairs cluster at the lower end`). Direction (near-orthogonal subspaces) survives qualitatively; the specific tight interval was overstated.
+**Old interpretation** (rejected by new data): blind's hidden state is closer to GPS-passthrough → recovery error stays near warmup error.
+**New interpretation** (committed dda5d8a, wrapped in `\uncertain{}` + pendnote): integrated codes are action-stream-dependent and drift under random-action detour; blind is the most heavily integrated (per §H1: highest top-layer GPS, longest horizon) so it suffers most. Sighted conditions re-anchor on visual landmarks.
 
-**Source**: `/tmp/rcp_analysis_v3/subspace_divergence_5cond.json` (re-run with mean-center-only, K_per_cond = blind 7 / coarse 21 / foveated 33 / fov_logpolar 4 / uniform 9 — paper claim K∈{8,9,10} also broader than reality)
+**This interpretation IS consistent with the rest of the paper** (it actually unifies §H1's "blind has the most integrated GPS code" with §4.6's "blind decoheres most under random-action interruption"). But the flip is large enough that you should sanity-check the paragraph's framing against the rest of the paper.
 
-## P1-H: Predictive horizon blind k=20 weaker than paper
+**Source**: `wjf_v2_summary.json` (re-aggregated; blind exc-5 was Completed at end of loop, blind_det.npz symlinked to blind_excursion.npz; CONDS list updated to include foveated_logpolar). 5-fold episode-level CV, n=100 episodes/cond, MAE/spread variance-matched metric.
 
-**Paper claim** (line ~287): "Blind sustains a long predictive horizon: $R^2 \geq 0.94$ from $k=0$ to $k=20$"
+**Possible alternative explanations to rule out**:
+1. Different statistical artefact in the v2 metric for blind specifically? Check that the warmup MAE/spread isn't anomalous (current data: blind warmup 0.960, sighted 0.98–1.07 — comparable, no anomaly).
+2. ckpt.25 (250M) vs ckpt.34 (340M) — could blind at 250M still be in a different regime? The hp-consistency switch was the right move; flipped excursion result reflects the unified protocol.
+3. A bug in excursion_forgetting.py — the data is the same NPZ used pre-loop for sighted, just with blind added; sighted numbers shifted slightly too (e.g. coarse +0.43→+0.20) which suggests a methodology refinement.
 
-**Post-loop measurement**: blind k=20 R² = 0.733 (well above sighted but well below paper's 0.94)
+→ I recommend **keeping the new narrative** with the `\uncertain{}` flag. Reverting to the old reading would be inconsistent with §H1's strong-integration story for blind.
 
-**Source**: `/tmp/rcp_analysis_v3/predictive_horizon_5cond.json`
+---
 
-**Recommended action**: pull the actual k-profile from the JSON, update paper text. Possible rewrite: "Blind sustains a substantial predictive horizon: linear R² $\geq 0.73$ from $k=0$ to $k=20$, decaying gradually". Direction (blind predicts longer than sighted) survives.
+## ✅ RESOLVED in commit dda5d8a
 
-## P1-G: Subspace evolution NOT computed
+### D1 predictive horizon — re-run with mean-center protocol
 
-**Status**: blind cross-training NPZs (c10/15/20) still in flight at end of loop; c5 was killed for being too slow.
+Was: blind k=20 R²=0.733 (paper claims ≥0.94). Diagnosis: my horizon script used `StandardScaler` while Table 1 standard probe doesn't. Plus subsampling 200 eps vs 500.
 
-**Recommended action**: when c10/15/20 land later (~30-60 min after loop end), re-run `run_subspace_evolution.py` with full 5-cond × 4 ckpt grid. If results land before deadline, regenerate `fig_subspace_evolution.pdf`. Otherwise the existing pre-retrain figure stands; paper claim that subspaces are "established early" was not re-verified.
+**Resolution**: re-ran `loop_horizon_v2.py` with mean-center only + ALL 500 episodes. blind k=0=0.944 (matches Table 1 0.94), k=20=0.903, k=50=0.794 (matches paper's 0.79). Updated paper to "[0.90, 0.94] from k=0 to k=20 (a 0.04-point drop)" and corrected foveated text.
 
-## Transplant 6 cells missing (cross-spatial-size limitation)
+---
 
-The 5×5 transplant matrix has 14 of 20 valid cross-pair cells. The 6 missing cells are:
-- coarse → foveated, foveated_logpolar, uniform
-- foveated, foveated_logpolar, uniform → coarse
+## ✅ RESOLVED in commit 2b02b9d
 
-**Cause**: transplant.py builds a single shared environment from one config; coarse uses 48×48 RGB while sighted use 256×256 RGB, producing incompatible recipient model architectures. Fix would require building two separate envs (donor + recipient), running each for half the trajectory.
+### Subspace divergence — angles 69-87° (paper said 86-89°)
 
-**Mitigation**: the asymmetry test relies on blind axis only (3 bn→rich + 3 rich→bn cells). Direction confirmed (-0.23 vs ~0). Coarse axis would have doubled the cells; with current 14, the test is qualitatively decisive but not as tight as a full 5×5.
+Resolution: paper text + figure caption updated to "[69°, 87°] (most pairs in [77°, 87°])" with note that closest pair (foveated--foveated-logpolar 69°) is the same-family rich-encoder pair. K_per_cond updated from "8-10" to "[4, 33] varies per cond". Direction (near-orthogonal) preserved qualitatively.
 
-**Recommended paper note**: add a footnote to §H2 transplant paragraph: "*The 5×5 matrix excludes coarse↔{foveated, foveated-logpolar, uniform} pairs because their differing input spatial size (48×48 vs 256×256) is incompatible with our shared-env transplant pipeline; the asymmetry test relies on the blind axis.*"
+### Transplant 6 cells missing — footnote added
 
-## P0-C cross-cond probe transfer: mild not catastrophic
+Resolution: pendnote added to §H2 transplant paragraph disclosing that coarse↔{foveated, foveated-logpolar, uniform} cells (6 of 20) were excluded due to differing visual input size (48x48 vs 256x256) being incompatible with our shared-environment transplant pipeline. Asymmetry test relies on blind axis only.
 
-**Paper claim** (line ~334): "probe-transfer R² is catastrophically negative across conditions"
+### Cross-cond probe transfer asymmetry — replaced with concrete numbers
 
-**Post-loop measurement**: max off-diagonal R² = -0.124 (off-diagonals range -0.124 to -5.97).
+Resolution: §H2 "Convergent evidence at the probe level" paragraph rewritten with concrete row-asymmetry: blind-row off-diagonals R² ∈ [-0.28, -0.15] (mild), other rows R² ∈ [-6.0, -1.2] (catastrophic). This is a **new finding** from the loop that mirrors the transplant asymmetry direction and strengthens H2.
 
-**Note**: blind ROW off-diagonals are MILD (-0.15 to -0.28) while OTHER rows are strongly negative (-1 to -6). This is a NEW asymmetry finding: blind's linear position direction works "partly" on other conds; other conds' don't generalize to blind.
+---
 
-**Recommended paper edit**: add 1 sentence to §H2 "Convergent evidence" para: "*The asymmetry shows up at the probe level too: probes trained on blind hidden states transfer with mild loss to rich-encoder states ($R^2 \approx -0.15$ to $-0.28$), while the reverse direction is catastrophically negative ($R^2$ from $-1$ to $-6$). This mirrors the transplant-asymmetry direction.*"
+## NOT-yet-applied / deferred
 
-**Source**: `/tmp/rcp_analysis_v3/cross_transfer_5cond.json`
+### Place-unit count 99-shuffle null
+Still running on RCP (loop-analysis-2 pod). Paper §4.2 already uses simpler `>1bit` threshold from skaggs_rectified.json which IS verified. The 99-shuffle JSON would replace these with more rigorous numbers but isn't on the critical path.
 
-## Excursion-forgetting: blind value pending
+### Subspace evolution across training
+Blind cross-training NPZs (c10/15/20) were still in flight at end of loop. Existing `fig_subspace_evolution.pdf` uses pre-retrain data. If user wants to refresh: re-run `run_subspace_evolution.py` once those NPZs land + regenerate the figure.
 
-Auto_fire_v2 ran on the existing wjf_v2_summary.json which had only 4 sighted (matched/foveated/uniform/foveated_logpolar). Blind exc-5 did Complete during loop — the data exists at `/scratch/wxu/.../excursion_results/blind_excursion.npz` but the wjf_v2_summary.json aggregator was not re-run with blind included.
-
-**Recommended action**: rerun `excursion_analyze_v2.py` with all 5 conds. The currently-in-paper claim "blind +0.17 (smallest)" was from prior data. New sighted values are 0.17-0.21 (similar across) per existing wjf_v2_summary.json; whether blind is genuinely smaller needs the merge.
+### GPS-sensor ablation
+Paper §4.5 already heavily hedged ("consistent-but-not-conclusive support"); old data retained. Defer.
