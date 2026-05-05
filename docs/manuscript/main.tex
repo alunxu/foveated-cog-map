@@ -723,22 +723,23 @@ with $T_{\theta}: \mathcal{X} \times \mathcal{Z} \to \mathbb{R}$ a neural networ
 \subsection{Eigenspectrum power-law per condition}
 \label{app:eigenspectrum}
 
-We adapt the eigenspectrum analysis of \citet{stringer2019high} to the LSTM hidden state, fitting a power law $\lambda_n \propto n^{-\alpha}$ to the eigenvalues of $\mathbf{h}_2$ per condition (PCs $n \in [5, 200]$ to skip finite-sample bias and machine-precision tail). All four conditions show a tight power-law eigenspectrum (Figure~\ref{fig:eigenspectrum}, $R^2 > 0.97$). The fitted exponent monotonically tracks encoder bandwidth in a CAP-consistent direction:
+We adapt the eigenspectrum analysis of \citet{stringer2019high} to the LSTM hidden state, fitting a power law $\lambda_n \propto n^{-\alpha}$ to the eigenvalues of $\mathbf{h}_2$ per condition (PCs $n \in [5, 200]$ to skip finite-sample bias and machine-precision tail). All five conditions show a tight power-law eigenspectrum (Figure~\ref{fig:eigenspectrum}, $R^2 \geq 0.99$). The fitted exponent shows a sharp bottleneck-vs-rich-encoder split:
 
 \begin{center}
 \begin{tabular}{lccc}
 \toprule
 Condition & $\alpha$ & $R^2$ & Var. top 10 PCs \\
 \midrule
-Blind     & $3.92 \pm 0.03$ & $0.99$ & $94\%$ \\
-Coarse    & $4.27 \pm 0.04$ & $0.98$ & $91\%$ \\
-Foveated & $3.32 \pm 0.02$ & $0.99$ & $92\%$ \\
-Uniform   & $2.85 \pm 0.02$ & $0.99$ & $93\%$ \\
+Blind             & $3.85 \pm 0.03$ & $0.99$ & $95\%$ \\
+Coarse            & $1.80 \pm 0.01$ & $1.00$ & $82\%$ \\
+Foveated          & $1.72 \pm 0.01$ & $1.00$ & $76\%$ \\
+Foveated-logpolar & $1.80 \pm 0.01$ & $1.00$ & $95\%$ \\
+Uniform           & $1.90 \pm 0.01$ & $1.00$ & $91\%$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-Two observations. (i) All $\alpha$ values are far above Stringer's V1 value ($\alpha \approx 1.04$) and above the critical exponent $1 + 2/d_{\rm task} \approx 1.67$ that demarcates differentiable from fractal manifolds for a $d_{\rm task} = 3$ stimulus (current position + heading). The recurrent state is therefore much smoother (more compact in its top-PC variance) than the cortical population codes of \citet{stringer2019high}. We do not claim that Stringer's specific theoretical bound ($\alpha = 1 + 2/d$, derived for smooth tuning curves over a $d$-dim stimulus manifold) directly applies to our recurrent setting; the observation is descriptive. (ii) \uncertain{Rich-encoder conditions have systematically lower $\alpha$ (slower spectral decay) than bottleneck conditions, in the order Coarse $>$ Blind $>$ Foveated $>$ Uniform.} Lower $\alpha$ corresponds to variance distributed across more PCs --- consistent with the capacity-allocation reading that rich-encoder conditions allocate more recurrent dimensions to visual-feature representation, while bottleneck conditions concentrate variance in fewer top PCs.
+Two observations. (i) Blind sits well above the critical exponent $1 + 2/d_{\rm task} \approx 1.67$ that demarcates differentiable from fractal manifolds for a $d_{\rm task} = 3$ stimulus (current position + heading), and far above Stringer's V1 value ($\alpha \approx 1.04$). With $\alpha = 3.85$, blind's eigenspectrum decays sharply: variance is concentrated in the top few PCs (top-$10$ already capture $95\%$). We do not claim that Stringer's specific theoretical bound ($\alpha = 1 + 2/d$, derived for smooth tuning curves over a $d$-dim stimulus manifold) directly applies to our recurrent setting; the observation is descriptive. (ii) \uncertain{The four sighted conditions cluster tightly around $\alpha \approx 1.7$--$1.9$, all near the $1 + 2/d_{\rm task} \approx 1.67$ critical exponent --- the smoothness/efficiency border. Blind is the outlier above, in a few-dim concentrated regime, while the four sighted conditions distribute variance across more PCs.} The split bottleneck-vs-rich-encoder reading: blind's heavy reliance on the integrated GPS code crystallises into a low-dimensional eigenspectrum, while sighted conditions (including coarse, whose $1{\times}1$ encoder still feeds a ResNet-18 stack with diverse channels) distribute hidden-state variance across more directions to support encoder-route information.
 
 \begin{figure}[!t]
 \centering
