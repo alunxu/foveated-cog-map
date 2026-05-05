@@ -18,7 +18,7 @@ case "$COND" in
   foveated)          CFG="pointnav/ddppo_pointnav_foveated_gibson";          CKPT="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-2/ckpt.49.pth"; ID=2 ;;
   uniform)           CFG="pointnav/ddppo_pointnav_uniform_gibson";           CKPT="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-3/ckpt.49.pth"; ID=3 ;;
   foveated_logpolar) CFG="pointnav/ddppo_pointnav_foveated_logpolar_gibson"; CKPT="/scratch/wxu/habitat_checkpoints_rcp/dh-probe-4/ckpt.49.pth"; ID=4 ;;
-  blind)             CFG="pointnav/ddppo_pointnav_blind_gibson";             CKPT="/scratch/wxu/habitat_checkpoints_rcp/blind_seed_2_friend/ckpt.49.pth"; ID=5 ;;
+  blind)             CFG="pointnav/ddppo_pointnav_blind_gibson";             CKPT="/scratch/wxu/habitat_checkpoints_rcp/blind_izar/ckpt.25.pth"; ID=5 ;;
   fnorm)             CFG="pointnav/ddppo_pointnav_foveated_normaliser_gibson"; CKPT="/scratch/wxu/habitat_checkpoints_rcp/dh-fnorm/ckpt.49.pth"; ID=6 ;;
   *) echo "Unknown condition: $COND" >&2; exit 1 ;;
 esac

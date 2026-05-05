@@ -277,8 +277,20 @@ def main():
         "habitat.dataset.split=train",
     ])
 
-    print("\n=== Building shared env (from donor config) ===")
-    env = habitat.Env(config=donor_config.habitat)
+    # Pick the env config from whichever side has visual sensors. If donor is
+    # blind and recipient is sighted, the env MUST come from recipient (else
+    # the recipient policy is built thinking it's blind and ckpt load fails on
+    # compression-layer shape mismatch).
+    donor_has_rgb = "rgb" in str(donor_config.habitat.simulator.agents).lower()
+    recip_has_rgb = "rgb" in str(recip_config.habitat.simulator.agents).lower()
+    if donor_has_rgb or not recip_has_rgb:
+        env_source = "donor"
+        env_config = donor_config.habitat
+    else:
+        env_source = "recipient"
+        env_config = recip_config.habitat
+    print(f"\n=== Building shared env (from {env_source} config; donor_rgb={donor_has_rgb} recip_rgb={recip_has_rgb}) ===")
+    env = habitat.Env(config=env_config)
     _ = env.reset()
 
     print("\n=== Loading recipient policy ===")

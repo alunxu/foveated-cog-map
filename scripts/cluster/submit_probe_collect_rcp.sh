@@ -61,15 +61,17 @@ case "$COND" in
     PROBE_ID=5
     ;;
   blind_izar)
-    # Our own izar-trained blind on seed=100, ckpt.34 = 340M frames trained.
+    # Our own izar-trained blind on seed=100, ckpt.25 = ~252M frames (250M-equivalent
+    # to the 4 sighted retrains at dh-probe-1..4/ckpt.49). All 35 ckpts (0..34)
+    # uploaded 2026-05-05 from izar:/scratch/izar/wxu/habitat_checkpoints/blind_gibson/.
     # Hyperparams: seed=100, num_envs=8, hidden=512, num_recurrent=3,
     # max_ep_steps=2000, force_blind_policy=True, WijmansPointNavPolicy.
     # num_envs differs from 4 sighted (16) — note in §limitations.
     CONFIG_NAME="pointnav/ddppo_pointnav_blind_gibson"
     CKPT_DIR="/scratch/wxu/habitat_checkpoints_rcp/blind_izar"
     PROBE_ID=5
-    # Default to ckpt.34 (the only ckpt we uploaded; izar had ckpt.0..34).
-    CKPT_NUM="${3:-34}"
+    # Default to ckpt.25 (250M-equivalent for unified-hp comparability).
+    CKPT_NUM="${3:-25}"
     ;;
   fnorm)
     CONFIG_NAME="pointnav/ddppo_pointnav_foveated_normaliser_gibson"
@@ -85,8 +87,8 @@ esac
 CKPT_PATH="${CKPT_DIR}/ckpt.${CKPT_NUM}.pth"
 
 # Numbered job name: probe-N (default ckpt.49) or probe-N-cN (specific ckpt).
-# blind_izar special-case: only ckpt.34 exists, treat as the final ckpt.
-if [ "$COND" = "blind_izar" ] && [ "$CKPT_NUM" = "34" ]; then
+# blind_izar special-case: ckpt.25 is the 250M-equivalent (treat as final).
+if [ "$COND" = "blind_izar" ] && [ "$CKPT_NUM" = "25" ]; then
   JOB_NAME="probe-${PROBE_ID}-blind-izar"
 elif [ "$CKPT_NUM" = "49" ]; then
   JOB_NAME="probe-${PROBE_ID}"
@@ -96,9 +98,9 @@ fi
 IMAGE="registry.rcp.epfl.ch/dhlab-wxu/habitat:v2"
 # Output dir + npz name. Default ckpt.49 → <cond>_det.npz (final result).
 # Cross-ckpt sweep → <cond>_det_ckpt<N>.npz (preserves ckpt.49 NPZ).
-# blind_izar w/ ckpt.34 → blind_izar_det.npz (final, no suffix).
+# blind_izar w/ ckpt.25 (250M-equivalent) → blind_izar_det.npz (final, no suffix).
 OUT_DIR="/scratch/wxu/habitat_checkpoints_rcp/probing_data_rcp"
-if [ "$COND" = "blind_izar" ] && [ "$CKPT_NUM" = "34" ]; then
+if [ "$COND" = "blind_izar" ] && [ "$CKPT_NUM" = "25" ]; then
   OUT_NPZ="${OUT_DIR}/blind_izar_det.npz"
 elif [ "$CKPT_NUM" = "49" ]; then
   OUT_NPZ="${OUT_DIR}/${COND}_det.npz"

@@ -38,7 +38,7 @@ get_ckpt() {
     foveated)          echo "/scratch/wxu/habitat_checkpoints_rcp/dh-probe-2/ckpt.49.pth" ;;
     uniform)           echo "/scratch/wxu/habitat_checkpoints_rcp/dh-probe-3/ckpt.49.pth" ;;
     foveated_logpolar) echo "/scratch/wxu/habitat_checkpoints_rcp/dh-probe-4/ckpt.49.pth" ;;
-    blind)             echo "/scratch/wxu/habitat_checkpoints_rcp/blind_seed_2_friend/ckpt.49.pth" ;;
+    blind)             echo "/scratch/wxu/habitat_checkpoints_rcp/blind_izar/ckpt.25.pth" ;;
     fnorm)             echo "/scratch/wxu/habitat_checkpoints_rcp/dh-fnorm/ckpt.49.pth" ;;
   esac
 }
