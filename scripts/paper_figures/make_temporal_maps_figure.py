@@ -479,64 +479,112 @@ def panel_tgm_decay(ax, tgm_data: dict):
 
 
 def panel_autocorr_compact(ax, autocorr: dict):
-    """Per-unit autocorrelation curves: 5 lines, one per condition, with
-    the Murray $1/e$ crossing annotated as the intrinsic timescale
+    """Per-unit autocorrelation curves (Murray-style intrinsic
+    timescale): one line per condition, $1/e$-crossing annotated as
     $\\tau$.  Discriminates blind ($\\tau{\\approx}12$) from sighted
-    ($\\tau{\\approx}7$--$8$) but the four sighted variants are
-    near-identical at the unit-autocorrelation level; this panel is now
-    moved to App F as a corroborating Murray-style timescale check."""
+    ($\\tau{\\approx}7$--$8$); within sighted the four variants
+    cluster near-identically.  Saved as a standalone App-F figure
+    (corroborating timescale check, referenced from §3.3)."""
     lags = np.arange(MAX_LAG + 1)
     for key, _, _ in CONDS:
         if key not in autocorr:
             continue
         curve, tau, colour, label = autocorr[key]
-        ax.plot(lags, curve, color=colour, lw=2.0, label=f"{label} ($\\tau{{=}}{tau:.0f}$)",
-                zorder=4)
+        ax.plot(lags, curve, color=colour, lw=2.0,
+                label=f"{label} ($\\tau{{=}}{tau:.0f}$)", zorder=4)
         if not np.isnan(tau):
             ax.scatter([tau], [1.0 / np.e], s=28, color=colour,
                        edgecolor="white", linewidth=1.0, zorder=5)
     ax.axhline(1.0 / np.e, ls="--", color="#666", lw=0.7, zorder=1)
-    ax.text(MAX_LAG - 1, 1.0 / np.e + 0.03, "$1/e$", fontsize=9,
+    ax.text(MAX_LAG - 1, 1.0 / np.e + 0.03, "$1/e$", fontsize=10,
             color="#444", ha="right")
     ax.axhline(0, color="#bbb", lw=0.4, zorder=0)
     ax.set_xlim(0, MAX_LAG)
     ax.set_ylim(-0.05, 1.05)
-    ax.set_xlabel("lag $k$ (steps)", fontsize=10, fontweight="bold")
-    ax.set_ylabel("per-unit autocorrelation", fontsize=10, fontweight="bold")
-    ax.set_title("intrinsic timescale (per-unit autocorr)",
+    ax.set_xlabel("lag $k$ (steps)", fontsize=12, fontweight="bold")
+    ax.set_ylabel("per-unit autocorrelation",
+                  fontsize=12, fontweight="bold")
+    ax.set_title("Murray intrinsic timescale ($1/e$-crossing of per-unit autocorr)",
                  fontsize=11, fontweight="bold", pad=4)
+    ax.tick_params(axis="both", labelsize=10)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
     ax.grid(linestyle=":", alpha=0.3)
-    ax.legend(loc="upper right", fontsize=8.5, frameon=False, handlelength=1.5)
+    ax.legend(loc="upper right", fontsize=10, frameon=False,
+              handlelength=1.5)
 
 
-def panel_cum_h2_lines(ax, eps_by_cond: dict):
-    """Cumulative memory displacement $\\Sigma|\\Delta\\mathbf{h}_2|$ vs
-    step-in-episode, one line per condition, on the SHARED matched
-    episode (Almena #157).  This is the within-sighted discriminator
-    that the redundant trajectory-map row was hiding: all four sighted
-    conditions take the same direct path in physical space, but their
-    memory states travel different distances along that path."""
-    # Y-axis: cumulative displacement; X-axis: step-in-episode.
+def compute_aggregate_cum_h2(min_episodes_at_step: int = 30,
+                              max_step: int = 200) -> dict:
+    """For each condition, aggregate cumulative $\\Sigma|\\Delta\\mathbf{h}_2|$
+    across all episodes in the canonical post-retrain NPZ.  At each step
+    $t$, average over only those episodes that survived to step $t$, and
+    truncate the curve at the step where fewer than `min_episodes_at_step`
+    episodes remain (so the right edge of the plot is statistically
+    well-supported).  Returns dict cond -> (steps, mean, lo, hi)."""
+    out = {}
     for key, label, colour in CONDS:
-        if key not in eps_by_cond:
+        p = NPZ_DIR / f"{key}_det_RCP.npz"
+        if not p.exists():
             continue
-        ep = eps_by_cond[key]
-        cum = ep["cum_h2_path"]
-        steps = np.arange(len(cum))
-        n = ep["n_steps"]
-        final = float(cum[-1])
-        ax.plot(steps, cum, color=colour, lw=2.0,
-                label=f"{label}: {n} steps, final $\\Sigma{{=}}{final:.0f}$",
-                zorder=4)
-        # Mark the final point with a dot.
-        ax.scatter([steps[-1]], [cum[-1]], s=32, color=colour,
-                   edgecolor="white", linewidth=1.0, zorder=5)
+        d = np.load(p, allow_pickle=True)
+        H = d["hidden_states"].astype(np.float32)
+        eps = d["episode_ids"].astype(np.int64)
+        s_steps = (d["step_in_episode"].astype(np.int64)
+                   if "step_in_episode" in d.files else np.arange(len(H)))
+        unique_eps = np.unique(eps)
+        cum_per_ep = []                                 # list of (T,) arrays
+        for e in unique_eps:
+            mask = eps == e
+            if mask.sum() < 5:
+                continue
+            order = np.argsort(s_steps[mask])
+            h = H[mask][order].astype(np.float32)
+            deltas = np.linalg.norm(np.diff(h, axis=0), axis=1)
+            cum = np.concatenate([[0.0], np.cumsum(deltas)])
+            cum_per_ep.append(cum)
+        if not cum_per_ep:
+            continue
+        # At each step t, collect cum[t] from all episodes that are >=t
+        # steps long, then average and take 25/75 percentiles.
+        max_t = min(max_step, max(len(c) for c in cum_per_ep))
+        means = np.full(max_t, np.nan)
+        lo = np.full(max_t, np.nan)
+        hi = np.full(max_t, np.nan)
+        cutoff = max_t
+        for t in range(max_t):
+            vals = np.array([c[t] for c in cum_per_ep if len(c) > t])
+            if len(vals) < min_episodes_at_step:
+                cutoff = t
+                break
+            means[t] = np.mean(vals)
+            lo[t]    = np.percentile(vals, 25)
+            hi[t]    = np.percentile(vals, 75)
+        steps = np.arange(cutoff)
+        out[key] = (steps, means[:cutoff], lo[:cutoff], hi[:cutoff], colour, label)
+    return out
+
+
+def panel_cum_h2_lines(ax, agg: dict):
+    """Aggregate cumulative memory displacement $\\Sigma|\\Delta\\mathbf{h}_2|$
+    vs step-in-episode, averaged across ALL episodes per condition (not
+    a single matched episode --- panel (c) is also episode-aggregate, so
+    panel (b) matches it for design consistency).  Mean line +
+    25--75 percentile shaded band per condition.  Curves truncate where
+    fewer than 30 episodes remain to keep the right edge well-supported.
+    """
+    for key, label, colour in CONDS:
+        if key not in agg:
+            continue
+        steps, mean, lo, hi, c_, _ = agg[key]
+        ax.fill_between(steps, lo, hi, color=colour, alpha=0.15,
+                        edgecolor="none", zorder=2)
+        ax.plot(steps, mean, color=colour, lw=2.0,
+                label=label, zorder=4)
     ax.set_xlabel("step in episode", fontsize=14, fontweight="bold")
     ax.set_ylabel(r"cumulative $\Sigma|\Delta\mathbf{h}_2|$",
                   fontsize=14, fontweight="bold")
-    ax.set_title("memory dynamics on the matched episode",
+    ax.set_title("memory dynamics, episode-aggregated",
                  fontsize=15, fontweight="bold", pad=4)
     ax.tick_params(axis="both", labelsize=12)
     for s_ in ("top", "right"):
@@ -611,18 +659,10 @@ def main():
     autocorr = compute_per_cond_autocorr()
     print(f"  ({time.time()-t0:.1f}s)")
 
-    print("[traj] picking common episode + loading per-cond...", flush=True)
+    print("[cum-h2] aggregating across all episodes per cond...", flush=True)
     t0 = time.time()
-    common_ep = pick_common_episode(SCENE)
-    print(f"  common episode_id = {common_ep} (used for all 5 panels)")
-    eps_by_cond = {}
-    for cond_key, *_ in CONDS:
-        ep = load_episode_from_npz(cond_key, SCENE, episode_id=common_ep)
-        if ep is not None:
-            eps_by_cond[cond_key] = ep
+    cum_h2_agg = compute_aggregate_cum_h2()
     print(f"  ({time.time()-t0:.1f}s)")
-    traj_cmap_max = max(ep["cum_h2_path"][-1] for ep in eps_by_cond.values())
-    traj_cmap_norm = (0.0, traj_cmap_max)
 
     # Load TGM data.
     print("[tgm] loading...", flush=True)
@@ -676,7 +716,7 @@ def main():
 
     # ── Row 2 (panels b, c): 2 line plots ───────────────────────────
     ax_cum       = fig.add_subplot(gs_bot[0, 0])
-    panel_cum_h2_lines(ax_cum, eps_by_cond)
+    panel_cum_h2_lines(ax_cum, cum_h2_agg)
 
     ax_decay     = fig.add_subplot(gs_bot[0, 1])
     panel_tgm_decay(ax_decay, tgm_data)
@@ -696,6 +736,20 @@ def main():
     fig.savefig(OUT, dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"wrote {OUT}")
+
+    # ── Standalone autocorrelation figure for Appendix F ─────────────
+    # The Murray-style per-unit autocorrelation curves were dropped from
+    # the main figure because they only differentiate blind vs sighted
+    # (sighted tau cluster at 7-8); they remain a useful corroborating
+    # cogneuro-style timescale check, and §3.3's main-text claim
+    # "Murray-style autocorr ... in Appendix F" depends on this file.
+    fig2, ax2 = plt.subplots(figsize=(6.0, 4.0))
+    panel_autocorr_compact(ax2, autocorr)
+    fig2.tight_layout()
+    out_app = OUT.parent / "figa_autocorr.pdf"
+    fig2.savefig(out_app, dpi=200, bbox_inches="tight")
+    plt.close(fig2)
+    print(f"wrote {out_app}")
 
 
 if __name__ == "__main__":
