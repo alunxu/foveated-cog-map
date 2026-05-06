@@ -194,13 +194,17 @@ def panel_b(ax) -> None:
 
     ax.set_ylim(CLIP_MIN - 0.10, 1.10)
     ax.set_xlim(X_MIN_M, X_MAX_M)
+    # Explicit ticks at the 5 sampled points only (no auto-generated 175/225)
+    ax.set_xticks([50, 100, 150, 200, 250])
+    ax.set_xticklabels(["50", "100", "150", "200", "250"],
+                        rotation=0, fontsize=10)
     ax.set_xlabel("training frames (M)", fontsize=11, fontweight="bold")
     ax.set_ylabel(r"top-layer GPS $R^2$ (5-fold CV)", fontsize=11, fontweight="bold")
     ax.set_title("(b) Substitution mechanism",
                  fontsize=12, fontweight="bold", loc="left", x=0.0, pad=8)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=10)
+    ax.tick_params(axis="y", labelsize=10)
     ax.grid(axis="y", linestyle=":", alpha=0.25)
     ax.annotate("", xy=(180, -1.0), xytext=(120, 0.5),
                 arrowprops=dict(arrowstyle="->", color="#a02528", lw=1.0,
@@ -210,8 +214,17 @@ def panel_b(ax) -> None:
 
 
 # ───────────────────── Panel C: pipeline view ────────────────────────────────
-def panel_c(ax) -> None:
-    """GPS R² along L0 → L1 → L2 (encoder point dropped: no new encoder data)."""
+def panel_c(ax, mlp_json: Path) -> None:
+    """Linear GPS R² along L0 → L1 → L2 (lines), plus MLP R² at L2 (stars)
+    showing the format-shift gap: how much non-linear readout recovers above
+    the linear floor for each condition."""
+    mlp_data = json.loads(mlp_json.read_text())
+    mlp_keymap = {
+        "blind_izar": "blind_izar", "coarse": "coarse",
+        "foveated_logpolar": "foveated_logpolar",
+        "foveated": "foveated", "uniform": "uniform",
+    }
+
     for rcp_key, _mlp, label, _cells, col, mk, _ in CONDS:
         main_p = RCP_DIR / f"{rcp_key}_det_analysis.json"
         layer_r2 = {0: None, 1: None, 2: None}
@@ -231,28 +244,42 @@ def panel_c(ax) -> None:
         for L in (0, 1, 2):
             if layer_r2[L] is not None:
                 xs.append(L); ys.append(layer_r2[L])
-
         if xs:
             ax.plot(xs, ys, marker=mk, label=label,
-                    color=col, linewidth=1.8, markersize=6.5)
+                    color=col, linewidth=1.8, markersize=6.5, zorder=3)
 
-    # L2 MLP recovery band (annotated above the band)
-    ax.axhspan(0.51, 0.73, xmin=(1.85 - (-0.4)) / (2.4 - (-0.4)),
-               xmax=(2.4 - (-0.4)) / (2.4 - (-0.4)),
-               color="#88aaee", alpha=0.20, zorder=0)
-    ax.annotate("MLP recovery\n($R^2 \\in [0.51, 0.73]$)",
-                xy=(2.0, 0.62), xytext=(1.0, 0.95),
-                fontsize=8, color="#445588", style="italic",
-                ha="center", va="bottom",
-                arrowprops=dict(arrowstyle="->", color="#445588",
-                                lw=0.8, alpha=0.8))
+        # MLP star marker at L2, plus vertical line showing the linear→MLP gap
+        mlp_key = mlp_keymap.get(rcp_key)
+        if mlp_key in mlp_data and layer_r2[2] is not None:
+            mlp_r2 = float(np.clip(mlp_data[mlp_key]["mlp_r2_mean"],
+                                    CLIP_MIN, 1.05))
+            linear_l2 = layer_r2[2]
+            # Slight x-jitter so MLP star doesn't overlap linear marker exactly
+            x_mlp = 2.10
+            # Vertical gap connector
+            ax.plot([x_mlp, x_mlp], [linear_l2, mlp_r2], color=col,
+                    linewidth=1.0, alpha=0.5, zorder=2)
+            ax.plot(x_mlp, mlp_r2, marker="*", color=col,
+                    markersize=11, markeredgecolor="black",
+                    markeredgewidth=0.6, zorder=4)
+
+    # Highlight the linear→MLP gap = format shift
+    ax.text(2.55, 0.7, "MLP probe\nat L2",
+            fontsize=8, color="#222", ha="left", va="center", weight="bold")
+    ax.text(2.55, 0.45, "(non-linear\nrecovery)",
+            fontsize=7.5, color="#444", ha="left", va="center", style="italic")
+    # Annotate the largest gap (uniform: linear=0.66 single-fit, but Panel A
+    # 5-fold says -1.19; mlp=0.48 → gap is huge in CV terms). Use linear
+    # single-fit floor for visual consistency within Panel C.
+    ax.text(2.55, -0.5, "vertical bar\n= format shift\ngap at L2",
+            fontsize=7.5, color="#666", ha="left", va="center", style="italic")
 
     ax.set_xticks([0, 1, 2])
     ax.set_xticklabels(["L0\n(LSTM in)", "L1", "L2\n(top, policy)"], fontsize=9)
-    ax.set_xlim(-0.4, 2.4)
+    ax.set_xlim(-0.4, 3.3)
     ax.set_ylim(CLIP_MIN - 0.05, 1.10)
     ax.set_xlabel("Pipeline location", fontsize=11, fontweight="bold")
-    ax.set_ylabel(r"GPS $R^2$ (single-fit)", fontsize=11, fontweight="bold")
+    ax.set_ylabel(r"GPS $R^2$", fontsize=11, fontweight="bold")
     ax.set_title("(c) Pipeline view: where the divergence sits",
                  fontsize=12, fontweight="bold", loc="left", x=0.0, pad=8)
     ax.tick_params(axis="y", labelsize=10)
@@ -284,7 +311,7 @@ def main() -> None:
 
     panel_a(ax_a, args.mlp_json)
     panel_b(ax_b)
-    panel_c(ax_c)
+    panel_c(ax_c, args.mlp_json)
 
     fig.savefig(args.out, dpi=200, bbox_inches="tight")
     fig.savefig(str(args.out).replace(".pdf", ".png"), dpi=200,
