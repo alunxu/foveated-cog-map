@@ -229,11 +229,12 @@ def panel_c(ax, mlp_json: Path) -> None:
     data = json.loads(LAGK_JSON.read_text())
     KS = [0, 1, 2, 5, 10, 20, 50]
 
+    Y_DISPLAY_MIN = -1.0
     for rcp_key, _mlp, label, _cells, col, mk, _ in CONDS:
         if rcp_key not in data:
             continue
         gps = data[rcp_key].get("GPS", {})
-        xs, ys, errs = [], [], []
+        xs, ys, errs, clipped = [], [], [], []
         for k in KS:
             entry = gps.get(f"k{k}")
             if entry is None:
@@ -242,20 +243,32 @@ def panel_c(ax, mlp_json: Path) -> None:
             if r2 is None:
                 continue
             xs.append(k)
-            ys.append(float(np.clip(r2, CLIP_MIN, 1.05)))
-            errs.append(float(entry.get("std", 0)))
+            y_raw = float(r2)
+            ys.append(float(np.clip(y_raw, Y_DISPLAY_MIN, 1.05)))
+            errs.append(min(float(entry.get("std", 0)), 0.4))
+            clipped.append(y_raw < Y_DISPLAY_MIN)
         if xs:
             ax.errorbar(xs, ys, yerr=errs, marker=mk, label=label,
                         color=col, linewidth=2.2, markersize=10,
                         markeredgecolor="white", markeredgewidth=1.0,
                         capsize=3, elinewidth=0.8, alpha=0.95, zorder=3)
+            # Downward arrows on clipped markers (uniform mostly)
+            for x, y, c in zip(xs, ys, clipped):
+                if c:
+                    ax.annotate("", xy=(x, y - 0.12), xytext=(x, y - 0.02),
+                                arrowprops=dict(arrowstyle="->", color=col,
+                                                lw=1.6, alpha=0.9),
+                                zorder=4)
 
+    # Light shaded "no-signal" band below R^2 = 0 to communicate that
+    # negative-R^2 = linear model worse than predict-mean (i.e. noise).
+    ax.axhspan(Y_DISPLAY_MIN - 0.05, 0, color="#fbe0dc", alpha=0.30, zorder=0)
     ax.axhline(0, color="black", linewidth=0.5, zorder=1)
     ax.set_xscale("symlog", linthresh=1)
     ax.set_xticks(KS)
     ax.set_xticklabels([str(k) for k in KS], fontsize=12)
     ax.set_xlim(-0.3, 60)
-    ax.set_ylim(CLIP_MIN - 0.05, 1.10)
+    ax.set_ylim(Y_DISPLAY_MIN - 0.05, 1.10)
     ax.set_xlabel("predictive horizon $k$ (steps ahead)",
                   fontsize=15, fontweight="bold")
     ax.set_ylabel(r"GPS $R^2$ at $\mathbf{h}_t \to \mathrm{pos}_{t+k}$",

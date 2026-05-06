@@ -150,7 +150,7 @@ As encoder spatial bandwidth grows, linear GPS readability at the policy-readabl
 \centering
 \small
 \setlength{\tabcolsep}{6pt}
-\caption{Per-condition headline. All five agents trained for 250M frames (§\ref{sec:methods-setup}); blind uses an independently retrained checkpoint (Appendix~\ref{app:repro}). Probe $R^2$: 5-fold episode-level CV mean $\pm$ std on full-length trajectories (no per-episode step cap). Sub-chance $R^2$ in rich-encoder rows reflect long-tail collapse (mid-episode $R^2 \in [0.6, 0.95]$, Figure~\ref{fig:h1_mega}b); rich-encoder GPS $R^2$ is statistically indistinguishable from zero (one-sample $t$-test: foveated $p\approx 0.58$, uniform $p\approx 0.25$; $df{=}4$). Bold marks blind/coarse rows where GPS and compass remain decodable ($p<0.001$) and best task performance.}
+\caption{Per-condition headline. All five agents trained for 250M frames (§\ref{sec:methods-setup}); blind uses an independently retrained checkpoint (Appendix~\ref{app:repro}). Probe $R^2$: 5-fold episode-level CV mean $\pm$ std on full-length trajectories (no per-episode step cap). Sub-chance $R^2$ in rich-encoder rows reflect long-tail collapse (mid-episode $R^2 \in [0.6, 0.95]$, Figure~\ref{fig:magnitude_appendix}b); rich-encoder GPS $R^2$ is statistically indistinguishable from zero (one-sample $t$-test: foveated $p\approx 0.58$, uniform $p\approx 0.25$; $df{=}4$). Bold marks blind/coarse rows where GPS and compass remain decodable ($p<0.001$) and best task performance.}
 \label{tab:summary}
 \begin{tabular}{lcccc}
 \toprule
@@ -167,7 +167,7 @@ Uniform               & 0.891         & \textbf{0.993}& $-$1.785$\pm$2.993 & $-$
 
 The relevant contrast is whether a linear top-layer readout --- the operation the DD-PPO policy head performs --- can recover position from $\mathbf{h}_2$. Two confounds are addressed up front: goal-distance decodes comparably across conditions (against a probe-capacity reading), and the foveated-logpolar control at $\sim 2{\times}2$ output lands in the rich-encoder regime (against pure spatial-output dimensionality, motivating a spatial-feature-\emph{variety} reframing, Appendix~\ref{app:scaling}). The blind result replicates~\citep{wijmans2023emergence}; coarse extends it to a vision-with-bottleneck condition, suggesting the trigger is per-step feature variety rather than absence of vision.
 
-We read this as a \emph{capacity-allocation} pattern: the hidden state has two routes to a position code --- integrating the L0 GPS-sensor input over time, or reading position-correlated features from the encoder --- and policy gradient biases capacity toward whichever route the encoder makes viable. Three views are consistent. \emph{Across training} (Figure~\ref{fig:magnitude}b): sighted conditions start with high linear readability; rich-encoder conditions then decay along trajectories whose timescale tracks encoder informativeness, while coarse plateaus and blind stays stable. \emph{Predictive horizon} (Figure~\ref{fig:magnitude}c): the SR cognitive-map signature~\citep{stachenfeld2017predictive} is sustained out to $k{=}50$ steps only in blind, attenuated in coarse, and absent in rich-encoder conditions --- $\mathbf{h}_t$ encodes a forward-rollout-style position code only when the integration route carries it. \emph{Pipeline localisation} (Appendix Figure~\ref{fig:h1_mega}c): linear readability is comparable across conditions at the LSTM input and only diverges at L2 --- where the policy reads.
+We read this as a \emph{capacity-allocation} pattern: the hidden state has two routes to a position code --- integrating the L0 GPS-sensor input over time, or reading position-correlated features from the encoder --- and policy gradient biases capacity toward whichever route the encoder makes viable. Two views in the main figure are consistent. \emph{Across training} (Figure~\ref{fig:magnitude}b): sighted conditions start with high linear readability; rich-encoder conditions then decay along trajectories whose timescale tracks encoder informativeness, while coarse plateaus and blind stays stable. \emph{Predictive horizon} (Figure~\ref{fig:magnitude}c): the SR cognitive-map signature~\citep{stachenfeld2017predictive} is sustained at long lags only in blind --- $\mathbf{h}_t$ encodes a forward-rollout-style position code only when the integration route carries it.
 
 \begin{figure}[!t]
 \centering
@@ -183,7 +183,7 @@ We read this as a \emph{capacity-allocation} pattern: the hidden state has two r
 % during training) is out of scope for this submission.
 % \noindent\textbf{Memory-length budget sweep}\quad \hcpending{...}
 
-Two cogneuro signatures further support the capacity-allocation reading. First, on \emph{peaked-unit content}: per-unit Skaggs spatial information~\citep{skaggs1996theta} is condition-flat, but peaked-unit regression (Appendix Figure~\ref{fig:place_cells}) suggests that the most informative units in rich-encoder agents track trajectory-phase / visual-landmark features more strongly than raw position, while in blind they track raw position --- a view-cell-like vs.\ path-integrated dissociation~\citep{rolls2024why}. Second, on \emph{perturbation robustness}: a 25-step random-action mid-episode excursion test (Appendix Figure~\ref{fig:wjf_excursion}) shows blind fragments most. The pattern is the inverse of a passthrough hidden state --- the more a condition's $\mathbf{h}_t$ integrates the action stream, the more it fragments when that stream is perturbed --- consistent at the high level with rodent path-integration under removed visual landmarks~\citep{chen2016grid}.
+Three corroborating diagnostics in Appendix Figure~\ref{fig:magnitude_appendix} converge on the same picture. \emph{(i)~Pipeline view}: linear readability is comparable across conditions at the LSTM input and only diverges at L2 --- where the policy reads --- isolating the divergence to the policy-readable layer. \emph{(ii)~Peaked-unit content}: per-unit Skaggs spatial information~\citep{skaggs1996theta} is condition-flat, but peaked-unit regression suggests the most informative units in rich-encoder agents track trajectory-phase / visual-landmark features rather than raw position, while in blind they track raw position --- a view-cell-like vs.\ path-integrated dissociation~\citep{rolls2024why}. \emph{(iii)~Perturbation robustness}: a 25-step random-action mid-episode excursion shows blind fragments most, the inverse of a passthrough hidden state and consistent at the high level with rodent path-integration under removed visual landmarks~\citep{chen2016grid}.
 
 \subsection{Format axis (spatial): scene-invariance within and non-interchangeable subspaces across}
 \label{sec:format-spatial}
@@ -344,7 +344,7 @@ Probe-readable position indexes \emph{where capacity is allocated}; whether the 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.65\linewidth]{fig/fig6_synthesis_2axes.pdf}
-\caption{Synthesis: three axes of one capacity allocation. \emph{X-axis:} top-layer GPS $R^2$ on $\mathbf{h}_2$ (magnitude). \emph{Y-axis:} $-1\times$ average cross-condition transplant cost when this condition is the donor (format-isolation; higher Y = more disruptive to other conditions' policies). \emph{Marker size:} second-episode shortcut SPL drop $\%$ (consumption; larger = more policy dependence on persistent recurrent memory). Within each axis, multiple convergent measurements --- e.g.\ information-allocation, scene-invariance, predictive-horizon, place-cell, and excursion-fragility findings (Figures~\ref{fig:format_shift}, \ref{fig:loso_cv}, \ref{fig:place_cells}) --- sharpen the \emph{interpretation} but are not separate axes of variation.}
+\caption{Synthesis: three axes of one capacity allocation. \emph{X-axis:} top-layer GPS $R^2$ on $\mathbf{h}_2$ (magnitude). \emph{Y-axis:} $-1\times$ average cross-condition transplant cost when this condition is the donor (format-isolation; higher Y = more disruptive to other conditions' policies). \emph{Marker size:} second-episode shortcut SPL drop $\%$ (consumption; larger = more policy dependence on persistent recurrent memory). Within each axis, multiple convergent measurements --- e.g.\ information-allocation, scene-invariance, predictive-horizon, place-cell, and excursion-fragility findings (Figures~\ref{fig:format_shift}, \ref{fig:loso_cv}, \ref{fig:magnitude_appendix}) --- sharpen the \emph{interpretation} but are not separate axes of variation.}
 \label{fig:synthesis_2axes}
 \end{figure}
 
@@ -583,7 +583,7 @@ Uniform           & $-4.31$ & $-4.32$ & $-4.32$ & $-4.26$ & $-4.39$ & $-10.14$ \
 
 Three observations. \emph{(i) Blind exhibits a long predictive horizon.} Linear $R^2$ from $\mathbf{h}_t$ to $(x, y)_{t+k}$ remains $\geq 0.90$ from $k=0$ to $k=20$ (only $0.04$-point drop), and $0.79$ at $k=50$. That is, the same linear projection that decodes \emph{current} position from $\mathbf{h}_t$ at $R^2 = 0.94$ also decodes positions $20$ steps in the future at $R^2 = 0.90$. This is a strong form of the predictive-map signature predicted by SR theory: $\mathbf{h}_t$ encodes future-state occupancy, not just current state. \emph{(ii) Coarse follows the same pattern at lower magnitude} (linear $R^2 \in [0.50, 0.57]$ across $k=0$--$20$, dropping to $+0.37$ at $k=50$). \emph{(iii) Rich-encoder conditions have no clear predictive horizon.} Foveated stays in $[0.06, 0.19]$ across $k=0$--$50$ with no monotonic decay --- the small positive values reflect probe-level noise rather than a sustained future-state code. Foveated-logpolar starts at $+0.17$ but turns negative by $k=20$. Uniform is already strongly negative at $k=0$ ($R^2 = -4.31$) and grows more negative. Rich-encoder $\mathbf{h}_t$ encodes neither current nor future position linearly --- consistent with our LOSO scene-invariance reading that rich-encoder position codes are scene-conditional and only non-linearly recoverable, but adds the temporal axis: even with non-linear flexibility, future positions are not encoded. The signature is asymmetric: bottleneck conditions encode $\mathbf{h}_t$ as a smoothly-varying integrated GPS code that linearly predicts upcoming positions; rich-encoder conditions encode $\mathbf{h}_t$ reactively to the current visual scene without temporal extrapolation.
 
-\noindent (See Figure~\ref{fig:predictive_horizon} for the predictive-horizon panel referenced from §\ref{sec:h1}.)
+\noindent (See main Figure~\ref{fig:magnitude}c for the predictive-horizon panel; this appendix expands on its theoretical context.)
 
 \subsection{Mutual-information capacity accounting (MINE)}
 \label{app:mine}
@@ -649,18 +649,15 @@ The main-text Figure~\ref{fig:shortcut_paired_traj} shows one canonical paired-e
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}\centering
 \includegraphics[width=\linewidth]{fig/appfig13_mp3d_generalization.pdf}\\
-{\footnotesize (b) Companion to Figure~\ref{fig:h1_mega}a (which uses 5-fold CV mean): single train/test fit on the same checkpoints; the qualitative bottleneck-vs-rich-encoder partition is the same.}
+{\footnotesize (b) Companion to Figure~\ref{fig:magnitude_appendix}a (which uses 5-fold CV mean): single train/test fit on the same checkpoints; the qualitative bottleneck-vs-rich-encoder partition is the same.}
 \end{minipage}
 \caption{Per-layer and MP3D companion figures (referenced from §\ref{sec:h1}).}
 \label{fig:supp_layerwise_mp3d}
 \end{figure}
 
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.85\linewidth]{fig/appfig_wjf_excursion.pdf}
-\caption{Excursion-forgetting per-segment scale-invariant error (referenced from §\ref{sec:boundaries}). One Ridge probe trained on full-episode pooled hidden states (episode-level 5-fold CV); the same probe tested on each segment of the held-out fold. Lower MAE/spread $=$ more accurate per-segment position decoding; values $\geq 1$ are at-or-worse than predict-mean baseline. All five conditions show recovery $>$ warmup error (forgetting); blind's rise ($+0.381$) is the largest, roughly $1.8$--$2.8\times$ the sighted conditions ($+0.135$ foveated-logpolar, $+0.167$ uniform, $+0.198$ coarse, $+0.210$ foveated). The pattern is consistent with blind carrying the most action-stream-dependent integrated GPS code and the sighted conditions partly re-anchoring on visual landmarks during recovery. Single seed.}
-\label{fig:wjf_excursion}
-\end{figure}
+% fig:magnitude_appendix now lives in the consolidated fig:magnitude_appendix
+% (\ref{app:magnitude-detail}); the standalone version was removed during
+% the appendix consolidation pass.
 
 
 \section{Foveation experiments: status and design}
@@ -702,40 +699,31 @@ A direct test of the H1 mechanism (encoder spatial-feature variety per step driv
 
 This appendix collects companion figures that extend results reported numerically in the main text. They are not load-bearing for any main-text claim and may be skipped on first reading.
 
-\subsection{Magnitude-axis: panel-level detail and predictive-horizon panel}
+\subsection{Magnitude axis: corroborating diagnostics}
 \label{app:magnitude-detail}
 
-\noindent The §\ref{sec:h1} consolidated 3-panel figure (Figure~\ref{fig:magnitude}) summarises the magnitude-axis story; the figures below preserve the panel-level detail referenced from that section.
+\noindent The main-text Figure~\ref{fig:magnitude} (§\ref{sec:h1}) summarises the magnitude-axis story across three independent axes; this single composite figure collects the corroborating diagnostics referenced from that section in one place.
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=\linewidth]{fig/fig2_h1_mega.pdf}
-\caption{\textbf{Magnitude-axis evidence in detail (referenced from §\ref{sec:h1} and Table~\ref{tab:summary}).} \emph{(a)}~Top-layer GPS $R^2$ on Gibson and held-out MP3D (5-fold CV, deterministic rollouts, $300$ ep/cond; lighter bars = MP3D; values outside y-range labelled). \emph{(b)}~Top-layer GPS $R^2$ binned by step-in-episode ($7$ log-spaced bins in $[10, 1600+]$, right-most bin pools $\geq 1024$); rich-encoder conditions hold $R^2 \in [0.6, 0.8]$ in the typical mid-episode window then collapse in the long tail. \emph{(c)}~GPS $R^2$ along Encoder $\to$ L0 $\to$ L1 $\to$ L2 (this panel is condensed into Figure~\ref{fig:magnitude}c; the version here uses single train/test fits rather than 5-fold CV mean). Shaded band at L2: 2-layer MLP probe recovery range ($R^2 \in [0.51, 0.73]$).}
-\label{fig:h1_mega}
+\includegraphics[width=\linewidth]{fig/fig2_h1_mega.pdf}\\[6pt]
+\begin{minipage}[c]{0.56\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/fig_place_cells.pdf}\\[-2pt]
+  {\footnotesize\textbf{(d) Skaggs spatial information per unit}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/appfig_wjf_excursion.pdf}\\[-2pt]
+  {\footnotesize\textbf{(e) Excursion forgetting}}
+\end{minipage}
+\caption{\textbf{Magnitude axis: corroborating diagnostics (referenced from §\ref{sec:h1} and Table~\ref{tab:summary}).} \emph{(a)}~Top-layer GPS $R^2$ on Gibson and held-out MP3D (5-fold CV, deterministic rollouts, $300$ ep/cond; lighter bars = MP3D; the MP3D shift is single-seed and awaits replication). \emph{(b)}~GPS $R^2$ binned by step-in-episode ($7$ log-spaced bins): rich-encoder readability holds in the mid-episode window then collapses in the long tail. \emph{(c)}~Pipeline view: GPS $R^2$ along Encoder $\to$ L0 (LSTM input) $\to$ L1 $\to$ L2 (single-fit; the 5-fold CV version is condensed in main Figure~\ref{fig:magnitude}). Readability is comparable across conditions at the LSTM input and only diverges at L2; the shaded band at L2 is the 2-layer MLP probe recovery range. \emph{(d)}~Per-unit Skaggs spatial information~\citep{skaggs1996theta} is condition-flat at the headline metric; the per-unit regression analysis in §\ref{sec:h1} (trajectory-phase vs.\ raw-position $R^2$) is the more diagnostic reading. \emph{(e)}~Mid-episode excursion forgetting (25-step random-action perturbation; per-segment scale-invariant MAE): blind fragments most, consistent with the strongest reliance on the integrated action stream.}
+\label{fig:magnitude_appendix}
 \end{figure}
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{fig/fig3_substitution_dynamics.pdf}
-\caption{\textbf{Cross-training substitution dynamics: GPS and compass (referenced from §\ref{sec:h1}).} Probe $R^2$ across $4$--$5$ training checkpoints per condition, truncated at $250$M frames. \emph{(a)} Top-layer GPS $R^2$ (this panel is the source for Figure~\ref{fig:magnitude}b). \emph{(b)} Top-layer compass $R^2$ tells the same story at smaller magnitude --- the substitution applies to spatial codes broadly, not just position. ($500$ ep/probe, 5-fold CV, single seed; hollow dotted = partial-data ckpts; negative-$R^2$ outliers clipped at $-2.0$.)}
+\caption{\textbf{Cross-training substitution dynamics: GPS and compass (companion to main Figure~\ref{fig:magnitude}b).} Probe $R^2$ across training checkpoints, truncated at $250$M frames. \emph{(a)} Top-layer GPS $R^2$ (the source panel for Figure~\ref{fig:magnitude}b). \emph{(b)} Top-layer compass $R^2$ tells the same story at smaller magnitude --- substitution applies to spatial codes broadly, not just position.}
 \label{fig:substitution_dynamics}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.7\linewidth]{fig/fig_predictive_horizon.pdf}
-\caption{\textbf{SR-style predictive horizon (referenced from §\ref{sec:h1} and §\ref{app:predictive_horizon}).} Linear $R^2$ predicting future position $(x, y)_{t+k}$ from $\mathbf{h}_t$ vs.\ horizon $k$ (Stachenfeld 2017 SR-style cognitive-map signature). \textsc{Blind} retains $R^2 \geq 0.90$ to $k{=}20$ and $+0.79$ at $k{=}50$; \textsc{coarse} a moderate $R^2 \in [0.50, 0.57]$ to $k{=}20$ ($+0.37$ at $k{=}50$); rich-encoder conditions show no predictive horizon (foveated stays in $[0.06, 0.19]$ flat, foveated-logpolar turns negative by $k{=}20$, uniform is strongly negative throughout). Blind's $\mathbf{h}_t$ encodes future-state occupancy --- the canonical cognitive-map signature predicted by SR theory.}
-\label{fig:predictive_horizon}
-\end{figure}
-
-\subsection{Other diagnostics}
-\label{app:other-diagnostics}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{fig/fig_place_cells.pdf}
-\caption{\textbf{Skaggs spatial information per LSTM unit (referenced from §\ref{sec:h1}).} \emph{(a)} Distribution of per-unit Skaggs bits (averaged across 15 top scenes per condition); bottleneck and rich-encoder conditions overlap substantially (means $\approx 1.16$--$1.32$ bits). \emph{(b)} Number of place units per scene exceeding the $99$th percentile of a $100$-shuffle null; foveated has the largest count ($\approx 237$/scene), blind/coarse/uniform $\approx 116$--$174$. \emph{(c)} Distribution summary; cross-condition differences sit within the within-condition spread. The canonical Skaggs metric on rectified activations does not by itself discriminate bottleneck from rich-encoder regimes; the per-unit-regression analysis in main-text §\ref{sec:h1} (trajectory-phase vs.\ raw-position $R^2$) is the more diagnostic reading.}
-\label{fig:place_cells}
 \end{figure}
 
 \begin{figure}[!t]
