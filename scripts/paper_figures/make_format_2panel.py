@@ -205,54 +205,80 @@ def panel_b(ax, loso_json: Path, transplant_dir: Path) -> None:
 
 # ────────────────── Panel C: subspace divergence (10 pairs) ──────────────
 def panel_c(ax, subspace_json: Path) -> None:
-    """2D scatter: principal angle × direction cosine for all 10 condition
-    pairs. Geometric corroboration of the behavioural transplant test in
-    Panel B: if conditions occupy non-interchangeable subspaces, all
-    pairwise tests should cluster near 'fully orthogonal' (90°, cos=0).
+    """Horizontal dot plot: principal angle for each of the 10 condition
+    pairs, sorted high-to-low.  Drops the redundant direction-cosine
+    second axis and the two-tone marker scheme of v1 — the orthogonality
+    story collapses into one number per pair, and a 1D strip plot reads
+    that story directly.  A reference line at 90° marks fully-orthogonal;
+    the foveated/foveated-logpolar pair (sole sub-70° outlier, the two
+    conditions sharing the foveated retina) is annotated separately.
     """
     data = json.loads(subspace_json.read_text())
     conds = data["conds"]
-    short = {"blind": "Bl", "coarse": "Co", "foveated": "Fv",
-             "foveated_logpolar": "Fl", "uniform": "Un"}
-    color = {"blind": "#444444", "coarse": "#377eb8",
-             "foveated": "#e41a1c", "foveated_logpolar": "#984ea3",
-             "uniform": "#4daf4a"}
+    pretty = {"blind": "Blind", "coarse": "Coarse",
+              "foveated": "Foveated",
+              "foveated_logpolar": "Fov-LP",
+              "uniform": "Uniform"}
     angle_mat = np.array(data["angle_matrix_deg"])
-    cos_mat = np.array(data["cos_matrix_x"])
 
-    # Extract upper triangle (10 pairs)
+    # Collect 10 unordered pairs with their angles.
+    pairs = []
     for i in range(5):
         for j in range(i + 1, 5):
-            angle = float(angle_mat[i, j])
-            cos = float(cos_mat[i, j])
-            # Use a 2-tone marker: outer color = condition i, inner = j
-            ax.scatter(angle, cos, s=240, c=color[conds[i]],
-                       edgecolor=color[conds[j]], linewidth=2.4,
-                       alpha=0.92, zorder=3)
-            label = f"{short[conds[i]]}--{short[conds[j]]}"
-            ax.annotate(label, (angle, cos), xytext=(7, 3),
-                        textcoords="offset points", fontsize=9.5,
-                        color="#333", weight="bold")
+            label = f"{pretty[conds[i]]}–{pretty[conds[j]]}"
+            pairs.append((label, float(angle_mat[i, j]),
+                          conds[i], conds[j]))
+    # Sort by angle, descending (most-orthogonal first).
+    pairs.sort(key=lambda t: -t[1])
+    n = len(pairs)
+    angles = np.array([p[1] for p in pairs])
 
-    # "Fully orthogonal" target: 90°, cos=0
-    ax.axvline(90, color="#3a7d3a", ls="--", lw=0.9, alpha=0.7, zorder=1)
-    ax.axhline(0, color="#3a7d3a", ls="--", lw=0.9, alpha=0.7, zorder=1)
-    ax.text(89.5, 0.13, "fully\northogonal\n(90°, 0)",
-            fontsize=10, color="#3a7d3a", style="italic", weight="bold",
-            ha="right", va="top", alpha=0.85)
+    # Highlight the within-foveated outlier (Fov-LP/Foveated).
+    is_fov_pair = np.array([
+        ({c1, c2} == {"foveated", "foveated_logpolar"})
+        for _, _, c1, c2 in pairs
+    ])
 
-    ax.set_xlabel("principal angle (deg)",
-                  fontsize=20, fontweight="bold")
-    ax.set_ylabel("Ridge-probe\ndirection cosine",
-                  fontsize=20, fontweight="bold")
+    y = np.arange(n)
+    # Bars from 90° anchor to each pair's angle, so the visual length
+    # encodes the *gap from orthogonal* (longer bar = less orthogonal).
+    for i, ang in enumerate(angles):
+        col = "#c95a3d" if is_fov_pair[i] else "#3a7d3a"
+        ax.hlines(y[i], ang, 90, color=col, lw=2.5,
+                  alpha=0.55 if not is_fov_pair[i] else 0.9, zorder=2)
+        ax.scatter(ang, y[i], s=110, color=col,
+                   edgecolor="white", linewidth=1.4, zorder=3)
+
+    # Pair labels to the LEFT of each row (left-justified at 64°).
+    for i, (label, _, _, _) in enumerate(pairs):
+        ax.text(64.5, y[i], label, ha="left", va="center",
+                fontsize=12, color="#222")
+
+    # Reference line at 90° = fully orthogonal.
+    ax.axvline(90, color="#222", ls="--", lw=1.0, alpha=0.7, zorder=1)
+    ax.text(90, n - 0.1, "  fully\n  orthogonal",
+            fontsize=11, color="#222", style="italic",
+            ha="left", va="top")
+
+    # Summary annotation: median + IQR.
+    med = float(np.median(angles))
+    q1, q3 = float(np.percentile(angles, 25)), float(np.percentile(angles, 75))
+    ax.text(64.5, -1.0,
+            f"median {med:.0f}° (IQR {q1:.0f}–{q3:.0f}°); "
+            f"9/10 pairs $\\geq 75°$, only Foveated–Fov-LP at $\\sim$67°",
+            fontsize=11, color="#444", style="italic")
+
+    ax.set_xlabel("principal angle (deg)  --  larger = more orthogonal",
+                  fontsize=18, fontweight="bold")
     ax.set_title("(c) Subspace divergence",
                  fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
-    ax.set_xlim(65, 92)
-    ax.set_ylim(-0.15, 0.15)
-    ax.tick_params(axis="both", labelsize=12)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.grid(linestyle=":", alpha=0.25)
+    ax.set_xlim(63.5, 93.5)
+    ax.set_ylim(-1.6, n - 0.4)
+    ax.set_yticks([])
+    ax.tick_params(axis="x", labelsize=12)
+    for s_ in ("top", "right", "left"):
+        ax.spines[s_].set_visible(False)
+    ax.grid(axis="x", linestyle=":", alpha=0.25)
 
 
 # ──────────────────────────── compose ────────────────────────────
