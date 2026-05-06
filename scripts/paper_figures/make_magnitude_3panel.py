@@ -162,6 +162,11 @@ def panel_b(ax) -> None:
             v = _read_ckpt_value(ck5_p)
             if v is not None:
                 points.append((5 * frames_per_ckpt, v))
+            # blind_izar ckpt.15 (151M-equivalent) — landed 2026-05-06
+            ck15_p = RCP_DIR / "blind_izar_det_ckpt15_analysis.json"
+            v = _read_ckpt_value(ck15_p)
+            if v is not None:
+                points.append((15 * frames_per_ckpt, v))
         else:
             # New RCP sweep: ckpt 10/20/30/40 at 5M each => 50/100/150/200M
             for ck in (10, 20, 30, 40):
