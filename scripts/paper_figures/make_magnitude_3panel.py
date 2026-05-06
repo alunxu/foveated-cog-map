@@ -212,52 +212,55 @@ def panel_b(ax) -> None:
     ax.grid(axis="y", linestyle=":", alpha=0.25)
 
 
-# ───────────────────── Panel C: pipeline view (magnitude only) ─────────────
+# ───────────────────── Panel C: predictive horizon (lag-k) ─────────────────
 def panel_c(ax, mlp_json: Path) -> None:
-    """Pipeline view: linear GPS R^2 along L0 (LSTM input) → L1 → L2 (top,
-    policy-readable) per condition. The magnitude divergence emerges at L2
-    only — at L0 (sensor concat) all conditions are comparable.
-
-    Magnitude-axis only — the linear-vs-MLP format-shift comparison is
-    Figure 3 (§3.2). mlp_json kept in signature for backward compatibility.
+    """Predictive horizon: GPS R^2 of decoding pos_{t+k} from h_t vs lag k.
+    The Stachenfeld 2017 SR-style cognitive-map signature — blind sustains
+    high R^2 over long horizons (path-integrated forward-rollout structure);
+    rich-encoder conditions crash because their L2 carries scene-conditional
+    visual features rather than a stable position code.
     """
-    _ = mlp_json  # not used here; format-shift lives in §3.2
+    _ = mlp_json  # not used here
+    LAGK_JSON = RCP_DIR / "lagk_summary.json"
+    if not LAGK_JSON.exists():
+        ax.text(0.5, 0.5, "(lagk_summary.json missing)",
+                ha="center", va="center", transform=ax.transAxes, color="grey")
+        return
+    data = json.loads(LAGK_JSON.read_text())
+    KS = [0, 1, 2, 5, 10, 20, 50]
 
     for rcp_key, _mlp, label, _cells, col, mk, _ in CONDS:
-        main_p = RCP_DIR / f"{rcp_key}_det_analysis.json"
-        layer_r2 = {0: None, 1: None, 2: None}
-        if main_p.exists():
-            try:
-                d = json.loads(main_p.read_text())
-                for entry in d.get("1d_multilayer", []):
-                    if entry.get("state") == "h":
-                        L = entry["layer"]
-                        if L in layer_r2:
-                            layer_r2[L] = float(np.clip(entry["gps_r2"],
-                                                       CLIP_MIN, 1.05))
-            except Exception:
-                pass
-
-        xs, ys = [], []
-        for L in (0, 1, 2):
-            if layer_r2[L] is not None:
-                xs.append(L); ys.append(layer_r2[L])
+        if rcp_key not in data:
+            continue
+        gps = data[rcp_key].get("GPS", {})
+        xs, ys, errs = [], [], []
+        for k in KS:
+            entry = gps.get(f"k{k}")
+            if entry is None:
+                continue
+            r2 = entry.get("mean")
+            if r2 is None:
+                continue
+            xs.append(k)
+            ys.append(float(np.clip(r2, CLIP_MIN, 1.05)))
+            errs.append(float(entry.get("std", 0)))
         if xs:
-            ax.plot(xs, ys, marker=mk, label=label,
-                    color=col, linewidth=2.2, markersize=10,
-                    markeredgecolor="white", markeredgewidth=1.0,
-                    zorder=3)
+            ax.errorbar(xs, ys, yerr=errs, marker=mk, label=label,
+                        color=col, linewidth=2.2, markersize=10,
+                        markeredgecolor="white", markeredgewidth=1.0,
+                        capsize=3, elinewidth=0.8, alpha=0.95, zorder=3)
 
     ax.axhline(0, color="black", linewidth=0.5, zorder=1)
-    ax.set_xticks([0, 1, 2])
-    ax.set_xticklabels(["L0\n(LSTM input)", "L1", "L2\n(top, policy)"],
-                       fontsize=12)
-    ax.set_xlim(-0.4, 2.4)
+    ax.set_xscale("symlog", linthresh=1)
+    ax.set_xticks(KS)
+    ax.set_xticklabels([str(k) for k in KS], fontsize=12)
+    ax.set_xlim(-0.3, 60)
     ax.set_ylim(CLIP_MIN - 0.05, 1.10)
-    ax.set_xlabel("Pipeline location", fontsize=15, fontweight="bold")
-    ax.set_ylabel(r"linear GPS $R^2$ (single-fit)",
+    ax.set_xlabel("predictive horizon $k$ (steps ahead)",
                   fontsize=15, fontweight="bold")
-    ax.set_title("(c) Pipeline view: where the divergence sits",
+    ax.set_ylabel(r"GPS $R^2$ at $\mathbf{h}_t \to \mathrm{pos}_{t+k}$",
+                  fontsize=15, fontweight="bold")
+    ax.set_title("(c) Predictive horizon: SR cognitive-map signature",
                  fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
     ax.tick_params(axis="y", labelsize=12)
     ax.spines["top"].set_visible(False)
