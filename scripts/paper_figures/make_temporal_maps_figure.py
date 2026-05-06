@@ -420,10 +420,10 @@ def panel_tgm(ax, cond_key: str, label: str, colour: str,
     im = ax.imshow(M_clipped, origin="lower", cmap="RdBu_r",
                    vmin=vmin, vmax=vmax, aspect="equal",
                    interpolation="nearest")
-    ax.set_title(label, fontsize=12, fontweight="bold", color=colour, pad=4)
-    ax.set_xlabel("test step", fontsize=9)
-    ax.set_ylabel("train step", fontsize=9)
-    ax.tick_params(axis="both", labelsize=8)
+    ax.set_title(label, fontsize=17, fontweight="bold", color=colour, pad=4)
+    ax.set_xlabel("test step", fontsize=13)
+    ax.set_ylabel("train step", fontsize=13)
+    ax.tick_params(axis="both", labelsize=11)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
     return im
@@ -467,14 +467,15 @@ def panel_tgm_decay(ax, tgm_data: dict):
                    edgecolor="white", linewidth=1.0, zorder=5)
     ax.axhline(0, color="#bbb", lw=0.4, zorder=0)
     ax.set_xlim(0, max_lag - 1)
-    ax.set_xlabel("step lag $|i-j|$", fontsize=10, fontweight="bold")
-    ax.set_ylabel(r"mean decoder $R^2$ at lag", fontsize=10, fontweight="bold")
+    ax.set_xlabel("step lag $|i-j|$", fontsize=14, fontweight="bold")
+    ax.set_ylabel(r"mean decoder $R^2$ at lag", fontsize=14, fontweight="bold")
     ax.set_title("decoder-transfer decay (TGM cross-section)",
-                 fontsize=11, fontweight="bold", pad=4)
+                 fontsize=15, fontweight="bold", pad=4)
+    ax.tick_params(axis="both", labelsize=12)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
     ax.grid(linestyle=":", alpha=0.3)
-    ax.legend(loc="upper right", fontsize=8.5, frameon=False, handlelength=1.5)
+    ax.legend(loc="upper right", fontsize=12, frameon=False, handlelength=1.5)
 
 
 def panel_autocorr_compact(ax, autocorr: dict):
@@ -532,15 +533,16 @@ def panel_cum_h2_lines(ax, eps_by_cond: dict):
         # Mark the final point with a dot.
         ax.scatter([steps[-1]], [cum[-1]], s=32, color=colour,
                    edgecolor="white", linewidth=1.0, zorder=5)
-    ax.set_xlabel("step in episode", fontsize=10, fontweight="bold")
+    ax.set_xlabel("step in episode", fontsize=14, fontweight="bold")
     ax.set_ylabel(r"cumulative $\Sigma|\Delta\mathbf{h}_2|$",
-                  fontsize=10, fontweight="bold")
+                  fontsize=14, fontweight="bold")
     ax.set_title("memory dynamics on the matched episode",
-                 fontsize=11, fontweight="bold", pad=4)
+                 fontsize=15, fontweight="bold", pad=4)
+    ax.tick_params(axis="both", labelsize=12)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
     ax.grid(linestyle=":", alpha=0.3)
-    ax.legend(loc="lower right", fontsize=8.0, frameon=False,
+    ax.legend(loc="lower right", fontsize=11, frameon=False,
               handlelength=1.5)
 
 
@@ -635,12 +637,12 @@ def main():
 
     # 2-row layout via two separate gridspecs (different col counts).
     #   Row 1: 5 step-by-step decoder generalisation heatmaps + colorbar.
-    #   Row 2: 3 panels — combined trajectory overlay (blind thick +
-    #          sighted thin overlaid on shared map) + cumulative
-    #          memory-displacement line plot + per-unit autocorrelation
-    #          curves.  The two line-plot panels fan all five conditions
-    #          out as separate curves, which the redundant 5-panel
-    #          trajectory grid was hiding.
+    #   Row 2: 2 panels — cumulative memory displacement line plot +
+    #          decoder-transfer-decay (TGM cross-section) curves.
+    #          Both line-plot panels fan all five conditions out;
+    #          the v8 trajectory overlay was dropped because the four
+    #          sighted paths bundled into one blur (hiding the within-
+    #          sighted spread we surface in these two panels).
     fig = plt.figure(figsize=(17.0, 8.4))
     gs_top = fig.add_gridspec(
         1, 6,
@@ -649,10 +651,10 @@ def main():
         left=0.04, right=0.97, top=0.95, bottom=0.56,
     )
     gs_bot = fig.add_gridspec(
-        1, 3,
-        width_ratios=[1.4, 1.8, 1.8],
-        wspace=0.27,
-        left=0.05, right=0.96, top=0.46, bottom=0.07,
+        1, 2,
+        width_ratios=[1.0, 1.0],
+        wspace=0.20,
+        left=0.06, right=0.96, top=0.46, bottom=0.08,
     )
 
     # ── Row 1: TGM heatmaps ──────────────────────────────────────────
@@ -666,17 +668,14 @@ def main():
     cax_top = fig.add_subplot(gs_top[0, 5])
     if last_im is not None:
         cb_top = fig.colorbar(last_im, cax=cax_top)
-        cb_top.set_label("decoder $R^2$", fontsize=9, fontweight="bold")
-        cb_top.ax.tick_params(labelsize=8)
+        cb_top.set_label("decoder $R^2$", fontsize=13, fontweight="bold")
+        cb_top.ax.tick_params(labelsize=11)
 
-    # ── Row 2: overlay + 2 line plots ───────────────────────────────
-    ax_overlay   = fig.add_subplot(gs_bot[0, 0])
-    panel_traj_overlay(ax_overlay, eps_by_cond)
-
-    ax_cum       = fig.add_subplot(gs_bot[0, 1])
+    # ── Row 2: 2 line plots ─────────────────────────────────────────
+    ax_cum       = fig.add_subplot(gs_bot[0, 0])
     panel_cum_h2_lines(ax_cum, eps_by_cond)
 
-    ax_decay     = fig.add_subplot(gs_bot[0, 2])
+    ax_decay     = fig.add_subplot(gs_bot[0, 1])
     panel_tgm_decay(ax_decay, tgm_data)
 
     fig.savefig(OUT, dpi=200, bbox_inches="tight")
