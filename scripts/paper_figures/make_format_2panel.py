@@ -180,30 +180,86 @@ def panel_b(ax, loso_json: Path, transplant_dir: Path) -> None:
     ax.grid(linestyle=":", alpha=0.25)
 
 
+# ────────────────── Panel C: subspace divergence (10 pairs) ──────────────
+def panel_c(ax, subspace_json: Path) -> None:
+    """2D scatter: principal angle × direction cosine for all 10 condition
+    pairs. Geometric corroboration of the behavioural transplant test in
+    Panel B: if conditions occupy non-interchangeable subspaces, all
+    pairwise tests should cluster near 'fully orthogonal' (90°, cos=0).
+    """
+    data = json.loads(subspace_json.read_text())
+    conds = data["conds"]
+    short = {"blind": "Bl", "coarse": "Co", "foveated": "Fv",
+             "foveated_logpolar": "Fl", "uniform": "Un"}
+    color = {"blind": "#444444", "coarse": "#377eb8",
+             "foveated": "#e41a1c", "foveated_logpolar": "#984ea3",
+             "uniform": "#4daf4a"}
+    angle_mat = np.array(data["angle_matrix_deg"])
+    cos_mat = np.array(data["cos_matrix_x"])
+
+    # Extract upper triangle (10 pairs)
+    for i in range(5):
+        for j in range(i + 1, 5):
+            angle = float(angle_mat[i, j])
+            cos = float(cos_mat[i, j])
+            # Use a 2-tone marker: outer color = condition i, inner = j
+            ax.scatter(angle, cos, s=240, c=color[conds[i]],
+                       edgecolor=color[conds[j]], linewidth=2.4,
+                       alpha=0.92, zorder=3)
+            label = f"{short[conds[i]]}--{short[conds[j]]}"
+            ax.annotate(label, (angle, cos), xytext=(7, 3),
+                        textcoords="offset points", fontsize=9.5,
+                        color="#333", weight="bold")
+
+    # "Fully orthogonal" target: 90°, cos=0
+    ax.axvline(90, color="#3a7d3a", ls="--", lw=0.9, alpha=0.7, zorder=1)
+    ax.axhline(0, color="#3a7d3a", ls="--", lw=0.9, alpha=0.7, zorder=1)
+    ax.text(89.5, 0.13, "fully\northogonal\n(90°, 0)",
+            fontsize=10, color="#3a7d3a", style="italic", weight="bold",
+            ha="right", va="top", alpha=0.85)
+
+    ax.set_xlabel("principal angle (deg)",
+                  fontsize=20, fontweight="bold")
+    ax.set_ylabel("Ridge-probe\ndirection cosine",
+                  fontsize=20, fontweight="bold")
+    ax.set_title("(c) Subspace divergence",
+                 fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
+    ax.set_xlim(65, 92)
+    ax.set_ylim(-0.15, 0.15)
+    ax.tick_params(axis="both", labelsize=12)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.grid(linestyle=":", alpha=0.25)
+
+
 # ──────────────────────────── compose ────────────────────────────
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mlp-json", type=Path, default=RCP_DIR / "mlp_probe.json")
     ap.add_argument("--loso-json", type=Path, default=RCP_V3 / "loso_5cond.json")
     ap.add_argument("--transplant-dir", type=Path, default=RCP_V3)
+    ap.add_argument("--subspace-json", type=Path,
+                    default=RCP_V3 / "subspace_divergence_5cond.json")
     ap.add_argument("--out", type=Path,
                     default=Path("docs/manuscript/fig/fig_format_axis.pdf"))
     args = ap.parse_args()
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
-    fig = plt.figure(figsize=(13.5, 5.7))
+    fig = plt.figure(figsize=(20.0, 5.8))
     gs = fig.add_gridspec(
-        1, 2,
-        width_ratios=[1.0, 1.25],
+        1, 3,
+        width_ratios=[0.85, 1.20, 1.0],
         wspace=0.32,
-        top=0.86, bottom=0.16, left=0.08, right=0.97,
+        top=0.86, bottom=0.16, left=0.05, right=0.99,
     )
     ax_a = fig.add_subplot(gs[0, 0])
     ax_b = fig.add_subplot(gs[0, 1])
+    ax_c = fig.add_subplot(gs[0, 2])
 
     panel_a(ax_a, args.mlp_json)
     panel_b(ax_b, args.loso_json, args.transplant_dir)
+    panel_c(ax_c, args.subspace_json)
 
     fig.savefig(args.out, dpi=200, bbox_inches="tight")
     fig.savefig(str(args.out).replace(".pdf", ".png"), dpi=200,
