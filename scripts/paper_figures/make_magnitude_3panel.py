@@ -51,8 +51,8 @@ CONDS = [
     ("uniform",          "uniform",           "Uniform",       16, "#4daf4a", "^", 5.0),
 ]
 CLIP_MIN = -2.0
-X_MAX_M = 350.0  # extended to include blind 340M ckpt; sighted converged @250M
-SIGHTED_CONVERGED_M = 250.0  # marker for sighted-condition endpoint
+X_MIN_M = 40.0   # x-axis starts before sighted's 50M ckpt for visual padding
+X_MAX_M = 260.0  # capped just past sighted convergence (250M) for consistent window
 RCP_DIR = Path("/tmp/rcp_analysis")
 LEGACY_BLIND_DIR = Path("results/probing_results")  # blind kept per memory
 
@@ -126,15 +126,30 @@ def panel_b(ax) -> None:
         # Build (frames_M, r2, std, n_eps) list across available ckpts
         points = []
         if rcp_key == "blind_izar":
-            # Legacy blind ckpt sweep (10/20/30/34) — frames_per_ckpt=10.06
-            # ckpt34 (342M) IS the converged endpoint (matches blind_izar_det
-            # in /tmp/rcp_analysis/ to 4 decimals; same .pth probed twice).
-            # Blind trained for 340M total; sighted converged at 250M.
-            for ck in (10, 20, 30, 34):
+            # Legacy blind ckpt sweep (10/20/30/34) at frames_per_ckpt=10.06.
+            # We restrict to the [50M, 250M] window for visual consistency
+            # with sighted; ckpts 30/34 (300M/342M) are out-of-window and
+            # the values there are essentially identical to ckpt20 anyway
+            # (~0.95). Probing for ckpt5 (50M) and ckpt25 (252M) is queued
+            # on RCP — see scripts/cluster/submit_blind_50_250.sh.
+            for ck in (10, 20):
                 p = LEGACY_BLIND_DIR / f"blind_gibson_ckpt{ck}_det_analysis.json"
                 v = _read_ckpt_value(p)
                 if v is not None:
                     points.append((ck * frames_per_ckpt, v))
+            # blind_izar ckpt.25 (252M-equivalent, the 250M-comparable
+            # endpoint per submit_probe_collect_rcp.sh special-casing)
+            # is stored as blind_izar_det_analysis.json (no _ckpt suffix).
+            ck25_p = RCP_DIR / "blind_izar_det_analysis.json"
+            v = _read_ckpt_value(ck25_p)
+            if v is not None:
+                points.append((25 * frames_per_ckpt, v))
+            # blind_izar ckpt.5 (50M-equivalent) — pending probe-5-c5 job
+            # on RCP; will land at blind_izar_det_ckpt5_analysis.json.
+            ck5_p = RCP_DIR / "blind_izar_det_ckpt5_analysis.json"
+            v = _read_ckpt_value(ck5_p)
+            if v is not None:
+                points.append((5 * frames_per_ckpt, v))
         else:
             # New RCP sweep: ckpt 10/20/30/40 at 5M each => 50/100/150/200M
             for ck in (10, 20, 30, 40):
@@ -153,7 +168,8 @@ def panel_b(ax) -> None:
         xs, ys, errs = [], [], []
         clipped_at = []
         for x, v in points:
-            if x > X_MAX_M + 1:
+            # Restrict to [50M, 250M] window for cross-condition consistency
+            if x < X_MIN_M - 1 or x > X_MAX_M + 1:
                 continue
             y_raw = v["r2"]
             y = float(np.clip(y_raw, CLIP_MIN, 1.05))
@@ -177,12 +193,7 @@ def panel_b(ax) -> None:
                 ha="center", va="center", transform=ax.transAxes, color="grey")
 
     ax.set_ylim(CLIP_MIN - 0.10, 1.10)
-    ax.set_xlim(0, X_MAX_M + 5)
-    # Marker for sighted-conditions convergence endpoint
-    ax.axvline(SIGHTED_CONVERGED_M, ls="--", color="#888", lw=0.7, alpha=0.6,
-               zorder=1)
-    ax.text(SIGHTED_CONVERGED_M + 3, -1.85, "sighted\nconverged",
-            fontsize=7, color="#666", ha="left", va="bottom", style="italic")
+    ax.set_xlim(X_MIN_M, X_MAX_M)
     ax.set_xlabel("training frames (M)", fontsize=11, fontweight="bold")
     ax.set_ylabel(r"top-layer GPS $R^2$ (5-fold CV)", fontsize=11, fontweight="bold")
     ax.set_title("(b) Substitution mechanism",
