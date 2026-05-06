@@ -260,7 +260,7 @@ def panel_c(ax, mlp_json: Path) -> None:
                   fontsize=15, fontweight="bold")
     ax.set_ylabel(r"GPS $R^2$ at $\mathbf{h}_t \to \mathrm{pos}_{t+k}$",
                   fontsize=15, fontweight="bold")
-    ax.set_title("(c) Predictive horizon: SR cognitive-map signature",
+    ax.set_title("(c) Predictive horizon",
                  fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
     ax.tick_params(axis="y", labelsize=12)
     ax.spines["top"].set_visible(False)
