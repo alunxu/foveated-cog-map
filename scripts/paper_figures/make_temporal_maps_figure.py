@@ -99,11 +99,14 @@ def find_scene_id(d: np.lib.npyio.NpzFile, target_lo: list[float],
 
 def load_episode_from_npz(cond_key: str, scene: str):
     """Load a representative episode from this cond's post-retrain NPZ in
-    the named scene. Returns (positions Tx3, n_steps, start, goal). Picks
-    the longest episode in that scene (most informative trajectory)."""
+    the named scene. Picks a successful episode of median step length
+    (most-typical, not the longest stuck-loop outlier).
+
+    Returns dict with keys: positions (Tx3), n_steps, start, goal,
+    h2 (Tx512), cum_h2_path (T,) — cumulative L2 distance travelled
+    in h_2 space up to step t."""
     p_npz = NPZ_DIR / f"{cond_key}_det_RCP.npz"
     d = np.load(p_npz, allow_pickle=True)
-    # Resolve named scene -> integer scene_id via topdown world-bounds.
     img, lo, hi = load_topdown(scene)
     sid = find_scene_id(d, lo, hi)
     if sid is None:
@@ -113,87 +116,98 @@ def load_episode_from_npz(cond_key: str, scene: str):
     steps_arr = d["step_in_episode"] if "step_in_episode" in d.files \
         else np.arange(len(sids))
     dtg = d["distance_to_goal"] if "distance_to_goal" in d.files else None
-    # Episodes in this scene that reached the goal (final dtg < 0.2 m,
-    # the canonical PointGoal success threshold) and have a reasonable
-    # step count (filters out stuck-loop episodes that ran the 2 000-
-    # step max).
+    H = d["hidden_states"]               # (n_steps, 512), float32
+
     ep_in_scene = np.unique(eps[sids == sid])
     candidates = []
     for e in ep_in_scene:
         m = (eps == e) & (sids == sid)
         nstep = int(m.sum())
-        if not (20 <= nstep <= 600):  # reasonable navigation episode
+        if not (20 <= nstep <= 600):
             continue
         if dtg is not None:
             final_dtg = float(dtg[m][np.argmax(steps_arr[m])])
-            if final_dtg > 0.5:        # didn't reach goal
+            if final_dtg > 0.5:
                 continue
         candidates.append((e, nstep))
     if not candidates:
-        # Fall back: any episode in the [20, 600] range, no success filter
         candidates = [(e, int(((eps == e) & (sids == sid)).sum()))
                       for e in ep_in_scene
                       if 20 <= ((eps == e) & (sids == sid)).sum() <= 600]
     if not candidates:
         return None
-    # Pick the one closest to the per-condition median step count
-    # (most-typical successful run, not the longest outlier).
     candidates.sort(key=lambda t: t[1])
     chosen_ep, n_steps = candidates[len(candidates) // 2]
 
     mask = (eps == chosen_ep) & (sids == sid)
-    pos = d["positions"][mask]           # (T, 3)
+    pos = d["positions"][mask]
     s_steps = steps_arr[mask]
     order = np.argsort(s_steps)
     pos = pos[order]
+    h2 = H[mask][order].astype(np.float32)
+    # Cumulative h_2 path length: sum of consecutive-step L2 distances.
+    deltas = np.linalg.norm(np.diff(h2, axis=0), axis=1)
+    cum = np.concatenate([[0.0], np.cumsum(deltas)])
     start = pos[0]
     if "goal_positions" in d.files:
         goal = d["goal_positions"][mask][0]
     else:
         goal = pos[-1]
-    return pos, int(n_steps), np.asarray(start), np.asarray(goal)
+    return {
+        "positions": pos,
+        "n_steps": int(n_steps),
+        "start": np.asarray(start),
+        "goal": np.asarray(goal),
+        "h2": h2,
+        "cum_h2_path": cum,
+    }
 
 
 def panel_traj_map(ax, cond_key: str, label: str, colour: str,
+                   ep_data: dict, cmap_norm: tuple[float, float],
                    tau_text: str | None = None):
     """Render the top-down PNG in world coordinates via `imshow(extent=...)`,
-    then plot the trajectory directly in world (x, z) coords. Following
-    make_shortcut_canonical_figure.py: `origin='lower'` places image[0,0]
-    at world (lo[0], lo[2]), which matches Habitat's coord convention so
-    trajectories follow corridors rather than cutting through walls."""
+    then plot the trajectory directly in world (x, z) coords. Trajectory
+    is coloured by *cumulative h_2 path length up to step t*, on a
+    SHARED colormap across all 5 conditions (cmap_norm = global vmin,
+    vmax). Blind's trajectory ends in a hot colour (memory state has
+    travelled far in 512-d space); sighted trajectories stay in cool
+    colours (memory barely moves)."""
     img, lo, hi = load_topdown(SCENE)
-    # imshow with world-coord extent + origin='lower'; alpha=0.55 keeps
-    # trajectory lines visible against the navmesh.
+    # Lighter alpha for the navmesh so the trajectory line stays
+    # visible without competing with the gray-block walls.
     ax.imshow(img, extent=[lo[0], hi[0], lo[2], hi[2]],
-              origin="lower", alpha=0.55, zorder=0,
+              origin="lower", alpha=0.40, zorder=0,
               interpolation="bilinear")
 
-    loaded = load_episode_from_npz(cond_key, SCENE)
-    if loaded is None:
-        ax.text(0.5, 0.5, f"{label}\n(no data)",
-                transform=ax.transAxes, ha="center", va="center")
-        ax.set_xticks([])
-        ax.set_yticks([])
-        return
-    pos, n_steps, start, goal = loaded
-    # Habitat positions are (x, y, z); top-down uses the (x, z) plane.
+    pos = ep_data["positions"]
+    n_steps = ep_data["n_steps"]
+    start = ep_data["start"]
+    goal = ep_data["goal"]
+    cum = ep_data["cum_h2_path"]
     xz = pos[:, [0, 2]]
 
-    # Plot trajectory in world coords, colour-coded by step.
-    cmap = plt.cm.viridis
+    # White halo behind the trajectory for visual separation from walls.
+    ax.plot(xz[:, 0], xz[:, 1], color="white", lw=4.0, alpha=0.85,
+            zorder=2, solid_capstyle="round")
+
+    # Coloured segments: colour encodes cumulative h_2 path length up to
+    # this step, normalised against the global max across all conditions.
+    cmap = plt.cm.plasma
+    vmin, vmax = cmap_norm
     n = len(xz)
     for i in range(n - 1):
-        c = cmap(i / max(n - 1, 1))
+        c = cmap((cum[i] - vmin) / max(vmax - vmin, 1e-9))
         ax.plot(xz[i:i+2, 0], xz[i:i+2, 1], color=c,
-                lw=2.4, alpha=0.95, zorder=3, solid_capstyle="round")
+                lw=2.2, alpha=0.98, zorder=3, solid_capstyle="round")
 
-    # Start (green circle) and goal (yellow star), directly in world coords.
+    # Start (green circle) + goal (yellow star).
     s_xz = (start[0], start[2])
     g_xz = (goal[0], goal[2])
-    ax.scatter(*s_xz, s=80, color="#0c7", zorder=5,
-               edgecolor="white", linewidth=1.2)
-    ax.scatter(*g_xz, s=180, color="#fc0", marker="*",
-               zorder=5, edgecolor="black", linewidth=0.9)
+    ax.scatter(*s_xz, s=85, color="#0c7", zorder=5,
+               edgecolor="white", linewidth=1.4)
+    ax.scatter(*g_xz, s=200, color="#fc0", marker="*",
+               zorder=5, edgecolor="black", linewidth=1.0)
 
     # Tight axis around the world bounds; equal aspect so paths follow
     # corridors visually.
@@ -201,11 +215,17 @@ def panel_traj_map(ax, cond_key: str, label: str, colour: str,
     ax.set_ylim(lo[2], hi[2])
     ax.set_aspect("equal", "box")
 
-    # Title with quantitative annotation.
-    title = f"{label}    {n_steps} steps"
+    # Title with quantitative annotation:
+    # condition (line 1) + step count + final cumulative h_2 path + tau (line 2).
+    final_h2 = cum[-1]
+    title = (
+        f"{label}\n"
+        f"$\\mathbf{{{n_steps}}}$ steps  "
+        f"$\\Sigma|\\Delta\\mathbf{{h}}_2|{{=}}{final_h2:.0f}$  "
+    )
     if tau_text:
-        title += f"    {tau_text}"
-    ax.set_title(title, fontsize=12, fontweight="bold", color=colour, pad=4)
+        title += f" {tau_text}"
+    ax.set_title(title, fontsize=10.5, fontweight="bold", color=colour, pad=4)
     ax.set_xticks([])
     ax.set_yticks([])
     for s_ in ("top", "right", "left", "bottom"):
@@ -315,26 +335,55 @@ def main():
     autocorr = compute_per_cond_autocorr()
     print(f"  ({time.time()-t0:.1f}s)")
 
-    # 2-row layout: 5 trajectory maps on top (one per condition),
-    # autocorrelation summary on the bottom (full width, narrow).
-    fig = plt.figure(figsize=(17.0, 5.6))
+    # Pre-load all chosen episodes so we can normalise the colormap on
+    # the global max cumulative h_2 path length across all 5 conditions.
+    print("[traj] loading per-cond episodes...", flush=True)
+    t0 = time.time()
+    eps_by_cond = {}
+    for cond_key, *_ in CONDS:
+        ep = load_episode_from_npz(cond_key, SCENE)
+        if ep is not None:
+            eps_by_cond[cond_key] = ep
+    print(f"  ({time.time()-t0:.1f}s)")
+    cmap_max = max(ep["cum_h2_path"][-1] for ep in eps_by_cond.values())
+    cmap_norm = (0.0, cmap_max)
+
+    # Single row of 5 trajectory maps + a slim shared colourbar on the
+    # right.  Drop the standalone autocorrelation panel — tau values now
+    # appear inline in each panel title, which carries the same info at
+    # a fraction of the page area.
+    fig = plt.figure(figsize=(17.0, 4.0))
     gs = fig.add_gridspec(
-        2, 5,
-        height_ratios=[1.0, 0.55],
-        hspace=0.30, wspace=0.04,
-        left=0.02, right=0.98, top=0.92, bottom=0.10,
+        1, 6,
+        width_ratios=[1.0, 1.0, 1.0, 1.0, 1.0, 0.04],
+        wspace=0.05,
+        left=0.01, right=0.97, top=0.81, bottom=0.05,
     )
+    last_im = None
     for i, (cond_key, label, colour) in enumerate(CONDS):
         ax = fig.add_subplot(gs[0, i])
         tau_text = None
         if cond_key in autocorr:
             tau = autocorr[cond_key][1]
             tau_text = f"$\\tau{{=}}{tau:.0f}$"
-        panel_traj_map(ax, cond_key, label, colour, tau_text=tau_text)
+        if cond_key in eps_by_cond:
+            panel_traj_map(ax, cond_key, label, colour,
+                           eps_by_cond[cond_key], cmap_norm,
+                           tau_text=tau_text)
+        else:
+            ax.text(0.5, 0.5, f"{label}\n(no data)",
+                    transform=ax.transAxes, ha="center", va="center")
+            ax.set_xticks([]); ax.set_yticks([])
 
-    # Autocorr panel spans the full bottom row.
-    ax_ac = fig.add_subplot(gs[1, :])
-    panel_autocorr_compact(ax_ac, autocorr)
+    # Shared colourbar.
+    cax = fig.add_subplot(gs[0, 5])
+    sm = plt.cm.ScalarMappable(cmap=plt.cm.plasma,
+                               norm=plt.Normalize(0, cmap_max))
+    sm.set_array([])
+    cb = fig.colorbar(sm, cax=cax)
+    cb.set_label(r"cumulative $\Sigma|\Delta\mathbf{h}_2|$ up to step $t$",
+                 fontsize=9, fontweight="bold")
+    cb.ax.tick_params(labelsize=8)
 
     fig.savefig(OUT, dpi=200, bbox_inches="tight")
     plt.close(fig)
