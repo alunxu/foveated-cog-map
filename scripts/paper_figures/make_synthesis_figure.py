@@ -43,26 +43,45 @@ apply_paper_style()
 
 
 CONDS = [
-    # (key,           label,                colour,    marker)
-    ("blind",            "Blind",             "#444444", "o"),
-    ("matched",          "Coarse",      "#377eb8", "s"),
-    ("uniform",          "Uniform",           "#4daf4a", "^"),
-    ("foveated",         "Foveated",    "#e41a1c", "D"),
+    # (key,                 label,             colour,    marker)
+    ("blind",            "Blind",            "#444444", "o"),
+    ("coarse",           "Coarse",           "#377eb8", "s"),
+    ("foveated_logpolar", "Fov-logpolar",    "#984ea3", "v"),
+    ("foveated",         "Foveated",         "#e41a1c", "D"),
+    ("uniform",          "Uniform",          "#4daf4a", "^"),
 ]
 
+# Map cond_key -> probing-analysis filename stem on RCP cache
+PROBING_KEY_MAP = {
+    "blind":             "blind_izar",
+    "coarse":            "coarse",
+    "foveated":          "foveated",
+    "foveated_logpolar": "foveated_logpolar",
+    "uniform":           "uniform",
+}
 
 
 def load_h1_magnitude(probing_dir: Path) -> dict[str, float]:
     """Top-layer GPS R^2 per condition (Gibson, 5-fold CV)."""
     out = {}
     for cond_key, *_ in CONDS:
-        p = probing_dir / f"{cond_key}_gibson_det_analysis.json"
-        if not p.exists():
-            continue
-        d = json.loads(p.read_text())
-        v = d.get("1b_global_gps_compass", {}).get("gps_cv_r2_mean")
-        if v is not None:
-            out[cond_key] = v
+        stem = PROBING_KEY_MAP.get(cond_key, cond_key)
+        # Try both naming schemes (current canonical: <stem>_det_analysis.json)
+        for fname in (f"{stem}_det_analysis.json",
+                      f"{cond_key}_gibson_det_analysis.json"):
+            p = probing_dir / fname
+            if p.exists():
+                d = json.loads(p.read_text())
+                # Try both schema forms
+                v = d.get("1b_global_gps_compass", {}).get("gps_cv_r2_mean")
+                if v is None:
+                    v = d.get("global_gps", {}).get("cv_r2_mean")
+                if v is None:
+                    # Direct cv_r2_mean for the canonical analyze.py output
+                    v = d.get("cv_r2_mean")
+                if v is not None:
+                    out[cond_key] = v
+                    break
     return out
 
 
@@ -75,28 +94,30 @@ def load_donor_toxicity(transplant_dir: Path) -> tuple[dict[str, float], dict[st
 
     Returns (avg_cost dict, n_cells dict).
     """
-    # First pass: recipient_self_spl per recipient
+    # First pass: recipient_self_spl per recipient.
+    # Files use the _mid30 suffix in the canonical 5-cond cache.
+    def _stem_to_pair(stem: str) -> tuple[str, str]:
+        """Strip the _mid<N> suffix and split donor/recipient."""
+        s = stem
+        if "_mid" in s:
+            s = s.rsplit("_mid", 1)[0]
+        donor, recip = s.split("_to_", 1)
+        return donor, recip
+
     recip_self: dict[str, float] = {}
-    for fp in sorted(transplant_dir.glob("*_to_*.json")):
-        # only mid=30 (default; files without _midN are mid30)
-        if "_mid" in fp.stem:
-            continue
-        # parse donor / recipient
-        parts = fp.stem.split("_to_")
-        donor, recip = parts[0], parts[1]
+    for fp in sorted(transplant_dir.glob("*_to_*_mid30.json")):
+        donor, recip = _stem_to_pair(fp.stem)
         d = json.loads(fp.read_text())
         if recip not in recip_self:
             recip_self[recip] = d["self_transplant"]["mean_spl"]
 
-    # Second pass: avg cost per donor
+    # Second pass: avg cost per donor.
     avg_cost: dict[str, float] = {}
     n_cells: dict[str, int] = {}
     for cond_key, *_ in CONDS:
         costs = []
-        for fp in sorted(transplant_dir.glob(f"{cond_key}_to_*.json")):
-            if "_mid" in fp.stem:
-                continue
-            recip = fp.stem.split("_to_")[1]
+        for fp in sorted(transplant_dir.glob(f"{cond_key}_to_*_mid30.json")):
+            donor, recip = _stem_to_pair(fp.stem)
             if recip == cond_key:  # self-transplant — skip
                 continue
             d = json.loads(fp.read_text())
@@ -111,18 +132,22 @@ def load_donor_toxicity(transplant_dir: Path) -> tuple[dict[str, float], dict[st
 
 
 def load_shortcut_drop(shortcut_dir: Path) -> dict[str, float]:
-    """Shortcut SPL drop % per condition: 100 × (reset - persist) / reset."""
+    """Shortcut SPL drop % per condition: 100 × (reset - persist) / reset.
+
+    Reads <cond_key>_traj.json from the 5-cond consolidated cache.
+    """
     out = {}
     for cond_key, *_ in CONDS:
-        p = shortcut_dir / f"{cond_key}_gibson.json"
-        if not p.exists():
-            continue
-        d = json.loads(p.read_text())
-        reset = d.get("reset_mean_spl")
-        persist = d.get("persistent_mean_spl")
-        if reset is None or persist is None or reset <= 0:
-            continue
-        out[cond_key] = 100.0 * (reset - persist) / reset
+        for fname in (f"{cond_key}_traj.json", f"{cond_key}_gibson.json"):
+            p = shortcut_dir / fname
+            if p.exists():
+                d = json.loads(p.read_text())
+                reset = d.get("reset_mean_spl")
+                persist = d.get("persistent_mean_spl")
+                if reset is None or persist is None or reset <= 0:
+                    continue
+                out[cond_key] = 100.0 * (reset - persist) / reset
+                break
     return out
 
 
