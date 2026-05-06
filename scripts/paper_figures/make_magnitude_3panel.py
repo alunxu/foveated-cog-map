@@ -67,33 +67,38 @@ def panel_a(ax, mlp_json: Path) -> None:
     ax.axhspan(-2.5, 0.4, color="#fbe0dc", alpha=0.45, zorder=0)
     ax.axhline(0, color="#888", lw=0.6, ls="--", zorder=0)
 
-    for _rcp, mlp_key, label, cells, col, mk, _ in CONDS:
+    # Index-based positions to keep blind and coarse from overlapping;
+    # cell counts shown below in xtick labels.
+    POS_MAP = {  # mlp_key → x_position
+        "blind_izar": 0,
+        "coarse": 1,
+        "foveated_logpolar": 2,
+        "foveated": 3,
+        "uniform": 3.5,  # share "16 cells" with foveated, slight x-jitter
+    }
+    for _rcp, mlp_key, label, _cells, col, mk, _ in CONDS:
         d = data[mlp_key]
         r2, sd = d["linear_r2_mean"], d["linear_r2_std"]
-        x = cells + (0.3 if mlp_key == "uniform"
-                      else (-0.3 if mlp_key == "foveated" else 0))
-        ax.errorbar(x, r2, yerr=sd, fmt=mk, color=col, markersize=10,
-                    markeredgecolor="white", markeredgewidth=1.2,
-                    capsize=3, lw=1.5, zorder=4, label=label)
+        x = POS_MAP[mlp_key]
+        ax.errorbar(x, r2, yerr=sd, fmt=mk, color=col, markersize=14,
+                    markeredgecolor="white", markeredgewidth=1.4,
+                    capsize=4, lw=2.0, zorder=4, label=label)
 
-    ax.text(13.5, 0.85, "Bottleneck regime\n(integration carries pos.)",
-            fontsize=8, color="#3a7d3a", ha="right", va="top", style="italic")
-    ax.text(13.5, -2.1, "Rich-encoder regime\n(visual route carries pos.)",
-            fontsize=8, color="#a02528", ha="right", va="bottom", style="italic")
-
-    ax.set_xlabel("Encoder spatial output (cells)", fontsize=11, fontweight="bold")
+    ax.set_xlabel("Encoder spatial output (cells)", fontsize=15, fontweight="bold")
     ax.set_ylabel(r"top-layer linear GPS $R^2$ (5-fold CV)",
-                  fontsize=11, fontweight="bold")
+                  fontsize=15, fontweight="bold")
     ax.set_title("(a) Magnitude collapse",
-                 fontsize=12, fontweight="bold", loc="left", x=0.0, pad=8)
-    ax.set_xlim(-1.5, 18.5)
+                 fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
+    ax.set_xlim(-0.4, 4.0)
     ax.set_ylim(-2.5, 1.15)
-    ax.set_xticks([0, 1, 4, 16])
-    ax.set_xticklabels(["0\n(blind)", "1×1\n(coarse)",
-                        "2×2\n(fov-LP)", "4×4\n(fov / uni)"], fontsize=9)
+    ax.set_xticks([0, 1, 2, 3, 3.5])
+    ax.set_xticklabels(["0\n(blind)", "1\n(coarse)", "4\n(fov-LP)",
+                         "16\n(foveated)", "16\n(uniform)"],
+                        fontsize=12)
+    ax.tick_params(axis="y", labelsize=12)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.legend(loc="lower left", fontsize=8, frameon=False, ncol=1)
+    ax.legend(loc="lower left", fontsize=11, frameon=False, ncol=1)
 
 
 # ───────────────────── Panel B: cross-training substitution ─────────────────
@@ -194,30 +199,26 @@ def panel_b(ax) -> None:
 
     ax.set_ylim(CLIP_MIN - 0.10, 1.10)
     ax.set_xlim(X_MIN_M, X_MAX_M)
-    # Explicit ticks at the 5 sampled points only (no auto-generated 175/225)
     ax.set_xticks([50, 100, 150, 200, 250])
     ax.set_xticklabels(["50", "100", "150", "200", "250"],
-                        rotation=0, fontsize=10)
-    ax.set_xlabel("training frames (M)", fontsize=11, fontweight="bold")
-    ax.set_ylabel(r"top-layer GPS $R^2$ (5-fold CV)", fontsize=11, fontweight="bold")
+                        rotation=0, fontsize=12)
+    ax.set_xlabel("training frames (M)", fontsize=15, fontweight="bold")
+    ax.set_ylabel(r"top-layer GPS $R^2$ (5-fold CV)", fontsize=15, fontweight="bold")
     ax.set_title("(b) Substitution mechanism",
-                 fontsize=12, fontweight="bold", loc="left", x=0.0, pad=8)
+                 fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="y", labelsize=10)
+    ax.tick_params(axis="y", labelsize=12)
     ax.grid(axis="y", linestyle=":", alpha=0.25)
-    ax.annotate("", xy=(180, -1.0), xytext=(120, 0.5),
-                arrowprops=dict(arrowstyle="->", color="#a02528", lw=1.0,
-                                alpha=0.7))
-    ax.text(120, 0.6, "rich-encoder\nsubstitution",
-            fontsize=8, color="#a02528", style="italic", ha="left", va="bottom")
 
 
-# ───────────────────── Panel C: pipeline view ────────────────────────────────
+# ───────────────────── Panel C: format shift at L2 ──────────────────────────
 def panel_c(ax, mlp_json: Path) -> None:
-    """Linear GPS R² along L0 → L1 → L2 (lines), plus MLP R² at L2 (stars)
-    showing the format-shift gap: how much non-linear readout recovers above
-    the linear floor for each condition."""
+    """Format shift at L2 (policy-readable layer): grouped bars per condition
+    showing linear vs MLP probe R^2 (5-fold CV). The gap = format shift.
+    L0 is condition-flat (~0.95) per the LSTM-input sensor concat — noted in
+    the caption rather than crowding the panel.
+    """
     mlp_data = json.loads(mlp_json.read_text())
     mlp_keymap = {
         "blind_izar": "blind_izar", "coarse": "coarse",
@@ -225,66 +226,67 @@ def panel_c(ax, mlp_json: Path) -> None:
         "foveated": "foveated", "uniform": "uniform",
     }
 
-    for rcp_key, _mlp, label, _cells, col, mk, _ in CONDS:
-        main_p = RCP_DIR / f"{rcp_key}_det_analysis.json"
-        layer_r2 = {0: None, 1: None, 2: None}
-        if main_p.exists():
-            try:
-                d = json.loads(main_p.read_text())
-                for entry in d.get("1d_multilayer", []):
-                    if entry.get("state") == "h":
-                        L = entry["layer"]
-                        if L in layer_r2:
-                            layer_r2[L] = float(np.clip(entry["gps_r2"],
-                                                       CLIP_MIN, 1.05))
-            except Exception:
-                pass
-
-        xs, ys = [], []
-        for L in (0, 1, 2):
-            if layer_r2[L] is not None:
-                xs.append(L); ys.append(layer_r2[L])
-        if xs:
-            ax.plot(xs, ys, marker=mk, label=label,
-                    color=col, linewidth=1.8, markersize=6.5, zorder=3)
-
-        # MLP star marker at L2, plus vertical line showing the linear→MLP gap
+    n = len(CONDS)
+    xs = np.arange(n)
+    bw = 0.36
+    lin_vals, mlp_vals, lin_errs, mlp_errs, colors, labels = [], [], [], [], [], []
+    for rcp_key, _mlp, label, _cells, col, _mk, _ in CONDS:
         mlp_key = mlp_keymap.get(rcp_key)
-        if mlp_key in mlp_data and layer_r2[2] is not None:
-            mlp_r2 = float(np.clip(mlp_data[mlp_key]["mlp_r2_mean"],
-                                    CLIP_MIN, 1.05))
-            linear_l2 = layer_r2[2]
-            # Slight x-jitter so MLP star doesn't overlap linear marker exactly
-            x_mlp = 2.10
-            # Vertical gap connector
-            ax.plot([x_mlp, x_mlp], [linear_l2, mlp_r2], color=col,
-                    linewidth=1.0, alpha=0.5, zorder=2)
-            ax.plot(x_mlp, mlp_r2, marker="*", color=col,
-                    markersize=11, markeredgecolor="black",
-                    markeredgewidth=0.6, zorder=4)
+        if mlp_key not in mlp_data:
+            lin_vals.append(0); mlp_vals.append(0)
+            lin_errs.append(0); mlp_errs.append(0)
+        else:
+            d = mlp_data[mlp_key]
+            lin_vals.append(float(np.clip(d["linear_r2_mean"], CLIP_MIN, 1.05)))
+            mlp_vals.append(float(np.clip(d["mlp_r2_mean"], CLIP_MIN, 1.05)))
+            lin_errs.append(float(d.get("linear_r2_std", 0)))
+            mlp_errs.append(float(d.get("mlp_r2_std", 0)))
+        colors.append(col); labels.append(label)
 
-    # Highlight the linear→MLP gap = format shift
-    ax.text(2.55, 0.7, "MLP probe\nat L2",
-            fontsize=8, color="#222", ha="left", va="center", weight="bold")
-    ax.text(2.55, 0.45, "(non-linear\nrecovery)",
-            fontsize=7.5, color="#444", ha="left", va="center", style="italic")
-    # Annotate the largest gap (uniform: linear=0.66 single-fit, but Panel A
-    # 5-fold says -1.19; mlp=0.48 → gap is huge in CV terms). Use linear
-    # single-fit floor for visual consistency within Panel C.
-    ax.text(2.55, -0.5, "vertical bar\n= format shift\ngap at L2",
-            fontsize=7.5, color="#666", ha="left", va="center", style="italic")
+    # Linear bars (filled, hatched-empty); MLP bars (filled, solid) — same
+    # colour per condition with slight saturation difference
+    bars_lin = ax.bar(xs - bw/2, lin_vals, bw, yerr=lin_errs,
+                      color=colors, edgecolor="black", linewidth=0.6,
+                      capsize=2, alpha=0.45,
+                      error_kw={"elinewidth": 0.6, "ecolor": "#444"},
+                      label="Linear probe")
+    bars_mlp = ax.bar(xs + bw/2, mlp_vals, bw, yerr=mlp_errs,
+                      color=colors, edgecolor="black", linewidth=0.6,
+                      capsize=2,
+                      error_kw={"elinewidth": 0.6, "ecolor": "#444"},
+                      label="MLP probe")
 
-    ax.set_xticks([0, 1, 2])
-    ax.set_xticklabels(["L0\n(LSTM in)", "L1", "L2\n(top, policy)"], fontsize=9)
-    ax.set_xlim(-0.4, 3.3)
+    # Connect linear→MLP per condition with a thin red line = format shift gap
+    for i in range(n):
+        ax.annotate("", xy=(xs[i] + bw/2, mlp_vals[i]),
+                    xytext=(xs[i] - bw/2, lin_vals[i]),
+                    arrowprops=dict(arrowstyle="->", color="#a02528",
+                                    lw=0.9, alpha=0.55, shrinkA=2, shrinkB=2),
+                    zorder=5)
+
+    ax.axhline(0, color="black", linewidth=0.5, zorder=1)
+
+    ax.set_xticks(xs)
+    ax.set_xticklabels(labels, fontsize=12, rotation=20, ha="right")
     ax.set_ylim(CLIP_MIN - 0.05, 1.10)
-    ax.set_xlabel("Pipeline location", fontsize=11, fontweight="bold")
-    ax.set_ylabel(r"GPS $R^2$", fontsize=11, fontweight="bold")
-    ax.set_title("(c) Pipeline view: where the divergence sits",
-                 fontsize=12, fontweight="bold", loc="left", x=0.0, pad=8)
-    ax.tick_params(axis="y", labelsize=10)
+    ax.set_xlim(-0.6, n - 0.4)
+    ax.set_ylabel(r"GPS $R^2$ at L2 (5-fold CV)",
+                  fontsize=15, fontweight="bold")
+    ax.set_title("(c) Format shift at L2 (policy-readable)",
+                 fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
+    ax.tick_params(axis="y", labelsize=12)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
+    ax.grid(axis="y", linestyle=":", alpha=0.25)
+    # Custom legend showing linear (light) vs MLP (solid) — neutral grey
+    from matplotlib.patches import Patch
+    legend_elems = [
+        Patch(facecolor="#888", edgecolor="black", alpha=0.45,
+              label="Linear probe"),
+        Patch(facecolor="#888", edgecolor="black", label="MLP probe"),
+    ]
+    ax.legend(handles=legend_elems, loc="lower left", fontsize=11,
+              frameon=True, framealpha=0.92)
 
 
 # ───────────────────────── compose ────────────────────────────────────
@@ -298,12 +300,12 @@ def main() -> None:
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
-    fig = plt.figure(figsize=(15.0, 4.4))
+    fig = plt.figure(figsize=(18.0, 5.5))
     gs = fig.add_gridspec(
         1, 3,
         width_ratios=[1.05, 1.15, 1.10],
-        wspace=0.26,
-        top=0.85, bottom=0.20, left=0.05, right=0.99,
+        wspace=0.28,
+        top=0.86, bottom=0.22, left=0.05, right=0.99,
     )
     ax_a = fig.add_subplot(gs[0, 0])
     ax_b = fig.add_subplot(gs[0, 1])
