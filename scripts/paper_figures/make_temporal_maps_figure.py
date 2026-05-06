@@ -98,47 +98,45 @@ def load_episode(cond_key: str, scene: str, rank: int):
     return pos, steps, start, goal
 
 
-def world_to_pixel(xy_world: np.ndarray,
-                   img_shape: tuple[int, int],
-                   lo: list[float], hi: list[float]) -> np.ndarray:
-    """Map world (x, z) coordinates onto image pixel coords.
-
-    Habitat top-down convention used by figa16: image x = world x,
-    image y = (1 - normalised world z) * H (image y inverts world z).
-    """
-    H, W = img_shape[:2]
-    nx = (xy_world[:, 0] - lo[0]) / max(hi[0] - lo[0], 1e-9)
-    nz = (xy_world[:, 1] - lo[2]) / max(hi[2] - lo[2], 1e-9)
-    px = nx * W
-    py = (1.0 - nz) * H
-    return np.stack([px, py], axis=1)
-
-
 def panel_traj_map(ax, cond_key: str, label: str, colour: str,
                    tau_text: str | None = None):
+    """Render the top-down PNG in world coordinates via `imshow(extent=...)`,
+    then plot the trajectory directly in world (x, z) coords. Following
+    make_shortcut_canonical_figure.py: `origin='lower'` places image[0,0]
+    at world (lo[0], lo[2]), which matches Habitat's coord convention so
+    trajectories follow corridors rather than cutting through walls."""
     img, lo, hi = load_topdown(SCENE)
-    ax.imshow(img, origin="upper")
+    # imshow with world-coord extent + origin='lower'; alpha=0.55 keeps
+    # trajectory lines visible against the navmesh.
+    ax.imshow(img, extent=[lo[0], hi[0], lo[2], hi[2]],
+              origin="lower", alpha=0.55, zorder=0,
+              interpolation="bilinear")
 
     pos, n_steps, start, goal = load_episode(cond_key, SCENE, EP_RANK)
-    # Habitat positions are (x, y, z) — top-down uses (x, z) plane.
+    # Habitat positions are (x, y, z); top-down uses the (x, z) plane.
     xz = pos[:, [0, 2]]
-    pix = world_to_pixel(xz, img.shape, lo, hi)
-    start_pix = world_to_pixel(start[None, [0, 2]], img.shape, lo, hi)[0]
-    goal_pix = world_to_pixel(goal[None, [0, 2]], img.shape, lo, hi)[0]
 
-    # Plot trajectory color-coded by step.
+    # Plot trajectory in world coords, colour-coded by step.
     cmap = plt.cm.viridis
-    n = len(pix)
+    n = len(xz)
     for i in range(n - 1):
         c = cmap(i / max(n - 1, 1))
-        ax.plot(pix[i:i+2, 0], pix[i:i+2, 1], color=c,
-                lw=2.4, alpha=0.92, zorder=3, solid_capstyle="round")
+        ax.plot(xz[i:i+2, 0], xz[i:i+2, 1], color=c,
+                lw=2.4, alpha=0.95, zorder=3, solid_capstyle="round")
 
-    # Start (green circle) and goal (yellow star).
-    ax.scatter(start_pix[0], start_pix[1], s=80, color="#0c7", zorder=5,
-               edgecolor="white", linewidth=1.2, label="start")
-    ax.scatter(goal_pix[0], goal_pix[1], s=180, color="#fc0", marker="*",
-               zorder=5, edgecolor="black", linewidth=0.9, label="goal")
+    # Start (green circle) and goal (yellow star), directly in world coords.
+    s_xz = (start[0], start[2])
+    g_xz = (goal[0], goal[2])
+    ax.scatter(*s_xz, s=80, color="#0c7", zorder=5,
+               edgecolor="white", linewidth=1.2)
+    ax.scatter(*g_xz, s=180, color="#fc0", marker="*",
+               zorder=5, edgecolor="black", linewidth=0.9)
+
+    # Tight axis around the world bounds; equal aspect so paths follow
+    # corridors visually.
+    ax.set_xlim(lo[0], hi[0])
+    ax.set_ylim(lo[2], hi[2])
+    ax.set_aspect("equal", "box")
 
     # Title with quantitative annotation.
     title = f"{label}    {n_steps} steps"
