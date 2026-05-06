@@ -185,7 +185,7 @@ We read this as a \emph{capacity-allocation} pattern: the hidden state has two r
 
 Three corroborating diagnostics in Appendix Figure~\ref{fig:magnitude_appendix} converge on the same picture. \emph{(i)~Pipeline view}: linear readability is comparable across conditions at the LSTM input and only diverges at L2 --- where the policy reads --- isolating the divergence to the policy-readable layer. \emph{(ii)~Peaked-unit content}: per-unit Skaggs spatial information~\citep{skaggs1996theta} is condition-flat, but peaked-unit regression suggests the most informative units in rich-encoder agents track trajectory-phase / visual-landmark features rather than raw position, while in blind they track raw position --- a view-cell-like vs.\ path-integrated dissociation~\citep{rolls2024why}. \emph{(iii)~Perturbation robustness}: a 25-step random-action mid-episode excursion shows blind fragments most, the inverse of a passthrough hidden state and consistent at the high level with rodent path-integration under removed visual landmarks~\citep{chen2016grid}.
 
-\subsection{Format axis (spatial): scene-invariance within and non-interchangeable subspaces across}
+\subsection{Spatial Format axis: collapsed linear readability is a format shift, not an information loss}
 \label{sec:format-spatial}
 \label{sec:h3-scene-invariance}
 \label{sec:h2}
@@ -195,7 +195,7 @@ Three corroborating diagnostics in Appendix Figure~\ref{fig:magnitude_appendix} 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{fig/fig_format_axis.pdf}
-\caption{\textbf{Three views of the format axis.} \emph{(a) Format shift:} slope chart from Linear to MLP probe per condition; steep slope $=$ large gap between linear and non-linear readability. Bottleneck conditions sit on near-horizontal slopes; rich-encoder conditions on near-vertical ones --- a format shift, not an information loss. \emph{(b) Format dichotomy:} LOSO median $R^2$ (within-condition scene-invariance) vs.\ mean cross-condition transplant cost (across-condition non-interchangeability). Bottleneck (blind) sits in the scene-invariant + transplant-robust quadrant; rich-encoder conditions cluster in the scene-conditional + transplant-brittle quadrant. \emph{(c) Subspace divergence:} all $10$ condition pairs plotted by principal angle (between top-$K$ PCA subspaces) and Ridge-probe direction-cosine. All cluster near (90°, 0) --- the ``fully orthogonal'' target --- geometrically corroborating the behavioural transplant test in (b).}
+\caption{\textbf{Three views of the spatial-format axis.} \emph{(a) Format shift:} slope chart from Linear to MLP probe per condition; steep slope $=$ large gap between linear and non-linear readability. Bottleneck conditions sit on near-horizontal slopes; rich-encoder conditions on near-vertical ones --- a format shift, not an information loss. \emph{(b) Format dichotomy:} LOSO median $R^2$ (within-condition scene-invariance) vs.\ mean cross-condition transplant cost (across-condition non-interchangeability). Bottleneck (blind) sits in the scene-invariant + transplant-robust quadrant; rich-encoder conditions cluster in the scene-conditional + transplant-brittle quadrant. \emph{(c) Subspace divergence:} all $10$ condition pairs plotted by principal angle (between top-$K$ PCA subspaces) and Ridge-probe direction-cosine. All cluster near (90°, 0) --- the ``fully orthogonal'' target --- geometrically corroborating the behavioural transplant test in (b).}
 \label{fig:format_axis}
 \end{figure}
 

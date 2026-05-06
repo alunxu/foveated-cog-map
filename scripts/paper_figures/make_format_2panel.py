@@ -83,7 +83,7 @@ def panel_a(ax, mlp_json: Path) -> None:
     ax.set_ylim(CLIP_MIN - 0.05, 1.10)
     ax.set_ylabel(r"GPS $R^2$ at $\mathbf{h}_2$",
                   fontsize=20, fontweight="bold")
-    ax.set_title("(a) Format shift: linear $\\to$ MLP",
+    ax.set_title("(a) Format shift",
                  fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
     ax.tick_params(axis="y", labelsize=12)
     ax.spines["top"].set_visible(False)
