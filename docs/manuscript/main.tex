@@ -172,7 +172,7 @@ We read this as a \emph{capacity-allocation} pattern: the hidden state has two r
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{fig/fig_magnitude.pdf}
-\caption{\textbf{Three views of the magnitude axis.} \emph{(a) Cross-condition:} top-layer linear GPS $R^2$ falls with encoder bandwidth. \emph{(b) Across training:} rich-encoder conditions start high then lose readability; bottleneck conditions hold it throughout. \emph{(c) Predictive horizon:} only bottleneck conditions linearly decode pos$_{t+k}$ at long $k$. Shaded band: $R^2 < 0$, linear probe worse than predict-mean baseline (no usable signal); uniform's clipped markers ($\downarrow$) sit below it.}
+\caption{\textbf{Three views of the magnitude axis.} \emph{(a) Cross-condition:} top-layer linear GPS $R^2$ falls with encoder bandwidth. \emph{(b) Across training:} rich-encoder conditions start high then lose readability; bottleneck conditions hold it throughout. \emph{(c) Predictive horizon:} only bottleneck conditions linearly decode pos$_{t+k}$ at long $k$. Shaded band: $R^2 < 0$, the linear probe is worse than predict-mean baseline (no usable signal). Uniform's actual $R^2$ is far below the visible range (CV noise against scene-conditional encoding); $\downarrow$ markers indicate ``value extends below panel''.}
 \label{fig:magnitude}
 \end{figure}
 
@@ -194,35 +194,25 @@ Three corroborating diagnostics in Appendix Figure~\ref{fig:magnitude_appendix} 
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.6\linewidth]{fig/fig_information_allocation.pdf}
-\caption{\textbf{Format shift, not information collapse.} Linear (filled) and 2-layer MLP (hollow) probes per condition. Linear $R^2$ varies widely across conditions; MLP $R^2$ is preserved. The remaining variation is in \emph{format}.}
-\label{fig:format_shift}
-\end{figure}
-
-A leave-one-scene-out (LOSO) cross-validation localises the within-condition answer (Figure~\ref{fig:loso_cv}): blind generalises across held-out scenes; rich-encoder conditions do not. The bottleneck-vs-rich rank ordering is preserved across the cross-training trajectory (Figure~\ref{fig:magnitude}b), so the contrast is not endpoint-specific. We read this as: encoder bandwidth modulates not the availability of position information (preserved per the MLP probe) but the \emph{scene-invariance} of the linear readout direction. A bottlenecked encoder lacks scene-specific features, so a single linear hyperplane suffices for cross-scene readout; a rich encoder lets the LSTM use scene-specific features, inducing scene-conditional position-directions that an MLP can switch over but a single linear probe cannot. This re-states capacity allocation in IB-invariance terms~\citep{achille2018invariance}; the dichotomy is analogous to the no-remapping vs.\ global-remapping spectrum of hippocampal coding under hidden-state inference~\citep{sanders2020remapping}.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.6\linewidth]{fig/fig_loso_cv.pdf}
-\caption{\textbf{LOSO cross-validation: only blind's linear position readout generalises across scenes.} Ridge probe trained on $\sim$30 Gibson scenes, tested on the held-out scene; box plot per condition. Bottleneck conditions force a scene-invariant position-direction; rich encoders induce scene-conditional encoding that a single linear probe cannot capture.}
-\label{fig:loso_cv}
-\end{figure}
-
-If conditions allocate hidden-state capacity to different subspaces of $\mathbf{h}_2$, the resulting representations should be hard to interchange. Two views agree (Figure~\ref{fig:h2}). The $5{\times}5$ memory-transplant matrix shows a direction-asymmetry: a bottleneck-style hidden state breaks rich-encoder policies, while a rich-encoder hidden state still drives bottleneck policies --- analogous to cross-modality remapping in echolocating bats, where the same hippocampal neurons recode under vision vs.\ echolocation~\citep{geva2016remapping}. Cross-condition probe transfer mirrors the asymmetry, and condition pairs that look similar under linear CKA still differ under transplant. Recipient sensitivity scales with encoder bandwidth (uniform most brittle, blind least).
-
-\begin{figure}[!t]
-\centering
-\begin{minipage}[t]{0.49\linewidth}\centering
-\includegraphics[width=\linewidth]{fig/fig4_h2_probe_transfer.pdf}\\[-2pt]
-{\footnotesize\textbf{(a) Cross-condition probe transfer}}
+\begin{minipage}[t]{0.32\linewidth}\centering
+\includegraphics[width=\linewidth]{fig/fig_information_allocation.pdf}\\[-2pt]
+{\footnotesize\textbf{(a) Format shift}}
 \end{minipage}\hfill
-\begin{minipage}[t]{0.49\linewidth}\centering
+\begin{minipage}[t]{0.32\linewidth}\centering
+\includegraphics[width=\linewidth]{fig/fig_loso_cv.pdf}\\[-2pt]
+{\footnotesize\textbf{(b) Scene-invariance (LOSO)}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\linewidth}\centering
 \includegraphics[width=\linewidth]{fig/fig4_transplant_5x5.pdf}\\[-2pt]
-{\footnotesize\textbf{(b) $5{\times}5$ memory-transplant matrix}}
+{\footnotesize\textbf{(c) $5{\times}5$ memory transplant}}
 \end{minipage}
-\caption{\textbf{Non-interchangeable subspaces across conditions.} \emph{(a)}~Cross-condition probe transfer (train on row, test on column). \emph{(b)}~$5{\times}5$ memory-transplant matrix at midpoint $t{=}30$. Both show a direction-asymmetry: bottleneck $\to$ rich-encoder transplant breaks the recipient; rich-encoder $\to$ bottleneck preserves it.}
-\label{fig:h2}
+\caption{\textbf{Three views of the format axis.} \emph{(a) Format shift:} linear (filled) and 2-layer MLP (hollow) probes per condition. Linear $R^2$ varies widely; MLP $R^2$ is preserved --- a format shift, not an information loss. \emph{(b) Scene-invariance (LOSO):} Ridge probe trained on $\sim$30 Gibson scenes, tested on the held-out scene. Only blind's linear readout generalises; rich encoders induce scene-conditional encoding. \emph{(c) Memory transplant:} $5{\times}5$ cross-condition matrix at midpoint $t{=}30$. Direction-asymmetric: bottleneck $\to$ rich-encoder transplant breaks the recipient; rich-encoder $\to$ bottleneck preserves it.}
+\label{fig:format_axis}
 \end{figure}
+
+A leave-one-scene-out (LOSO) cross-validation localises the within-condition answer (Figure~\ref{fig:format_axis}b): blind generalises across held-out scenes; rich-encoder conditions do not. The bottleneck-vs-rich rank ordering is preserved across the cross-training trajectory (Figure~\ref{fig:magnitude}b), so the contrast is not endpoint-specific. We read this as: encoder bandwidth modulates not the availability of position information (preserved per the MLP probe) but the \emph{scene-invariance} of the linear readout direction. A bottlenecked encoder lacks scene-specific features, so a single linear hyperplane suffices for cross-scene readout; a rich encoder lets the LSTM use scene-specific features, inducing scene-conditional position-directions that an MLP can switch over but a single linear probe cannot. This re-states capacity allocation in IB-invariance terms~\citep{achille2018invariance}; the dichotomy is analogous to the no-remapping vs.\ global-remapping spectrum of hippocampal coding under hidden-state inference~\citep{sanders2020remapping}.
+
+If conditions allocate hidden-state capacity to different subspaces of $\mathbf{h}_2$, the resulting representations should be hard to interchange. The $5{\times}5$ memory-transplant matrix (Figure~\ref{fig:format_axis}c) shows a direction-asymmetry: a bottleneck-style hidden state breaks rich-encoder policies, while a rich-encoder hidden state still drives bottleneck policies --- analogous to cross-modality remapping in echolocating bats, where the same hippocampal neurons recode under vision vs.\ echolocation~\citep{geva2016remapping}. Cross-condition probe transfer mirrors the asymmetry (Appendix Figure~\ref{fig:format_appendix}), and condition pairs that look similar under linear CKA still differ under transplant. Recipient sensitivity scales with encoder bandwidth (uniform most brittle, blind least).
 
 Three geometric views agree (Table~\ref{tab:geometry}): Procrustes shape distance~\citep{williams2021shape} pairs bottleneck and rich-encoder regimes; participation ratio and TwoNN intrinsic dimension~\citep{ansuini2019intrinsic} separate coarse (the $1{\times}1$ encoder-collapse case); eigenspectrum power-law~\citep{stringer2019high} places sighted conditions near the Stringer optimum and blind well above with a sharper tail. We use these descriptively rather than mechanistically (Appendix~\ref{app:eigenspectrum}).
 
@@ -246,14 +236,7 @@ Uniform                        & $4.01$ & $1.91$ & $1.80$ & $1.90$ & $1.22$ & $1
 \end{tabular}
 \end{table}
 
-If capacity allocation produces near-orthogonal subspaces with non-aligned position-directions, principal-angle and direction-cosine tests should both register the divergence (Figure~\ref{fig:subspace_divergence}). Across all ten condition pairs, mean principal angles are close to orthogonal and pairwise cosines between Ridge-probe GPS-direction weights are near zero. The divergence is established early --- already visible at the earliest probed checkpoint (Figure~\ref{fig:subspace_evolution}, Appendix) --- suggesting the structural separation is laid down well before convergence rather than emerging late.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.92\linewidth]{fig/fig_subspace_divergence.pdf}
-\caption{\textbf{Subspace divergence: conditions occupy mostly-orthogonal subspaces of $\mathbf{h}_2$.} \emph{(a)}~Mean principal angles between top-$K$ PCA subspaces (close to orthogonal across all condition pairs). \emph{(b)}~Pairwise cosines between Ridge-probe position-directions (near zero). Position is encoded along essentially uncorrelated directions across conditions.}
-\label{fig:subspace_divergence}
-\end{figure}
+If capacity allocation produces near-orthogonal subspaces with non-aligned position-directions, principal-angle and direction-cosine tests should both register the divergence (Appendix Figure~\ref{fig:format_appendix}): mean principal angles between top-$K$ PCA subspaces are close to orthogonal across all ten condition pairs, and pairwise cosines between Ridge-probe GPS-direction weights are near zero. The divergence is established early --- already visible at the earliest probed checkpoint --- suggesting the structural separation is laid down well before convergence rather than emerging late.
 
 \subsection{Format axis (temporal): the blind code rotates over time, sighted codes stabilise}
 \label{sec:tgm}
@@ -510,7 +493,7 @@ The three figures below provide independent geometric tests of the capacity-allo
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.55\linewidth]{fig/fig_cross_cond_transfer.pdf}
-\caption{\textbf{Cross-condition probe-transfer matrix.} Ridge-probe trained on condition $A$'s top-layer states, applied to condition $B$'s. Diagonal (own-probe) $R^2 \in [0.90, 0.99]$. Off-diagonal $R^2$ is \emph{catastrophically negative} ($-3.5{\times}10^2$ to $-3.5{\times}10^4$ unclipped; clipped to $[-1, 1]$ for visualisation): the position-axes encoded across conditions are not just orthogonal in subspace orientation (Figure~\ref{fig:subspace_divergence}) but jointly incompatible at the readout level. Even when the same scenes are visited and the same task is solved, no single linear position-direction transfers between conditions.}
+\caption{\textbf{Cross-condition probe-transfer matrix.} Ridge-probe trained on condition $A$'s top-layer states, applied to condition $B$'s. Diagonal (own-probe) $R^2 \in [0.90, 0.99]$. Off-diagonal $R^2$ is \emph{catastrophically negative} ($-3.5{\times}10^2$ to $-3.5{\times}10^4$ unclipped; clipped to $[-1, 1]$ for visualisation): the position-axes encoded across conditions are not just orthogonal in subspace orientation (Figure~\ref{fig:format_appendix}) but jointly incompatible at the readout level. Even when the same scenes are visited and the same task is solved, no single linear position-direction transfers between conditions.}
 \label{fig:cross_cond_transfer}
 \end{figure}
 
@@ -524,7 +507,7 @@ The three figures below provide independent geometric tests of the capacity-allo
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.55\linewidth]{fig/fig_intrinsic_dim.pdf}
-\caption{\textbf{Intrinsic dimensionality (TwoNN).} \citet{facco2017twonn}-style estimate of the intrinsic dimensionality of $\mathbf{h}_2$, on $5\,000$ samples per condition (paper-canonical seed-0 filled markers; seed-2 robustness check hollow). All four conditions yield ID $\approx 2.5$--$2.9$, comparable to the task-intrinsic dimensionality (2-D position $+$ 1-D heading $\approx 3$). The same intrinsic dim across conditions, combined with strongly differing linear $R^2$ and orthogonal subspaces (Figure~\ref{fig:subspace_divergence}), shows capacity-allocation is about the \emph{orientation} of the task-shaped manifold within the 512-d ambient space rather than about its size.}
+\caption{\textbf{Intrinsic dimensionality (TwoNN).} \citet{facco2017twonn}-style estimate of the intrinsic dimensionality of $\mathbf{h}_2$, on $5\,000$ samples per condition (paper-canonical seed-0 filled markers; seed-2 robustness check hollow). All four conditions yield ID $\approx 2.5$--$2.9$, comparable to the task-intrinsic dimensionality (2-D position $+$ 1-D heading $\approx 3$). The same intrinsic dim across conditions, combined with strongly differing linear $R^2$ and orthogonal subspaces (Figure~\ref{fig:format_appendix}), shows capacity-allocation is about the \emph{orientation} of the task-shaped manifold within the 512-d ambient space rather than about its size.}
 \label{fig:intrinsic_dim}
 \end{figure}
 
@@ -728,9 +711,20 @@ This appendix collects companion figures that extend results reported numericall
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.95\linewidth]{fig/fig_subspace_evolution.pdf}
-\caption{\textbf{Subspace evolution over training (referenced from §\ref{sec:format-spatial}).} \emph{(a)}~Mean principal angle between condition-pair top-$K$ subspaces, plotted across five training stages ($\sim 50$M to $\sim 250$M frames; sighted at ckpt $10$/$20$/$30$/$40$/$49$, blind at $10$/$15$/$20$/$25$). Angles are already $[82°, 89°]$ at the earliest probed stage and stay near-orthogonal throughout. \emph{(b)}~Position-encoding direction cosines are essentially zero throughout (range $[-0.05, +0.14]$), indicating direction divergence is committed before the earliest probed checkpoint. Single seed; 4--5 ckpts per condition. Companion to main-text Figure~\ref{fig:subspace_divergence}.}
-\label{fig:subspace_evolution}
+\begin{minipage}[c]{\linewidth}\centering
+  \includegraphics[width=0.96\linewidth]{fig/fig_subspace_divergence.pdf}\\[-2pt]
+  {\footnotesize\textbf{(a-b) Subspace divergence at the converged checkpoint}}
+\end{minipage}\\[6pt]
+\begin{minipage}[c]{0.49\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/fig4_h2_probe_transfer.pdf}\\[-2pt]
+  {\footnotesize\textbf{(c) Cross-condition probe transfer}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.49\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/fig_subspace_evolution.pdf}\\[-2pt]
+  {\footnotesize\textbf{(d) Subspace evolution over training}}
+\end{minipage}
+\caption{\textbf{Format axis: corroborating diagnostics (referenced from §\ref{sec:format-spatial}).} \emph{(a)}~Principal angles between top-$K$ PCA subspaces of $\mathbf{h}_2$: close to orthogonal across all condition pairs. \emph{(b)}~Pairwise cosines between Ridge-probe GPS-direction weights: near zero. \emph{(c)}~Cross-condition probe transfer matrix (train on row, test on column): off-diagonal $R^2$ is catastrophically negative --- the position-axes encoded across conditions are jointly incompatible at the readout level. \emph{(d)}~Subspace divergence is established early: principal angles are already near-orthogonal at the earliest probed checkpoint ($\sim 50$M frames) and stay so throughout, indicating the structural separation is laid down well before convergence.}
+\label{fig:format_appendix}
 \end{figure}
 
 \begin{figure}[!t]

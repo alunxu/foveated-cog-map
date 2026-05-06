@@ -66,6 +66,13 @@ def panel_a(ax, mlp_json: Path) -> None:
     ax.axhspan(0.4, 1.05, color="#dceedc", alpha=0.55, zorder=0)
     ax.axhspan(-2.5, 0.4, color="#fbe0dc", alpha=0.45, zorder=0)
     ax.axhline(0, color="#888", lw=0.6, ls="--", zorder=0)
+    # Regime annotations
+    ax.text(3.85, 0.85, "Bottleneck regime\n(integration\ncarries pos.)",
+            fontsize=11, color="#3a7d3a", ha="right", va="top",
+            style="italic", weight="bold")
+    ax.text(3.85, -2.35, "Rich-encoder regime\n(visual route\ncarries pos.)",
+            fontsize=11, color="#a02528", ha="right", va="bottom",
+            style="italic", weight="bold")
 
     # Index-based positions to keep blind and coarse from overlapping;
     # cell counts shown below in xtick labels (1×1, 2×2, 4×4 notation).
