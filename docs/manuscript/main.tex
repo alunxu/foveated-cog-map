@@ -194,19 +194,8 @@ Three corroborating diagnostics in Appendix Figure~\ref{fig:magnitude_appendix} 
 
 \begin{figure}[!t]
 \centering
-\begin{minipage}[t]{0.32\linewidth}\centering
-\includegraphics[width=\linewidth]{fig/fig_information_allocation.pdf}\\[-2pt]
-{\footnotesize\textbf{(a) Format shift}}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.32\linewidth}\centering
-\includegraphics[width=\linewidth]{fig/fig_loso_cv.pdf}\\[-2pt]
-{\footnotesize\textbf{(b) Scene-invariance (LOSO)}}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.32\linewidth}\centering
-\includegraphics[width=\linewidth]{fig/fig4_transplant_5x5.pdf}\\[-2pt]
-{\footnotesize\textbf{(c) $5{\times}5$ memory transplant}}
-\end{minipage}
-\caption{\textbf{Three views of the format axis.} \emph{(a) Format shift:} linear (filled) and 2-layer MLP (hollow) probes per condition. Linear $R^2$ varies widely; MLP $R^2$ is preserved --- a format shift, not an information loss. \emph{(b) Scene-invariance (LOSO):} Ridge probe trained on $\sim$30 Gibson scenes, tested on the held-out scene. Only blind's linear readout generalises; rich encoders induce scene-conditional encoding. \emph{(c) Memory transplant:} $5{\times}5$ cross-condition matrix at midpoint $t{=}30$. Direction-asymmetric: bottleneck $\to$ rich-encoder transplant breaks the recipient; rich-encoder $\to$ bottleneck preserves it.}
+\includegraphics[width=\linewidth]{fig/fig_format_axis.pdf}
+\caption{\textbf{Two views of the format axis.} \emph{(a) Format shift:} slope chart from Linear to MLP probe per condition; steep slope $=$ large gap between linear and non-linear readability. Bottleneck conditions sit on near-horizontal slopes; rich-encoder conditions on near-vertical ones --- a format shift, not an information loss. \emph{(b) Format dichotomy:} LOSO median $R^2$ (within-condition scene-invariance) vs.\ mean cross-condition transplant cost (across-condition non-interchangeability). Bottleneck (blind) sits in the scene-invariant + transplant-robust quadrant; rich-encoder conditions cluster in the scene-conditional + transplant-brittle quadrant. (Coarse $n{=}1$ cross-pair --- differing input size excludes it from most pairs.)}
 \label{fig:format_axis}
 \end{figure}
 
