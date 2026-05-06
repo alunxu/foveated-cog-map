@@ -51,7 +51,8 @@ CONDS = [
     ("uniform",          "uniform",           "Uniform",       16, "#4daf4a", "^", 5.0),
 ]
 CLIP_MIN = -2.0
-X_MAX_M = 250.0
+X_MAX_M = 350.0  # extended to include blind 340M ckpt; sighted converged @250M
+SIGHTED_CONVERGED_M = 250.0  # marker for sighted-condition endpoint
 RCP_DIR = Path("/tmp/rcp_analysis")
 LEGACY_BLIND_DIR = Path("results/probing_results")  # blind kept per memory
 
@@ -126,6 +127,9 @@ def panel_b(ax) -> None:
         points = []
         if rcp_key == "blind_izar":
             # Legacy blind ckpt sweep (10/20/30/34) — frames_per_ckpt=10.06
+            # ckpt34 (342M) IS the converged endpoint (matches blind_izar_det
+            # in /tmp/rcp_analysis/ to 4 decimals; same .pth probed twice).
+            # Blind trained for 340M total; sighted converged at 250M.
             for ck in (10, 20, 30, 34):
                 p = LEGACY_BLIND_DIR / f"blind_gibson_ckpt{ck}_det_analysis.json"
                 v = _read_ckpt_value(p)
@@ -174,6 +178,11 @@ def panel_b(ax) -> None:
 
     ax.set_ylim(CLIP_MIN - 0.10, 1.10)
     ax.set_xlim(0, X_MAX_M + 5)
+    # Marker for sighted-conditions convergence endpoint
+    ax.axvline(SIGHTED_CONVERGED_M, ls="--", color="#888", lw=0.7, alpha=0.6,
+               zorder=1)
+    ax.text(SIGHTED_CONVERGED_M + 3, -1.85, "sighted\nconverged",
+            fontsize=7, color="#666", ha="left", va="bottom", style="italic")
     ax.set_xlabel("training frames (M)", fontsize=11, fontweight="bold")
     ax.set_ylabel(r"top-layer GPS $R^2$ (5-fold CV)", fontsize=11, fontweight="bold")
     ax.set_title("(b) Substitution mechanism",
