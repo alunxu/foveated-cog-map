@@ -68,9 +68,16 @@ N_EP_AUTOCORR = 80
 # Trajectory-map helpers
 # ──────────────────────────────────────────────────────────────────────
 def load_topdown(scene: str):
+    """Load the top-down navmesh PNG and threshold to a high-contrast
+    binary image (walls = dark grey, corridors = white) so the
+    trajectory line is clearly distinguishable from the navmesh."""
     p_png = TOPDOWN_DIR / f"{scene}.png"
     p_json = TOPDOWN_DIR / f"{scene}.json"
-    img = np.asarray(Image.open(p_png).convert("RGB"))
+    img_g = np.asarray(Image.open(p_png).convert("L"))
+    # Pixels below 220 = wall / obstacle (rendered as solid dark grey),
+    # >= 220 = navigable corridor (rendered white).
+    img_bin = np.where(img_g < 220, 90, 255).astype(np.uint8)
+    img = np.stack([img_bin, img_bin, img_bin], axis=-1)
     meta = json.loads(p_json.read_text())
     return img, meta["world_lower_bound"], meta["world_upper_bound"]
 
@@ -174,11 +181,11 @@ def panel_traj_map(ax, cond_key: str, label: str, colour: str,
     travelled far in 512-d space); sighted trajectories stay in cool
     colours (memory barely moves)."""
     img, lo, hi = load_topdown(SCENE)
-    # Lighter alpha for the navmesh so the trajectory line stays
-    # visible without competing with the gray-block walls.
+    # Thresholded navmesh (walls dark grey, corridors white) at full
+    # alpha — high contrast so the trajectory line + halo pop clearly.
     ax.imshow(img, extent=[lo[0], hi[0], lo[2], hi[2]],
-              origin="lower", alpha=0.40, zorder=0,
-              interpolation="bilinear")
+              origin="lower", alpha=0.95, zorder=0,
+              interpolation="nearest")
 
     pos = ep_data["positions"]
     n_steps = ep_data["n_steps"]
