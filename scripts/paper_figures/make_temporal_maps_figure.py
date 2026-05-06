@@ -43,7 +43,7 @@ apply_paper_style()
 # Trajectory-map + autocorrelation panels — all 5 conditions, single
 # shared scene, single canonical post-retrain NPZ per condition.
 # ──────────────────────────────────────────────────────────────────────
-SCENE = "8WUmhLawc2A"        # has top-down PNG + episodes for every cond
+SCENE = "Almena"             # tight scene-id match + striking 4.8x blind/sighted step ratio
 
 # Canonical post-retrain NPZs (positions, scene_ids, hidden_states all
 # in the same file).  Order matches paper-canonical condition order.
@@ -57,6 +57,7 @@ CONDS = [
 ]
 NPZ_DIR = Path("/tmp/rcp_analysis_v3")
 TOPDOWN_DIR = Path("results/topdown_fig5")
+TGM_NPZ = Path("results/cogneuro_data/tgm_results.npz")
 OUT = Path("docs/manuscript/fig/fig5_temporal.pdf")
 
 MAX_LAG = 50
@@ -68,29 +69,42 @@ N_EP_AUTOCORR = 80
 # Trajectory-map helpers
 # ──────────────────────────────────────────────────────────────────────
 def load_topdown(scene: str):
-    """Load the top-down navmesh PNG and threshold to a high-contrast
-    binary image (walls = dark grey, corridors = white) so the
-    trajectory line is clearly distinguishable from the navmesh."""
+    """Load the top-down map and rebuild as a 3-tone image so the
+    structure is preserved without obscuring the trajectory.
+    The Habitat top-down PNG has only 3 distinct grey levels:
+       value 50  -> hard wall / outline
+       value 150 -> structure / soft border (e.g. furniture, doorway)
+       value 255 -> open navigable corridor
+    Map them to: dark grey, very light grey, white. This preserves the
+    fine corridor structure (so the agent's path through narrow
+    corridors is visible) while keeping a clean visual contrast."""
     p_png = TOPDOWN_DIR / f"{scene}.png"
     p_json = TOPDOWN_DIR / f"{scene}.json"
     img_g = np.asarray(Image.open(p_png).convert("L"))
-    # Pixels below 220 = wall / obstacle (rendered as solid dark grey),
-    # >= 220 = navigable corridor (rendered white).
-    img_bin = np.where(img_g < 220, 90, 255).astype(np.uint8)
-    img = np.stack([img_bin, img_bin, img_bin], axis=-1)
+    out = np.full_like(img_g, 255)            # corridor = white
+    out[img_g < 200] = 200                    # soft border = light grey
+    out[img_g < 100] = 60                     # hard wall = dark grey
+    img = np.stack([out, out, out], axis=-1)
     meta = json.loads(p_json.read_text())
     return img, meta["world_lower_bound"], meta["world_upper_bound"]
 
 
 def find_scene_id(d: np.lib.npyio.NpzFile, target_lo: list[float],
                   target_hi: list[float]) -> int | None:
-    """Return the integer scene_id whose episode-position bounds fit
-    inside the target topdown's world bounds. The post-retrain NPZs
-    use integer scene indices; this function recovers which integer
-    corresponds to the named topdown scene by bounding-box matching."""
+    """Return the integer scene_id whose episode-position bounds match
+    the target topdown's world bounds most tightly. The post-retrain
+    NPZs use integer scene indices; this function recovers which
+    integer corresponds to the named topdown scene by bounding-box
+    matching, picking the candidate with HIGHEST diagonal-coverage
+    (so we don't mistake a small scene that fits inside a large
+    topdown for that scene)."""
     sids = d["scene_ids"]
     pos = d["positions"]
-    margin = 2.0  # tolerate a few steps off the navmesh
+    margin = 2.0
+    target_diag = float(np.hypot(target_hi[0] - target_lo[0],
+                                 target_hi[2] - target_lo[2]))
+    best_sid = None
+    best_cov = 0.0
     for sid in np.unique(sids):
         m = sids == sid
         p = pos[m]
@@ -98,10 +112,20 @@ def find_scene_id(d: np.lib.npyio.NpzFile, target_lo: list[float],
             continue
         lo = p.min(axis=0)
         hi = p.max(axis=0)
-        if (target_lo[0] - margin <= lo[0] and hi[0] <= target_hi[0] + margin and
+        if not (target_lo[0] - margin <= lo[0] and hi[0] <= target_hi[0] + margin and
                 target_lo[2] - margin <= lo[2] and hi[2] <= target_hi[2] + margin):
-            return int(sid)
-    return None
+            continue
+        diag_p = float(np.hypot(hi[0] - lo[0], hi[2] - lo[2]))
+        cov = diag_p / max(target_diag, 1e-9)
+        if cov > best_cov:
+            best_cov = cov
+            best_sid = int(sid)
+    # Require at least 80% diagonal coverage to be confident the
+    # scene_id actually corresponds to this topdown (not a small
+    # different scene that happens to fit inside).
+    if best_sid is not None and best_cov < 0.80:
+        return None
+    return best_sid
 
 
 def load_episode_from_npz(cond_key: str, scene: str):
@@ -303,6 +327,47 @@ def compute_per_cond_autocorr() -> dict:
     return out
 
 
+# ──────────────────────────────────────────────────────────────────────
+# Panel: per-condition step-by-step decoder generalisation heatmap
+# (the temporal-generalisation-matrix view).
+# ──────────────────────────────────────────────────────────────────────
+TGM_KEY_MAP = {
+    "blind_izar":        "blind",
+    "coarse":            "coarse",
+    "foveated_logpolar": "foveated_logpolar",
+    "foveated":          "foveated",
+    "uniform":           "uniform",
+}
+
+
+def panel_tgm(ax, cond_key: str, label: str, colour: str,
+              tgm_data: dict, vmin: float, vmax: float):
+    """Plot the 50x50 step-by-step decoder generalisation heatmap for
+    one condition (the temporal-generalisation-matrix view)."""
+    key = TGM_KEY_MAP.get(cond_key)
+    if key not in tgm_data:
+        ax.text(0.5, 0.5, "(no TGM data)",
+                transform=ax.transAxes, ha="center", va="center",
+                fontsize=8, color="#888")
+        ax.set_xticks([]); ax.set_yticks([])
+        return None
+    M = tgm_data[key]
+    # Clip to the viz range so very-negative outliers don't dominate
+    # the colour scale.  We use RdBu_r so the diagonal/block patterns
+    # show up as warm-on-cool contrast.
+    M_clipped = np.clip(M, vmin, vmax)
+    im = ax.imshow(M_clipped, origin="lower", cmap="RdBu_r",
+                   vmin=vmin, vmax=vmax, aspect="equal",
+                   interpolation="nearest")
+    ax.set_title(label, fontsize=12, fontweight="bold", color=colour, pad=4)
+    ax.set_xlabel("test step", fontsize=9)
+    ax.set_ylabel("train step", fontsize=9)
+    ax.tick_params(axis="both", labelsize=8)
+    for s_ in ("top", "right"):
+        ax.spines[s_].set_visible(False)
+    return im
+
+
 def panel_autocorr_compact(ax, autocorr: dict):
     """Compact 1-panel autocorrelation summary (smaller than the full
     line plot in v1)."""
@@ -342,8 +407,6 @@ def main():
     autocorr = compute_per_cond_autocorr()
     print(f"  ({time.time()-t0:.1f}s)")
 
-    # Pre-load all chosen episodes so we can normalise the colormap on
-    # the global max cumulative h_2 path length across all 5 conditions.
     print("[traj] loading per-cond episodes...", flush=True)
     t0 = time.time()
     eps_by_cond = {}
@@ -352,45 +415,69 @@ def main():
         if ep is not None:
             eps_by_cond[cond_key] = ep
     print(f"  ({time.time()-t0:.1f}s)")
-    cmap_max = max(ep["cum_h2_path"][-1] for ep in eps_by_cond.values())
-    cmap_norm = (0.0, cmap_max)
+    traj_cmap_max = max(ep["cum_h2_path"][-1] for ep in eps_by_cond.values())
+    traj_cmap_norm = (0.0, traj_cmap_max)
 
-    # Single row of 5 trajectory maps + a slim shared colourbar on the
-    # right.  Drop the standalone autocorrelation panel — tau values now
-    # appear inline in each panel title, which carries the same info at
-    # a fraction of the page area.
-    fig = plt.figure(figsize=(17.0, 4.0))
+    # Load TGM data.
+    print("[tgm] loading...", flush=True)
+    tgm_npz = np.load(TGM_NPZ, allow_pickle=True)
+    tgm_data = {k: tgm_npz[k] for k in tgm_npz.files}
+    # Clip the colormap to [-0.5, +0.5] so the diagonal/block structure
+    # is readable — blind has extreme negative outliers (R^2 < -1000)
+    # that, on a shared linear scale, would render every cell as
+    # near-zero yellow. This range maps R^2 in roughly [-0.5, +0.5]
+    # which is the meaningful R^2 range; values beyond are clipped.
+    tgm_vmin, tgm_vmax = -0.5, 0.5
+
+    # 2-row layout:
+    #   Row 1: 5 step-by-step decoder generalisation heatmaps + colorbar.
+    #   Row 2: 5 trajectory maps + colorbar.
+    fig = plt.figure(figsize=(17.0, 7.0))
     gs = fig.add_gridspec(
-        1, 6,
+        2, 6,
         width_ratios=[1.0, 1.0, 1.0, 1.0, 1.0, 0.04],
-        wspace=0.05,
-        left=0.01, right=0.97, top=0.81, bottom=0.05,
+        height_ratios=[1.0, 1.10],            # bottom row a touch taller for trajectory maps
+        wspace=0.10, hspace=0.32,
+        left=0.04, right=0.97, top=0.93, bottom=0.06,
     )
+
+    # ── Row 1: TGM heatmaps ──────────────────────────────────────────
     last_im = None
     for i, (cond_key, label, colour) in enumerate(CONDS):
         ax = fig.add_subplot(gs[0, i])
+        im = panel_tgm(ax, cond_key, label, colour,
+                       tgm_data, tgm_vmin, tgm_vmax)
+        if im is not None:
+            last_im = im
+    cax_top = fig.add_subplot(gs[0, 5])
+    if last_im is not None:
+        cb_top = fig.colorbar(last_im, cax=cax_top)
+        cb_top.set_label("decoder $R^2$", fontsize=9, fontweight="bold")
+        cb_top.ax.tick_params(labelsize=8)
+
+    # ── Row 2: trajectory maps ──────────────────────────────────────
+    for i, (cond_key, label, colour) in enumerate(CONDS):
+        ax = fig.add_subplot(gs[1, i])
         tau_text = None
         if cond_key in autocorr:
             tau = autocorr[cond_key][1]
             tau_text = f"$\\tau{{=}}{tau:.0f}$"
         if cond_key in eps_by_cond:
             panel_traj_map(ax, cond_key, label, colour,
-                           eps_by_cond[cond_key], cmap_norm,
+                           eps_by_cond[cond_key], traj_cmap_norm,
                            tau_text=tau_text)
         else:
             ax.text(0.5, 0.5, f"{label}\n(no data)",
                     transform=ax.transAxes, ha="center", va="center")
             ax.set_xticks([]); ax.set_yticks([])
-
-    # Shared colourbar.
-    cax = fig.add_subplot(gs[0, 5])
+    cax_bot = fig.add_subplot(gs[1, 5])
     sm = plt.cm.ScalarMappable(cmap=plt.cm.plasma,
-                               norm=plt.Normalize(0, cmap_max))
+                               norm=plt.Normalize(0, traj_cmap_max))
     sm.set_array([])
-    cb = fig.colorbar(sm, cax=cax)
-    cb.set_label(r"cumulative $\Sigma|\Delta\mathbf{h}_2|$ up to step $t$",
-                 fontsize=9, fontweight="bold")
-    cb.ax.tick_params(labelsize=8)
+    cb_bot = fig.colorbar(sm, cax=cax_bot)
+    cb_bot.set_label(r"cumulative $\Sigma|\Delta\mathbf{h}_2|$",
+                     fontsize=9, fontweight="bold")
+    cb_bot.ax.tick_params(labelsize=8)
 
     fig.savefig(OUT, dpi=200, bbox_inches="tight")
     plt.close(fig)
