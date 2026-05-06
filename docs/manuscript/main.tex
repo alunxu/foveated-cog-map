@@ -220,28 +220,13 @@ Picture two ways memory might track a slowly-changing target like ``where is the
   \label{fig:tgm}
 \end{figure}
 
-\noindent\emph{Intrinsic timescales corroborate.} If blind's code integrates, individual memory units should retain their values longer per step --- the cortical-hierarchy pattern of slow integrators in prefrontal cortex vs.\ fast sensory units~\citep{murray2014timescales}. Fitting per-unit autocorrelation decay (Figure~\ref{fig:cogneuro_battery}a), blind integrates over a substantially longer timescale than every sighted condition. Combined with the rotating linear readout above, blind's memory state is a slow-rotating spiral; sighted-rich units change fast on a stationary readout --- a fast pendulum with a fixed axis.
-
-\noindent\emph{Topology, descriptive only.} A parameter-free pipeline used for toroidal grid-cell structure in mouse cortex~\citep{gardner2022toroidal} (Figure~\ref{fig:cogneuro_battery}b,c) confirms that conditions are topologically distinguishable: cross-condition Wasserstein-2 distance is roughly twice the within-condition seed noise. Persistent-loop counts order monotonically with encoder bandwidth (blind highest, uniform lowest); we treat this as suggestive corroboration rather than independent mechanistic evidence. \uncertain{Our pre-registered prediction was the opposite direction; we report what we found.}
+\noindent\emph{Phase portrait and intrinsic timescales corroborate.} Two complementary views of the same temporal-format dichotomy (Figure~\ref{fig:cogneuro_battery}). \emph{(a) Phase portrait:} the top-layer hidden state $\mathbf{h}_2$, projected onto its first two principal components, traces a long winding trajectory through state-space in blind --- the cumulative path length per episode is the highest of any condition (Blind $140$, Coarse $107$, Foveated $71$, Fov-logpolar $46$, Uniform $32$, in shared PC units). Sighted-rich trajectories stay compact in a small region. \emph{(b) Intrinsic timescales:} if blind's code integrates motion across time, individual memory units should retain their values across longer lags --- the cortical-hierarchy pattern of slow integrators in prefrontal cortex vs.\ fast sensory units~\citep{murray2014timescales}. The per-unit autocorrelation curves recapitulate this exactly: blind's units cross the $1/e$ threshold at $\tau \approx 12$ steps, while every sighted condition crosses at $\tau \approx 8$. Combined with the rotating linear readout above (TGM, Figure~\ref{fig:tgm}), blind's memory state is a \emph{slow-rotating spiral} that traverses substantial state-space; sighted-rich units change fast on a stationary readout --- a \emph{fast pendulum with a fixed axis}. A topological corroboration via persistent homology~\citep{gardner2022toroidal} is reported in Appendix~\ref{app:format-temporal-detail}.
 
 \begin{figure}[!t]
 \centering
-\begin{minipage}[t]{0.32\linewidth}
-\centering
-\includegraphics[width=\linewidth]{fig/fig5a_timescales.pdf}\\[-2pt]
-{\footnotesize\textbf{(a) Murray 2014 timescales}}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.32\linewidth}
-\centering
-\includegraphics[width=\linewidth]{fig/fig5b_persistence_betti.pdf}\\[-2pt]
-{\footnotesize\textbf{(b) Persistent loops (Gardner 2022)}}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.32\linewidth}
-\centering
-\includegraphics[width=\linewidth]{fig/fig5c_persistence_wasserstein.pdf}\\[-2pt]
-{\footnotesize\textbf{(c) Across-condition gap > seed noise}}
-\end{minipage}
-\caption{\textbf{Two corroborating views of temporal format} (companion to TGM in Figure~\ref{fig:tgm}). \emph{(a) Intrinsic timescales:} per-unit autocorrelation decay $\tau$. Blind integrates over a substantially longer timescale than any sighted condition. \emph{(b)~Persistent loops:} Vietoris--Rips persistence-diagram loop counts. \emph{(c) Topological distinguishability:} cross-condition manifold distance dominates within-condition seed noise.}
+\includegraphics[width=\linewidth]{fig/fig5a_phase_portrait.pdf}\\[6pt]
+\includegraphics[width=0.78\linewidth]{fig/fig5b_autocorrelation.pdf}
+\caption{\textbf{Two corroborating views of temporal format} (companion to TGM, Figure~\ref{fig:tgm}). \emph{(a) Phase portrait:} per-condition 2D PCA of $\mathbf{h}_2$, plotting $5$ representative episodes per condition with line colour encoding step-in-episode. Per-condition cumulative path length (printed in each panel title) ranks blind highest and uniform lowest, matching the slow-rotating-spiral vs.\ fast-pendulum reading. \emph{(b) Per-unit autocorrelation:} mean per-unit autocorrelation function across $256$ random units and $100$ random episodes (shaded band: $\pm 1$ SD across units). Blind crosses $1/e$ at $\tau \approx 12$ steps; the four sighted conditions all cross at $\tau \approx 8$. Both panels read the same temporal-format dichotomy from different angles: state-space geometry (a) and unit-level memory persistence (b).}
 \label{fig:cogneuro_battery}
 \end{figure}
 
@@ -611,7 +596,28 @@ Uniform            & $3.09$ & $2.32$ & $2.17$ & $1.92$ \\
 \section{Temporal Format: corroborating diagnostics}
 \label{app:format-temporal-detail}
 
-The main-text §\ref{sec:tgm} reports the temporal-generalisation matrix and intrinsic-timescale analyses; this appendix expands on the predictive-horizon test (referenced from §\ref{sec:tgm} and Figure~\ref{fig:magnitude}c) and grounds it in successor-representation theory.
+The main-text §\ref{sec:tgm} reports the temporal-generalisation matrix and the phase-portrait + intrinsic-timescale corroboration. This appendix collects two further diagnostics: a predictive-horizon test grounded in successor-representation theory (Section~\ref{app:predictive_horizon}), and a topological-distinguishability test via persistent homology (Section~\ref{app:topology}, referenced from §\ref{sec:tgm}).
+
+\subsection{Topological distinguishability via persistent homology}
+\label{app:topology}
+
+A parameter-free pipeline used for toroidal grid-cell structure in mouse cortex~\citep{gardner2022toroidal} confirms that conditions are topologically distinguishable: cross-condition Wasserstein-2 distance between H1 persistence diagrams is roughly twice the within-condition seed noise (Figure~\ref{fig:persistence_appendix}b). Persistent-loop counts order monotonically with encoder bandwidth (blind highest, uniform lowest; Figure~\ref{fig:persistence_appendix}a). We treat this as suggestive corroboration rather than independent mechanistic evidence. \uncertain{Our pre-registered prediction was the opposite direction (we expected uniform highest, blind lowest); we report what we found.}
+
+\begin{figure}[!t]
+\centering
+\begin{minipage}[t]{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig/fig5b_persistence_betti.pdf}\\[-2pt]
+{\footnotesize\textbf{(a) Persistent loops (Gardner 2022)}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{fig/fig5c_persistence_wasserstein.pdf}\\[-2pt]
+{\footnotesize\textbf{(b) Across-condition gap > seed noise}}
+\end{minipage}
+\caption{\textbf{Topological corroboration of the temporal-format dichotomy.} \emph{(a)} Persistent-loop counts (number of $H_1$ features with persistence $> 0.1$) per condition. \emph{(b)} Wasserstein-2 distance between $H_1$ persistence diagrams: the cross-condition gap exceeds within-condition (seed) noise across all five conditions, so the $\mathbf{h}_t$ manifolds are topologically distinguishable.}
+\label{fig:persistence_appendix}
+\end{figure}
 
 \subsection{Predictive horizon: does $\mathbf{h}_t$ encode future positions?}
 \label{app:predictive_horizon}
