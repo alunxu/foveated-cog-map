@@ -370,49 +370,124 @@ Two safeguards protect against rare numerical instabilities arising from off-nav
 \noindent\textbf{Log-polar foveation transform}\quad
 The log-polar control (Appendix~\ref{app:scaling}) applies a differentiable log-polar resampling step before the ResNet-18 backbone: the $128{\times}128$ avg-pooled image is mapped onto a $64{\times}64$ grid with $n_\rho{=}64$ log-spaced radial samples and $n_\theta{=}64$ angular samples, mimicking the cortical magnification of mammalian primary visual cortex. Visual front-end only; LSTM, sensors, and training pipeline are identical to the foveated condition.
 
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.65\linewidth]{fig/appfig7_training_curves.pdf}
+\caption{\textbf{Behavioural convergence (DD-PPO training curves).} TensorBoard event-file scalars across the 250M-frame training budget. All four sighted conditions (\textsc{coarse}, \textsc{foveated}, \textsc{foveated-logpolar}, \textsc{uniform}) converge to SPL $0.82$--$0.85$ and success $>97\%$ by $\sim 100$M frames; \textsc{blind} converges to SPL $\sim 0.50$ over a longer horizon. Probing windows fall well after convergence for all conditions, so the encoded-content gap reported in §\ref{sec:results} cannot be attributed to differential under-training.}
+\label{fig:training_curves}
+\end{figure}
+
 \section{Probing protocol details}
 \label{app:probing-details}
 
 \noindent\textbf{Sampling protocol}\quad An earlier draft used stochastic (policy-distribution) action selection at probe time. Conditions with higher action-entropy under their trained stochastic policies sampled the STOP action early with $\sim 0.25$ per-step probability, producing $\sim 4$-step rollouts and target variance two orders of magnitude below the episodic range. The resulting probe $R^2$ values were trivially high across all conditions (any predictor fits a near-constant target). This confounded cross-condition comparisons; we switched to the deterministic (argmax) protocol used here and elsewhere in our pipeline. All paper results use the deterministic protocol.
 
-\emph{Length-matching ablation.} Under deterministic rollouts, episode lengths span $\sim$100--400 mean steps depending on condition. We use 5-fold episode-level CV to keep splits balanced per scene rather than length-matching across conditions. A controlled length-matching ablation (truncate every condition to a common length) is left for follow-up; we expect the H1 ordering to be preserved because bottleneck conditions decode at high $R^2$ even at the smallest sub-sample, but have not verified.
+\noindent\textbf{Length-matching ablation}\quad Under deterministic rollouts, episode lengths span $\sim$100--400 mean steps depending on condition. We use 5-fold episode-level CV to keep splits balanced per scene rather than length-matching across conditions. A controlled length-matching ablation (truncate every condition to a common length) is left for follow-up; we expect the magnitude ordering to be preserved because bottleneck conditions decode at high $R^2$ even at the smallest sub-sample, but have not verified.
 
-\emph{Cross-heading probe.} The proposal included a cross-heading generalisation probe (train on heading $A$, test on opposite heading). Our implementation returned ``insufficient samples'' sentinels at our probe sizes; not in our results.
+\noindent\textbf{Cross-heading probe}\quad The proposal included a cross-heading generalisation probe (train on heading $A$, test on opposite heading). Our implementation returned ``insufficient samples'' sentinels at our probe sizes; not in our results.
 
-\section{Probing details (Layer 0 sensor branch and MLP probe)}
-\label{app:probe-details}
+\noindent\textbf{LSTM Layer~0 sensor branch}\quad The non-visual sensor stack (goal-in-start-frame, GPS, compass, close-to-goal scalar, prev-action) projects each sensor to 32-d, concatenates them with the visual encoder's flattened output, and feeds the result as the LSTM's Layer~0 input. The GPS embedding therefore enters the LSTM via this concatenation; this explains why Figure~\ref{fig:magnitude}c shows linearly-decodable GPS at Layer~0 even for conditions whose visual encoder discards GPS entirely. The full per-layer breakdown (linear $R^2$ at $\mathbf{h}_0, \mathbf{h}_1, \mathbf{h}_2$ and at the cell states $\mathbf{c}_0, \mathbf{c}_1, \mathbf{c}_2$) is in Figure~\ref{fig:supp_extra_states}: Layer~0 carries GPS for every condition; Layer~1 dips for everyone; Layer~2 separates blind/coarse from foveated/uniform; cell states do not carry the GPS code as cleanly as hidden states. The headline ``top-layer linearly-decodable GPS'' claim is therefore specifically about $\mathbf{h}_2$, not the cell pathway.
 
-\emph{LSTM Layer 0 sensor branch.} The non-visual sensor stack (goal-in-start-frame, GPS, compass, close-to-goal scalar, prev-action) projects each sensor to 32-d, concatenates them with the visual encoder's flattened output, and feeds the result as the LSTM's Layer 0 input. The GPS embedding therefore enters the LSTM via this concatenation; this explains why Figure~\ref{fig:magnitude}c shows linearly-decodable GPS at Layer 0 even for conditions whose visual encoder discards GPS entirely.
-
-\emph{MLP probe details.} For each condition we fit a 2-layer MLP (hidden dim 256, ReLU, $L_2$ weight decay $10^{-4}$) on the same top-layer hidden states and GPS labels as the linear Ridge probe, with the same 5-fold episode-level CV. Top-layer recovery: foveated $R^2 = 0.51$, uniform $0.55$ (vs.\ Ridge's chance R²). The MLP probe alone cannot disentangle ``non-linear position code'' from ``MLP regressing through position-correlated features (wall distance, scene identifiers, episode-phase markers)''; the log-polar foveation control (Appendix~\ref{app:scaling}) targets the encoder-spatial-output axis at one intermediate point.
+\noindent\textbf{Non-linear (MLP) probe details}\quad For each condition we fit a 2-layer MLP (hidden dim 256, ReLU, $L_2$ weight decay $10^{-4}$) on the same top-layer hidden states and GPS labels as the linear Ridge probe, with the same 5-fold episode-level CV. Top-layer recovery: foveated $R^2 = 0.51$, uniform $0.55$ (vs.\ Ridge's chance $R^2$). The MLP probe alone cannot disentangle ``non-linear position code'' from ``MLP regressing through position-correlated features (wall distance, scene identifiers, episode-phase markers)''; the log-polar foveation control (Appendix~\ref{app:scaling}) targets that question at one intermediate point.
 
 \section{Alternative-account rebuttals (full)}
 \label{app:alt-accounts}
 
-\emph{Task-competence differences.} All conditions solve PointGoal at $93$--$99\%$ success (Table~\ref{tab:summary}); the encoded-content gap cannot be attributed to navigation skill.
+\emph{Task-competence differences.} All conditions solve PointGoal at $93$--$99\%$ success (Table~\ref{tab:summary}); training curves (Figure~\ref{fig:training_curves}) confirm that all five conditions converge behaviourally before the probing window. The encoded-content gap cannot be attributed to navigation skill.
 
-\emph{Probe-capacity / probe-fitting artefacts.} DtG decodes robustly across all four conditions ($R^2 \geq 0.81$), and the real-vs-permuted-label probe gap (Hewitt--Liang selectivity) tracks GPS $R^2$; the chance-level rich-encoder GPS $R^2$ is therefore a hidden-state property, not a probe artefact.
+\emph{Probe-capacity / probe-fitting artefacts.} A direct test: distance-to-goal (DtG) decodes robustly across all four conditions ($R^2 \geq 0.81$; Figure~\ref{fig:supp_goal_vec}) while the goal-direction component is at chance everywhere (PointGoal provides the goal vector as a per-step input, so the policy has no incentive to re-encode it). The linear probe is therefore capable of fitting position-correlated structure when it exists; the chance-level rich-encoder GPS $R^2$ is a hidden-state property, not a probe artefact. The real-vs-permuted-label gap (Hewitt--Liang selectivity) likewise tracks GPS $R^2$.
 
 \emph{Sample-size / trajectory-distribution artefacts.} CV $\sigma$ spans come from the same 500-episode pool with $\sim 100$--$400$-step rollouts under identical deterministic evaluation; the protocol confound that haunted an earlier draft is documented and retired in Appendix~\ref{app:probing-details}.
 
-\emph{Linear-probe artefacts.} Two complementary checks. \emph{(a)~Behavioural:} the memory-transplant intervention goes outside the probe framework and reproduces the bottleneck-vs-rich-encoder ordering; the $5\times 5$ matrix's asymmetry adds structure no linear-similarity measure can read. \emph{(b)~Non-linear probe:} a 2-layer MLP recovers $R^2 \in [0.51, 0.73]$ from rich-encoder top-layer states (Appendix~\ref{app:probe-details}). H1 is therefore specifically about \emph{linear} top-layer readability --- what the linear DD-PPO action head can consume --- not GPS absence.
+\emph{Linear-probe artefacts.} Three complementary checks. \emph{(a)~Behavioural:} the memory-transplant intervention goes outside the probe framework and reproduces the bottleneck-vs-rich-encoder ordering; the $5\times 5$ matrix's asymmetry adds structure no linear-similarity measure can read. \emph{(b)~Non-linear (MLP) probe:} a 2-layer MLP recovers $R^2 \in [0.51, 0.73]$ from rich-encoder top-layer states (Appendix~\ref{app:probing-details}). \emph{(c)~Non-linear similarity (t-SNE).} Beyond linear similarity (CKA $< 10^{-4}$ off-diagonal, Figure~\ref{fig:supp_cka}), a non-linear t-SNE embedding (Figure~\ref{fig:supp_tsne}) also separates the four conditions with 1-NN purity $1.000$ vs.\ chance $0.20$ --- the format divergence is not an artefact of linear-similarity measures. H1 is therefore specifically about \emph{linear} top-layer readability --- what the linear DD-PPO action head can consume --- not GPS absence.
 
 
-\section{Supplementary visualisations}
-\label{app:supp_figs}
+\section{Magnitude: corroborating diagnostics}
+\label{app:magnitude-detail}
+
+The main-text Figure~\ref{fig:magnitude} (§\ref{sec:h1}) summarises the magnitude story across three views: cross-condition $R^2$, training-trajectory dynamics, and predictive horizon. This appendix collects the corroborating diagnostics referenced from §\ref{sec:h1}: the composite of cross-environment generalisation / step-binned readability / pipeline view / Skaggs information / excursion forgetting (Figure~\ref{fig:magnitude_appendix}); the per-LSTM-layer breakdown of where the GPS code lives (Figure~\ref{fig:supp_extra_states}); a single-fit companion check (Figure~\ref{fig:supp_layerwise_mp3d}); the GPS+compass version of the substitution-dynamics curves (Figure~\ref{fig:substitution_dynamics}); and the nat-scale information-theoretic capacity estimate (Figure~\ref{fig:mine_capacity}, §\ref{app:mine}).
 
 \begin{figure}[!t]
 \centering
-\begin{minipage}{0.52\linewidth}\centering
-\includegraphics[width=\linewidth]{fig/appfig7_training_curves.pdf}\\
-{\footnotesize (a) Training curves (TensorBoard event-file scalars). All three sighted conditions converge to SPL $0.82$--$0.85$ and success $>97\%$ by $\sim$100M frames; blind converges to SPL $\sim$0.50 over a longer horizon.}
+\includegraphics[width=\linewidth]{fig/fig2_h1_mega.pdf}\\[6pt]
+\begin{minipage}[c]{0.56\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/fig_place_cells.pdf}\\[-2pt]
+  {\footnotesize\textbf{(d) Skaggs spatial information per unit}}
 \end{minipage}\hfill
-\begin{minipage}{0.44\linewidth}\centering
-\includegraphics[width=\linewidth]{fig/appfig7_h2_hidden_embedding_tsne.pdf}\\
-{\footnotesize (b) t-SNE projection of top-layer LSTM hidden states (deterministic-rollout probes), pooled across all four conditions (perplexity 30). The four conditions occupy non-overlapping regions of the 2-D embedding --- a visual confirmation of the near-zero CKA result (§\ref{sec:h2}).}
+\begin{minipage}[c]{0.42\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/appfig_wjf_excursion.pdf}\\[-2pt]
+  {\footnotesize\textbf{(e) Excursion forgetting}}
 \end{minipage}
-\caption{Supplementary visualisations referenced from the main text.}
-\label{fig:supp_figs}
+\caption{\textbf{Magnitude: corroborating diagnostics (referenced from §\ref{sec:h1} and Table~\ref{tab:summary}).} \emph{(a)}~Top-layer GPS $R^2$ on Gibson and held-out MP3D (5-fold CV, deterministic rollouts, $300$ ep/cond; lighter bars = MP3D; the MP3D shift is single-seed and awaits replication). \emph{(b)}~GPS $R^2$ binned by step-in-episode ($7$ log-spaced bins): rich-encoder readability holds in the mid-episode window then collapses in the long tail. \emph{(c)}~Pipeline view: GPS $R^2$ along Encoder $\to$ L0 (LSTM input) $\to$ L1 $\to$ L2 (single-fit; the 5-fold CV version is condensed in main Figure~\ref{fig:magnitude}). Readability is comparable across conditions at the LSTM input and only diverges at L2; the shaded band at L2 is the 2-layer MLP probe recovery range. \emph{(d)}~Per-unit Skaggs spatial information~\citep{skaggs1996theta} is condition-flat at the headline metric; the per-unit regression analysis in §\ref{sec:h1} (trajectory-phase vs.\ raw-position $R^2$) is the more diagnostic reading. \emph{(e)}~Mid-episode excursion forgetting (25-step random-action perturbation; per-segment scale-invariant MAE): blind fragments most, consistent with the strongest reliance on the integrated action stream.}
+\label{fig:magnitude_appendix}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{fig/appfig10_extra_states.pdf}
+\caption{\textbf{Where GPS lives along the LSTM stack: per-layer linear probe $R^2$.} 5-fold CV linear probe at each hidden state $\mathbf{h}_\ell$ and cell state $\mathbf{c}_\ell$, $\ell \in \{0, 1, 2\}$, for all 4 conditions. \emph{Left:} GPS. \emph{Right:} compass. Three patterns. \emph{(i)~At $\mathbf{h}_0$ all conditions decode GPS at $R^2 \sim 0.95$} --- the GPS sensor embedding enters the LSTM concat at Layer~0 regardless of vision condition (Appendix~\ref{app:probing-details}). \emph{(ii)~$\mathbf{h}_1$ dips for every condition} including blind ($R^2 = +0.22$); information passes through the middle layer with reduced linear decodability for everyone, then partly recovers at $\mathbf{h}_2$ for the bottleneck conditions. \emph{(iii)~Cell states $\mathbf{c}_\ell$ do \emph{not} carry the GPS code as cleanly as $\mathbf{h}_\ell$}: $\mathbf{c}_1$ is at chance/negative for every condition; $\mathbf{c}_2$ is positive only for blind ($R^2 = +0.57$). The headline ``top-layer linearly-decodable GPS'' result in §\ref{sec:h1} is therefore specifically about $\mathbf{h}_2$ (the policy readout), not the cell-state pathway. Same single-seed limitation as the main paper.}
+\label{fig:supp_extra_states}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\begin{minipage}{0.48\linewidth}\centering
+\includegraphics[width=\linewidth]{fig/appfig13_layerwise_decay.pdf}\\
+{\footnotesize (a) Per-LSTM-layer GPS / compass probe $R^2$ across all three layers, all four conditions (single train/test fit; the 5-fold CV mean reported in Table~\ref{tab:summary} matches qualitatively but with different magnitudes for rich-encoder conditions). Compass tells the same story as GPS at smaller magnitude.}
+\end{minipage}\hfill
+\begin{minipage}{0.48\linewidth}\centering
+\includegraphics[width=\linewidth]{fig/appfig13_mp3d_generalization.pdf}\\
+{\footnotesize (b) Companion to Figure~\ref{fig:magnitude_appendix}a (which uses 5-fold CV mean): single train/test fit on the same checkpoints; the qualitative bottleneck-vs-rich-encoder partition is the same.}
+\end{minipage}
+\caption{\textbf{Single-fit per-layer and MP3D companion checks.} Companion to the headline 5-fold CV results: a single train/test split reproduces the bottleneck-vs-rich-encoder partition reported in Table~\ref{tab:summary}, ruling out CV-fold-induced artefacts. The MP3D panel re-evaluates the same checkpoints on a held-out scene distribution; the partition still holds.}
+\label{fig:supp_layerwise_mp3d}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{fig/fig3_substitution_dynamics.pdf}
+\caption{\textbf{Cross-training substitution dynamics: GPS and compass (companion to main Figure~\ref{fig:magnitude}b).} Probe $R^2$ across training checkpoints, truncated at $250$M frames. \emph{(a)} Top-layer GPS $R^2$ (the source panel for Figure~\ref{fig:magnitude}b). \emph{(b)} Top-layer compass $R^2$ tells the same story at smaller magnitude --- substitution applies to spatial codes broadly, not just position.}
+\label{fig:substitution_dynamics}
+\end{figure}
+
+\subsection{Mutual-information capacity accounting (MINE)}
+\label{app:mine}
+
+To anchor the information-allocation finding in §\ref{sec:h1} on a nat-scale rather than the bounded, model-dependent $R^2$ scale of probes, we estimate $I(\mathbf{h}_2; \text{pos})$ per condition using the Mutual Information Neural Estimator~\citep{belghazi2018mine}. MINE exploits the Donsker--Varadhan dual representation of the KL divergence:
+\[
+I(X; Z) \geq \sup_T \, \mathbb{E}_{P_{XZ}}[T(x, z)] - \log \mathbb{E}_{P_X \otimes P_Z}[\exp T(x, z)],
+\]
+with $T_{\theta}: \mathcal{X} \times \mathcal{Z} \to \mathbb{R}$ a neural network optimised by gradient ascent on the right-hand side. Joint samples $(x_i, z_i)$ come from paired $(\mathbf{h}_2, \text{pos})$ along episodes; marginal samples are obtained by within-batch shuffling of $z$. We use a 3-layer MLP with $256$ hidden units, ELU activations, batch size $512$, learning rate $10^{-4}$, $4{,}000$ training steps per condition, and the bias-corrected gradient (eq.~12 of \citealt{belghazi2018mine}) to mitigate the SGD bias of the log-denominator estimate.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{fig/fig_mine_capacity.pdf}
+\caption{\textbf{MINE capacity accounting.} \emph{(a)} MINE training curves: $I_\theta(\mathbf{h}_2; \text{pos})$ in nats vs.\ optimisation step, per condition. All curves converge by $\sim 3{,}000$ steps. \emph{(b)} Final $I(\mathbf{h}_2; \text{pos})$ in bits per condition (mean $\pm$ std across $3$ MINE seeds): Blind $6.01 \pm 0.06$, Coarse $4.55 \pm 0.03$, Foveated $4.30 \pm 0.04$, Foveated-logpolar $4.66 \pm 0.04$, Uniform $4.47 \pm 0.06$. Total mutual information decreases with encoder bandwidth, but the decrease is gentle ($\approx 1.3\times$ blind/uniform) compared to the linear-probe $R^2$ collapse (effectively factor-of-zero for uniform). The within-sighted ordering (foveated $<$ uniform $<$ coarse $<$ foveated-logpolar) is reproducible across MINE seeds (per-cond std $\leq 0.06$ bits, much smaller than the within-sighted gap $\approx 0.36$); the dominant signal is the bottleneck-vs-rich-encoder gap (Blind $6.01$ vs sighted mean $4.49$). The interpretation: rich-encoder conditions retain substantial position information in $\mathbf{h}_2$, but it is encoded non-linearly and partly offloaded to the encoder route, paralleling the LOSO scene-invariance result (Figure~\ref{fig:loso_cv}).}
+\label{fig:mine_capacity}
+\end{figure}
+
+
+\section{Spatial Format: corroborating diagnostics}
+\label{app:format-spatial-detail}
+
+The main-text Figure~\ref{fig:format_axis} (§\ref{sec:format-spatial}) shows three convergent measures of format divergence. This appendix collects: the full transplant matrix together with cross-condition probe transfer and subspace evolution (Figure~\ref{fig:format_appendix}); a linear-similarity null and a non-linear similarity check (Figures~\ref{fig:supp_cka},~\ref{fig:supp_tsne}); the geometric structure of the position code within $\mathbf{h}_2$ (Section~\ref{app:cap_allocation_extras}); a population-coding analysis (Figure~\ref{fig:supp_pop_coding}); the eigenspectrum power-law per condition with associated geometric scalars (Section~\ref{app:eigenspectrum}); and a causal subspace ablation (Section~\ref{app:scrubbing}).
+
+\begin{figure}[!t]
+\centering
+\begin{minipage}[c]{\linewidth}\centering
+  \includegraphics[width=0.7\linewidth]{fig/fig4_transplant_5x5.pdf}\\[-2pt]
+  {\footnotesize\textbf{(a) $5{\times}5$ memory-transplant matrix (full)}}
+\end{minipage}\\[6pt]
+\begin{minipage}[c]{0.49\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/fig4_h2_probe_transfer.pdf}\\[-2pt]
+  {\footnotesize\textbf{(b) Cross-condition probe transfer}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.49\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/fig_subspace_evolution.pdf}\\[-2pt]
+  {\footnotesize\textbf{(c) Subspace evolution over training}}
+\end{minipage}
+\caption{\textbf{Spatial Format: corroborating diagnostics (referenced from §\ref{sec:format-spatial}).} \emph{(a)}~The full $5{\times}5$ memory-transplant matrix at midpoint $t{=}30$ (the per-recipient mean enters main Figure~\ref{fig:format_axis}b as the ``transplant cost'' axis); the matrix shows the same direction-asymmetry condensed there. \emph{(b)}~Cross-condition probe transfer matrix (train on row, test on column): off-diagonal $R^2$ is catastrophically negative ($-3.5{\times}10^2$ to $-3.5{\times}10^4$ unclipped; clipped to $[-1, 1]$ for visualisation) --- the position-axes encoded across conditions are jointly incompatible at the readout level, even when the same scenes are visited and the same task is solved. \emph{(c)}~Subspace divergence is established early: principal angles are already near-orthogonal at the earliest probed checkpoint ($\sim 50$M frames) and stay so throughout, indicating the structural separation is laid down well before convergence.}
+\label{fig:format_appendix}
 \end{figure}
 
 \begin{figure}[!t]
@@ -420,20 +495,6 @@ The log-polar control (Appendix~\ref{app:scaling}) applies a differentiable log-
 \includegraphics[width=0.55\linewidth]{fig/appfig8_h2_cka_heatmap.pdf}
 \caption{Unaligned linear CKA~\citep{kornblith2019cka} between top-layer LSTM hidden states ($n{=}95{,}640$ steps per condition under deterministic-rollout probes); every off-diagonal is below $10^{-4}$. Within-condition split-half CKA $\approx 1$ confirms the near-zero off-diagonals are not estimator noise. Pairs that look identical here differ markedly under transplant and probe-transfer (Figure~\ref{fig:h2}); CKA is the least informative of the three H2 measures because it cannot read the asymmetric structure that transplant and probe-transfer show.}
 \label{fig:supp_cka}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.95\linewidth]{fig/appfig9_transplant_sweep.pdf}
-\caption{Memory-transplant midpoint sweep on two representative donor$\to$recipient pairs (foveated$\to$uniform, foveated$\to$blind) across midpoints $\{0, 15, 30, 60, 90, 200, 400, 800\}$ time-steps ($n{=}100$--$150$ episodes/cell). The full $5{\times}5$ matrix in Figure~\ref{fig:h2} (right) is at midpoint $t{=}30$. \emph{(a):} full SPL per condition --- baseline / self / cross. The $t{=}0$ self/cross collapse to a protocol-noise floor (so the diagonal in Figure~\ref{fig:h2} is correctly read as rollout-divergence noise, not condition mismatch); SPL decays for all conditions at $t \geq 200$ because by then most successful episodes have already terminated, leaving only long atypical episodes. \emph{(b):} cross-minus-self isolates condition-mismatch alone. The gap peaks in the $t \in [30, 90]$ window --- where the agent has integrated history but is not yet committed to a trajectory --- and decays toward $0$ at $t \geq 400$. The asymmetry pattern reported at $t{=}30$ in Figure~\ref{fig:h2} is therefore neither a $t{=}30$-specific artefact nor a late-midpoint inflation.}
-\label{fig:transplant_sweep_supp}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{fig/appfig10_extra_states.pdf}
-\caption{Linear probe ($R^2$, 5-fold CV) at each LSTM hidden state $\mathbf{h}_\ell$ and cell state $\mathbf{c}_\ell$, $\ell \in \{0, 1, 2\}$, for all 4 conditions. \emph{Left:} GPS. \emph{Right:} compass. Three patterns. \emph{(i)~At $\mathbf{h}_0$ all conditions decode GPS at $R^2 \sim 0.95$} (the GPS sensor embedding enters the LSTM concat there, regardless of vision condition). \emph{(ii)~$\mathbf{h}_1$ dips for every condition} including blind ($R^2 = +0.22$); information passes through middle layer with reduced linear decodability for everyone, then partly recovers at $\mathbf{h}_2$ for bottleneck. \emph{(iii)~Cell states $\mathbf{c}_\ell$ do \emph{not} carry the GPS code as cleanly as $\mathbf{h}_\ell$}: $\mathbf{c}_1$ is at chance/negative for every condition; $\mathbf{c}_2$ is positive only for blind ($R^2 = +0.57$). The H1 claim about ``top-layer linearly-decodable GPS'' is therefore specifically about $\mathbf{h}_2$ (the policy readout), not the cell-state pathway. Same single-seed limitation as the main paper.}
-\label{fig:supp_extra_states}
 \end{figure}
 
 \begin{figure}[!t]
@@ -502,46 +563,6 @@ Uniform & $-1.08$ & $-1.46$ & $+0.42$ & $+0.31$ \\
 
 The MLP probe is essentially unaffected by scrubbing across all three conditions ($\Delta R^2 \in [-0.05, +0.11]$). The Ridge probe shows small drops for Blind (-$0.02$) and Coarse (-$0.10$), and a more-negative shift for Uniform (the absolute value increases due to the variance of negative $R^2$ estimates). Two interpretations: (i) the rank-$2$ subspace identified by Ridge is one of many redundant directions encoding position --- when removed, Ridge re-fits to a different direction in the remaining $510$ dims; (ii) MLP, having access to non-linear combinations of remaining dims, trivially recovers the position code from this redundant population. This is the population-coding-redundancy property familiar from biological place-cell systems~\citep{stringer2019high}: single-cell or low-rank ablation does not break the code because of high-dimensional distributed representation. Methodologically, single-direction scrubbing is too weak to causally localise position information in $\mathbf{h}_2$; higher-rank ablation, attribution-based pruning, or path-patching~\citep{heimersheim2024activation} would be next steps. Foveated is deferred to the $250$M re-probe.
 
-\subsection{Predictive horizon: does $\mathbf{h}_t$ encode future positions?}
-\label{app:predictive_horizon}
-
-Successor-representation theory~\citep{stachenfeld2017predictive,whittington2020tem} predicts that hippocampal place cells encode not just current position but a discounted future-occupancy code: place-cell firing at $s_t$ corresponds to expected visits to nearby states $s_{t+k}$. We test the analog claim for our recurrent state: does a linear or MLP probe from $\mathbf{h}_t$ recover \emph{future} positions $(x, y)_{t+k}$ for $k \in \{0, 1, 5, 10, 20, 50\}$?
-
-\begin{center}
-\begin{tabular}{l|cccccc}
-\toprule
- & $k=0$ & $k=1$ & $k=5$ & $k=10$ & $k=20$ & $k=50$ \\
-\midrule
-\multicolumn{7}{l}{\emph{Linear (Ridge $\alpha = 10$) $R^2$, all-episode pooling, episode-level 5-fold CV}} \\
-Blind             & $+0.94$ & $+0.94$ & $+0.94$ & $+0.92$ & $+0.90$ & $+0.79$ \\
-Coarse            & $+0.57$ & $+0.57$ & $+0.57$ & $+0.56$ & $+0.50$ & $+0.37$ \\
-Foveated          & $+0.06$ & $+0.06$ & $+0.08$ & $+0.13$ & $+0.19$ & $+0.06$ \\
-Foveated-logpolar & $+0.17$ & $+0.18$ & $+0.17$ & $+0.11$ & $-0.14$ & $-0.50$ \\
-Uniform           & $-4.31$ & $-4.32$ & $-4.32$ & $-4.26$ & $-4.39$ & $-10.14$ \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-Three observations. \emph{(i) Blind exhibits a long predictive horizon.} Linear $R^2$ from $\mathbf{h}_t$ to $(x, y)_{t+k}$ remains $\geq 0.90$ from $k=0$ to $k=20$ (only $0.04$-point drop), and $0.79$ at $k=50$. That is, the same linear projection that decodes \emph{current} position from $\mathbf{h}_t$ at $R^2 = 0.94$ also decodes positions $20$ steps in the future at $R^2 = 0.90$. This is a strong form of the predictive-map signature predicted by SR theory: $\mathbf{h}_t$ encodes future-state occupancy, not just current state. \emph{(ii) Coarse follows the same pattern at lower magnitude} (linear $R^2 \in [0.50, 0.57]$ across $k=0$--$20$, dropping to $+0.37$ at $k=50$). \emph{(iii) Rich-encoder conditions have no clear predictive horizon.} Foveated stays in $[0.06, 0.19]$ across $k=0$--$50$ with no monotonic decay --- the small positive values reflect probe-level noise rather than a sustained future-state code. Foveated-logpolar starts at $+0.17$ but turns negative by $k=20$. Uniform is already strongly negative at $k=0$ ($R^2 = -4.31$) and grows more negative. Rich-encoder $\mathbf{h}_t$ encodes neither current nor future position linearly --- consistent with our LOSO scene-invariance reading that rich-encoder position codes are scene-conditional and only non-linearly recoverable, but adds the temporal axis: even with non-linear flexibility, future positions are not encoded. The signature is asymmetric: bottleneck conditions encode $\mathbf{h}_t$ as a smoothly-varying integrated GPS code that linearly predicts upcoming positions; rich-encoder conditions encode $\mathbf{h}_t$ reactively to the current visual scene without temporal extrapolation.
-
-\noindent (See main Figure~\ref{fig:magnitude}c for the predictive-horizon panel; this appendix expands on its theoretical context.)
-
-\subsection{Mutual-information capacity accounting (MINE)}
-\label{app:mine}
-
-To anchor the information-allocation finding in §\ref{sec:h1} on a nat-scale rather than the bounded, model-dependent $R^2$ scale of probes, we estimate $I(\mathbf{h}_2; \text{pos})$ per condition using the Mutual Information Neural Estimator~\citep{belghazi2018mine}. MINE exploits the Donsker--Varadhan dual representation of the KL divergence:
-\[
-I(X; Z) \geq \sup_T \, \mathbb{E}_{P_{XZ}}[T(x, z)] - \log \mathbb{E}_{P_X \otimes P_Z}[\exp T(x, z)],
-\]
-with $T_{\theta}: \mathcal{X} \times \mathcal{Z} \to \mathbb{R}$ a neural network optimised by gradient ascent on the right-hand side. Joint samples $(x_i, z_i)$ come from paired $(\mathbf{h}_2, \text{pos})$ along episodes; marginal samples are obtained by within-batch shuffling of $z$. We use a 3-layer MLP with $256$ hidden units, ELU activations, batch size $512$, learning rate $10^{-4}$, $4{,}000$ training steps per condition, and the bias-corrected gradient (eq.~12 of \citealt{belghazi2018mine}) to mitigate the SGD bias of the log-denominator estimate.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{fig/fig_mine_capacity.pdf}
-\caption{\textbf{MINE capacity accounting.} \emph{(a)} MINE training curves: $I_\theta(\mathbf{h}_2; \text{pos})$ in nats vs.\ optimisation step, per condition. All curves converge by $\sim 3{,}000$ steps. \emph{(b)} Final $I(\mathbf{h}_2; \text{pos})$ in bits per condition (mean $\pm$ std across $3$ MINE seeds): Blind $6.01 \pm 0.06$, Coarse $4.55 \pm 0.03$, Foveated $4.30 \pm 0.04$, Foveated-logpolar $4.66 \pm 0.04$, Uniform $4.47 \pm 0.06$. Total mutual information decreases with encoder bandwidth, but the decrease is gentle ($\approx 1.3\times$ blind/uniform) compared to the linear-probe $R^2$ collapse (effectively factor-of-zero for uniform). The within-sighted ordering (foveated $<$ uniform $<$ coarse $<$ foveated-logpolar) is reproducible across MINE seeds (per-cond std $\leq 0.06$ bits, much smaller than the within-sighted gap $\approx 0.36$); the dominant signal is the bottleneck-vs-rich-encoder gap (Blind $6.01$ vs sighted mean $4.49$). The interpretation: rich-encoder conditions retain substantial position information in $\mathbf{h}_2$, but it is encoded non-linearly and partly offloaded to the encoder route, paralleling the LOSO scene-invariance result (Figure~\ref{fig:loso_cv}).}
-\label{fig:mine_capacity}
-\end{figure}
-
 \subsection{Eigenspectrum power-law per condition}
 \label{app:eigenspectrum}
 
@@ -589,35 +610,70 @@ Uniform            & $3.09$ & $2.32$ & $2.17$ & $1.92$ \\
 \label{fig:eigenspectrum}
 \end{figure}
 
+\section{Temporal Format: corroborating diagnostics}
+\label{app:format-temporal-detail}
+
+The main-text §\ref{sec:tgm} reports the temporal-generalisation matrix and intrinsic-timescale analyses; this appendix expands on the predictive-horizon test (referenced from §\ref{sec:tgm} and Figure~\ref{fig:magnitude}c) and grounds it in successor-representation theory.
+
+\subsection{Predictive horizon: does $\mathbf{h}_t$ encode future positions?}
+\label{app:predictive_horizon}
+
+Successor-representation theory~\citep{stachenfeld2017predictive,whittington2020tem} predicts that hippocampal place cells encode not just current position but a discounted future-occupancy code: place-cell firing at $s_t$ corresponds to expected visits to nearby states $s_{t+k}$. We test the analog claim for our recurrent state: does a linear probe from $\mathbf{h}_t$ recover \emph{future} positions $(x, y)_{t+k}$ for $k \in \{0, 1, 5, 10, 20, 50\}$?
+
+\begin{center}
+\begin{tabular}{l|cccccc}
+\toprule
+ & $k=0$ & $k=1$ & $k=5$ & $k=10$ & $k=20$ & $k=50$ \\
+\midrule
+\multicolumn{7}{l}{\emph{Linear (Ridge $\alpha = 10$) $R^2$, all-episode pooling, episode-level 5-fold CV}} \\
+Blind             & $+0.94$ & $+0.94$ & $+0.94$ & $+0.92$ & $+0.90$ & $+0.79$ \\
+Coarse            & $+0.57$ & $+0.57$ & $+0.57$ & $+0.56$ & $+0.50$ & $+0.37$ \\
+Foveated          & $+0.06$ & $+0.06$ & $+0.08$ & $+0.13$ & $+0.19$ & $+0.06$ \\
+Foveated-logpolar & $+0.17$ & $+0.18$ & $+0.17$ & $+0.11$ & $-0.14$ & $-0.50$ \\
+Uniform           & $-4.31$ & $-4.32$ & $-4.32$ & $-4.26$ & $-4.39$ & $-10.14$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three observations. \emph{(i) Blind exhibits a long predictive horizon.} Linear $R^2$ from $\mathbf{h}_t$ to $(x, y)_{t+k}$ remains $\geq 0.90$ from $k=0$ to $k=20$ (only $0.04$-point drop), and $0.79$ at $k=50$. The same linear projection that decodes \emph{current} position from $\mathbf{h}_t$ at $R^2 = 0.94$ also decodes positions $20$ steps in the future at $R^2 = 0.90$. This is a strong form of the predictive-map signature predicted by SR theory: $\mathbf{h}_t$ encodes future-state occupancy, not just current state. \emph{(ii) Coarse follows the same pattern at lower magnitude} (linear $R^2 \in [0.50, 0.57]$ across $k=0$--$20$, dropping to $+0.37$ at $k=50$). \emph{(iii) Rich-encoder conditions have no clear predictive horizon.} Foveated stays in $[0.06, 0.19]$ across $k=0$--$50$ with no monotonic decay --- the small positive values reflect probe-level noise rather than a sustained future-state code. Foveated-logpolar starts at $+0.17$ but turns negative by $k=20$. Uniform is already strongly negative at $k=0$ ($R^2 = -4.31$) and grows more negative. Rich-encoder $\mathbf{h}_t$ encodes neither current nor future position linearly --- consistent with the LOSO scene-invariance reading in §\ref{sec:format-spatial}, but adding the temporal aspect: even with non-linear flexibility, future positions are not encoded. The signature is asymmetric: bottleneck conditions encode $\mathbf{h}_t$ as a smoothly-varying integrated GPS code that linearly predicts upcoming positions; rich-encoder conditions encode $\mathbf{h}_t$ reactively to the current visual scene without temporal extrapolation.
+
+
+\section{Consumption: corroborating diagnostics}
+\label{app:consumption-detail}
+
+The main-text §\ref{sec:dissociation} reports the persistent-memory failure-mode test; this appendix shows the canonical paired-episode trajectory per condition (Figure~\ref{fig:shortcut_paired_traj}) and the full $4{\times}4$ catalog spanning the per-condition margin distribution (Figure~\ref{fig:shortcut_catalog}).
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{fig/fig5_shortcut_canonical.pdf}
+\caption{\textbf{Persistent-memory failure modes (referenced from §\ref{sec:dissociation}): canonical paired-episode case per condition.} Extended catalog: Figure~\ref{fig:shortcut_catalog}. Aggregate per-condition margin $=$ avg dist(persistent end $\to$ old goal) $-$ avg dist(persistent end $\to$ new goal) over same-floor failures (reset SPL $>0.5$, persistent SPL $<0.2$, persistent steps $\geq 30$, $|\Delta y_\text{goal}| < 0.5$m): Blind $-0.38$m ($n{=}27$), Coarse $-0.57$m ($n{=}35$), Foveated $-0.59$m ($n{=}16$), \textbf{Uniform $+1.83$m ($n{=}46$, closer to OLD goal)}. Single seed.}
+\label{fig:shortcut_paired_traj}
+\end{figure}
+
 \subsection{Persistent-memory failure-mode catalog}
 \label{app:shortcut-catalog}
 
-The main-text Figure~\ref{fig:shortcut_paired_traj} shows one canonical paired-episode case per condition; the full $4{\times}4$ catalog below (Figure~\ref{fig:shortcut_catalog}) shows four cases per condition spanning the per-condition margin range (most-tries-new $\to$ most-locks-onto-old).  All cases share the selection criterion: reset SPL $> 0.5$, persistent SPL $< 0.2$, persistent steps $\geq 30$, $|\Delta y_\text{goal}| < 0.5$\,m (same-floor old vs.\ new goal). Within each row, panels are ordered by margin (column 1 = most-negative = closer to NEW goal direction; column 4 = most-positive = closer to OLD goal direction).
+The main-text Figure~\ref{fig:shortcut_paired_traj} shows one canonical paired-episode case per condition; the full $4{\times}4$ catalog below (Figure~\ref{fig:shortcut_catalog}) shows four cases per condition spanning the per-condition margin range (most-tries-new $\to$ most-locks-onto-old). All cases share the selection criterion: reset SPL $> 0.5$, persistent SPL $< 0.2$, persistent steps $\geq 30$, $|\Delta y_\text{goal}| < 0.5$\,m (same-floor old vs.\ new goal). Within each row, panels are ordered by margin (column 1 = most-negative = closer to NEW goal direction; column 4 = most-positive = closer to OLD goal direction).
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{fig/appfig_shortcut_catalog.pdf}
-\caption{Persistent-memory failure-mode catalog: 4 cases per condition spanning the per-condition margin distribution. Each panel: reset trajectory (solid, condition colour) reaches the new goal; persistent trajectory (dashed) demonstrates the failure. The cross-condition pattern: bottleneck conditions (Blind, Coarse) cluster at ``tries-new'' (most cases attempt new goal direction but fail to reach); Uniform clusters at ``locks-onto-old'' (most cases stay near previous-episode goal); Foveated is mixed with no dominant mode. Single seed per condition (cogsci modelling convention; see §\ref{sec:limitations}).}
+\caption{\textbf{Persistent-memory failure-mode catalog: 4 cases per condition spanning the per-condition margin distribution.} Each panel: reset trajectory (solid, condition colour) reaches the new goal; persistent trajectory (dashed) demonstrates the failure. The cross-condition pattern: bottleneck conditions (Blind, Coarse) cluster at ``tries-new'' (most cases attempt new goal direction but fail to reach); Uniform clusters at ``locks-onto-old'' (most cases stay near previous-episode goal); Foveated is mixed with no dominant mode. Single seed per condition (cogsci modelling convention; see §\ref{sec:limitations}).}
 \label{fig:shortcut_catalog}
 \end{figure}
 
+
+\section{Causal intervention: corroborating diagnostics}
+\label{app:causal-detail}
+
+The main-text §\ref{sec:causal-intervention} reports the $5{\times}5$ memory-transplant matrix at a fixed midpoint $t{=}30$ (the full matrix appears as panel~(a) of Figure~\ref{fig:format_appendix}). A natural concern is whether the asymmetry pattern is specific to that midpoint. The midpoint sweep below addresses this: across midpoints $\{0, 15, 30, 60, 90, 200, 400, 800\}$ time-steps, the bottleneck-vs-rich-encoder gap appears for $t \in [30, 90]$ and decays toward zero by $t \geq 400$, with a protocol-noise floor at $t{=}0$ where the donor's hidden state has had no time to integrate.
+
 \begin{figure}[!t]
 \centering
-\begin{minipage}{0.48\linewidth}\centering
-\includegraphics[width=\linewidth]{fig/appfig13_layerwise_decay.pdf}\\
-{\footnotesize (a) Per-LSTM-layer GPS / compass probe $R^2$ across all three layers, all four conditions (single train/test fit; the 5-fold CV mean reported in Table~\ref{tab:summary} matches qualitatively but with different magnitudes for rich-encoder conditions). Compass tells the same story as GPS at smaller magnitude.}
-\end{minipage}\hfill
-\begin{minipage}{0.48\linewidth}\centering
-\includegraphics[width=\linewidth]{fig/appfig13_mp3d_generalization.pdf}\\
-{\footnotesize (b) Companion to Figure~\ref{fig:magnitude_appendix}a (which uses 5-fold CV mean): single train/test fit on the same checkpoints; the qualitative bottleneck-vs-rich-encoder partition is the same.}
-\end{minipage}
-\caption{Per-layer and MP3D companion figures (referenced from §\ref{sec:h1}).}
-\label{fig:supp_layerwise_mp3d}
+\includegraphics[width=0.95\linewidth]{fig/appfig9_transplant_sweep.pdf}
+\caption{\textbf{Memory-transplant midpoint sweep (referenced from §\ref{sec:causal-intervention}).} Two representative donor$\to$recipient pairs (foveated$\to$uniform, foveated$\to$blind) across midpoints $\{0, 15, 30, 60, 90, 200, 400, 800\}$ time-steps ($n{=}100$--$150$ episodes/cell). The full $5{\times}5$ matrix in main Figure~\ref{fig:format_axis} is the $t{=}30$ slice. \emph{(a):} full SPL per condition --- baseline / self / cross. The $t{=}0$ self/cross collapse to a protocol-noise floor (the diagonal in the main-text matrix is correctly read as rollout-divergence noise, not condition mismatch); SPL decays for all conditions at $t \geq 200$ because by then most successful episodes have already terminated, leaving only long atypical episodes. \emph{(b):} cross-minus-self isolates condition-mismatch alone. The gap peaks in the $t \in [30, 90]$ window --- where the agent has integrated history but is not yet committed to a trajectory --- and decays toward $0$ at $t \geq 400$. The asymmetry pattern reported at $t{=}30$ is therefore neither a $t{=}30$-specific artefact nor a late-midpoint inflation.}
+\label{fig:transplant_sweep_supp}
 \end{figure}
-
-% fig:magnitude_appendix now lives in the consolidated fig:magnitude_appendix
-% (\ref{app:magnitude-detail}); the standalone version was removed during
-% the appendix consolidation pass.
 
 
 \section{Foveation experiments: status and design}
@@ -651,65 +707,7 @@ Encoder feature-map probe                                 & where position infor
 \section{Encoder-capacity scaling: log-polar foveation control}
 \label{app:scaling}
 
-A direct test of the H1 mechanism (encoder spatial-feature variety per step drives top-layer LSTM spatial encoding) is to vary that variable continuously across our existing 4-condition spectrum. The most diagnostic single point is the \emph{log-polar foveation} control: log-polar resampling onto a $64{\times}64$ retinal grid produces an encoder spatial output of $\sim 2{\times}2$, intermediate between coarse's $1{\times}1$ and uniform's $4{\times}4$ (verified by direct forward pass through the trained encoder). Only the visual front-end differs from the foveated condition; LSTM, sensors, and training pipeline are identical. \textbf{Preregistered prediction:} if the H1 mechanism is the simple ``encoder spatial-output dimensionality'' reading, log-polar should produce LSTM GPS $R^2$ in the bottleneck regime (i.e.\ closer to coarse's $+0.58$ than to uniform's $\approx 0$); if log-polar matches uniform on H1 instead ($R^2 \approx 0$), the encoder-spatial-output mechanism story needs reframing toward channel information, encoder spatial-feature \emph{variety} per step, or another axis. \textbf{Result (converged 250M frames).} The log-polar agent at convergence (ckpt-49, $\sim 245$M frames) yields top-layer GPS $R^2 = -0.029 \pm 0.759$ (5-fold CV, $n=500$ episodes) --- \emph{not} in the bottleneck regime, but indistinguishable from foveated ($R^2 = +0.178 \pm 0.659$) and clearly far from coarse ($R^2 = +0.582 \pm 0.099$). The simple ``encoder spatial-output dimensionality'' framing is therefore \emph{not} sufficient to explain the H1 phenomenon: log-polar's $2{\times}2$ output does not place it in the bottleneck regime. We read the result as supporting the alternative ``encoder spatial-feature \emph{variety} per step'' framing: log-polar's radial sampling preserves rich gaze-centred feature variety per timestep even at low spatial output, so the policy can still source position from the visual route and the LSTM does not commit capacity to the integrated code. Substitution-dynamics analysis (Figure~\ref{fig:magnitude}b) corroborates this reading: log-polar starts at $R^2 = +0.92$ at $\sim 50$M frames (matching all 4 main conditions' early high $R^2$), then decays along the rich-encoder trajectory rather than plateauing in the bottleneck range. A finer multi-point input-resolution sweep ($K \in \{32, 64, 96, 128, 192\}$) is reported as future work; its training cost (multiple from-scratch DD-PPO runs at $\sim 250$M frames each) was outside this submission's compute window.
-
-
-\section{Additional representational and behavioural diagnostics}
-\label{app:extra-diagnostics}
-
-This appendix collects companion figures that extend results reported numerically in the main text. They are not load-bearing for any main-text claim and may be skipped on first reading.
-
-\subsection{Magnitude: corroborating diagnostics}
-\label{app:magnitude-detail}
-
-\noindent The main-text Figure~\ref{fig:magnitude} (§\ref{sec:h1}) summarises the magnitude story across three independent axes; this single composite figure collects the corroborating diagnostics referenced from that section in one place.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{fig/fig2_h1_mega.pdf}\\[6pt]
-\begin{minipage}[c]{0.56\linewidth}\centering
-  \includegraphics[width=\linewidth]{fig/fig_place_cells.pdf}\\[-2pt]
-  {\footnotesize\textbf{(d) Skaggs spatial information per unit}}
-\end{minipage}\hfill
-\begin{minipage}[c]{0.42\linewidth}\centering
-  \includegraphics[width=\linewidth]{fig/appfig_wjf_excursion.pdf}\\[-2pt]
-  {\footnotesize\textbf{(e) Excursion forgetting}}
-\end{minipage}
-\caption{\textbf{Magnitude axis: corroborating diagnostics (referenced from §\ref{sec:h1} and Table~\ref{tab:summary}).} \emph{(a)}~Top-layer GPS $R^2$ on Gibson and held-out MP3D (5-fold CV, deterministic rollouts, $300$ ep/cond; lighter bars = MP3D; the MP3D shift is single-seed and awaits replication). \emph{(b)}~GPS $R^2$ binned by step-in-episode ($7$ log-spaced bins): rich-encoder readability holds in the mid-episode window then collapses in the long tail. \emph{(c)}~Pipeline view: GPS $R^2$ along Encoder $\to$ L0 (LSTM input) $\to$ L1 $\to$ L2 (single-fit; the 5-fold CV version is condensed in main Figure~\ref{fig:magnitude}). Readability is comparable across conditions at the LSTM input and only diverges at L2; the shaded band at L2 is the 2-layer MLP probe recovery range. \emph{(d)}~Per-unit Skaggs spatial information~\citep{skaggs1996theta} is condition-flat at the headline metric; the per-unit regression analysis in §\ref{sec:h1} (trajectory-phase vs.\ raw-position $R^2$) is the more diagnostic reading. \emph{(e)}~Mid-episode excursion forgetting (25-step random-action perturbation; per-segment scale-invariant MAE): blind fragments most, consistent with the strongest reliance on the integrated action stream.}
-\label{fig:magnitude_appendix}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{fig/fig3_substitution_dynamics.pdf}
-\caption{\textbf{Cross-training substitution dynamics: GPS and compass (companion to main Figure~\ref{fig:magnitude}b).} Probe $R^2$ across training checkpoints, truncated at $250$M frames. \emph{(a)} Top-layer GPS $R^2$ (the source panel for Figure~\ref{fig:magnitude}b). \emph{(b)} Top-layer compass $R^2$ tells the same story at smaller magnitude --- substitution applies to spatial codes broadly, not just position.}
-\label{fig:substitution_dynamics}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\begin{minipage}[c]{\linewidth}\centering
-  \includegraphics[width=0.7\linewidth]{fig/fig4_transplant_5x5.pdf}\\[-2pt]
-  {\footnotesize\textbf{(a) $5{\times}5$ memory-transplant matrix (full)}}
-\end{minipage}\\[6pt]
-\begin{minipage}[c]{0.49\linewidth}\centering
-  \includegraphics[width=\linewidth]{fig/fig4_h2_probe_transfer.pdf}\\[-2pt]
-  {\footnotesize\textbf{(b) Cross-condition probe transfer}}
-\end{minipage}\hfill
-\begin{minipage}[c]{0.49\linewidth}\centering
-  \includegraphics[width=\linewidth]{fig/fig_subspace_evolution.pdf}\\[-2pt]
-  {\footnotesize\textbf{(c) Subspace evolution over training}}
-\end{minipage}
-\caption{\textbf{Format axis: corroborating diagnostics (referenced from §\ref{sec:format-spatial}).} \emph{(a)}~The full $5{\times}5$ memory-transplant matrix at midpoint $t{=}30$ (the per-recipient mean enters main Figure~\ref{fig:format_axis}b as the ``transplant cost'' axis); the matrix shows the same direction-asymmetry condensed there. \emph{(b)}~Cross-condition probe transfer matrix (train on row, test on column): off-diagonal $R^2$ is catastrophically negative --- the position-axes encoded across conditions are jointly incompatible at the readout level. \emph{(c)}~Subspace divergence is established early: principal angles are already near-orthogonal at the earliest probed checkpoint ($\sim 50$M frames) and stay so throughout, indicating the structural separation is laid down well before convergence.}
-\label{fig:format_appendix}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{fig/fig5_shortcut_canonical.pdf}
-\caption{\textbf{Persistent-memory failure modes (referenced from §\ref{sec:dissociation}): canonical paired-episode case per condition.} Extended catalog: Figure~\ref{fig:shortcut_catalog}. Aggregate per-condition margin $=$ avg dist(persistent end $\to$ old goal) $-$ avg dist(persistent end $\to$ new goal) over same-floor failures (reset SPL $>0.5$, persistent SPL $<0.2$, persistent steps $\geq 30$, $|\Delta y_\text{goal}| < 0.5$m): Blind $-0.38$m ($n{=}27$), Coarse $-0.57$m ($n{=}35$), Foveated $-0.59$m ($n{=}16$), \textbf{Uniform $+1.83$m ($n{=}46$, closer to OLD goal)}. Single seed.}
-\label{fig:shortcut_paired_traj}
-\end{figure}
+A direct test of the H1 mechanism (encoder spatial-feature variety per step drives top-layer LSTM spatial encoding) is to vary that variable continuously across our existing 4-condition spectrum. The most diagnostic single point is the \emph{log-polar foveation} control: log-polar resampling onto a $64{\times}64$ retinal grid produces an encoder spatial output of $\sim 2{\times}2$, intermediate between coarse's $1{\times}1$ and uniform's $4{\times}4$ (verified by direct forward pass through the trained encoder). Only the visual front-end differs from the foveated condition; LSTM, sensors, and training pipeline are identical. \textbf{Preregistered prediction:} if the H1 mechanism is the simple ``encoder spatial-output dimensionality'' reading, log-polar should produce LSTM GPS $R^2$ in the bottleneck regime (i.e.\ closer to coarse's $+0.58$ than to uniform's $\approx 0$); if log-polar matches uniform on H1 instead ($R^2 \approx 0$), the encoder-spatial-output mechanism story needs reframing toward channel information, encoder spatial-feature \emph{variety} per step, or another aspect. \textbf{Result (converged 250M frames).} The log-polar agent at convergence (ckpt-49, $\sim 245$M frames) yields top-layer GPS $R^2 = -0.029 \pm 0.759$ (5-fold CV, $n=500$ episodes) --- \emph{not} in the bottleneck regime, but indistinguishable from foveated ($R^2 = +0.178 \pm 0.659$) and clearly far from coarse ($R^2 = +0.582 \pm 0.099$). The simple ``encoder spatial-output dimensionality'' framing is therefore \emph{not} sufficient to explain the H1 phenomenon: log-polar's $2{\times}2$ output does not place it in the bottleneck regime. We read the result as supporting the alternative ``encoder spatial-feature \emph{variety} per step'' framing: log-polar's radial sampling preserves rich gaze-centred feature variety per timestep even at low spatial output, so the policy can still source position from the visual route and the LSTM does not commit capacity to the integrated code. Substitution-dynamics analysis (Figure~\ref{fig:magnitude}b) corroborates this reading: log-polar starts at $R^2 = +0.92$ at $\sim 50$M frames (matching all 4 main conditions' early high $R^2$), then decays along the rich-encoder trajectory rather than plateauing in the bottleneck range. A finer multi-point input-resolution sweep ($K \in \{32, 64, 96, 128, 192\}$) is reported as future work; its training cost (multiple from-scratch DD-PPO runs at $\sim 250$M frames each) was outside this submission's compute window.
 
 
 \end{document}
