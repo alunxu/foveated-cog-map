@@ -460,27 +460,13 @@ The log-polar control (Appendix~\ref{app:scaling}) applies a differentiable log-
 \subsection{Capacity-allocation: additional geometric tests}
 \label{app:cap_allocation_extras}
 
-The three figures below provide independent geometric tests of the capacity-allocation principle, beyond the headline information-allocation (Fig.~\ref{fig:format_shift}) and LOSO scene-invariance (Fig.~\ref{fig:loso_cv}) results in §\ref{sec:h1}.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.55\linewidth]{fig/fig_cross_cond_transfer.pdf}
-\caption{\textbf{Cross-condition probe-transfer matrix.} Ridge-probe trained on condition $A$'s top-layer states, applied to condition $B$'s. Diagonal (own-probe) $R^2 \in [0.90, 0.99]$. Off-diagonal $R^2$ is \emph{catastrophically negative} ($-3.5{\times}10^2$ to $-3.5{\times}10^4$ unclipped; clipped to $[-1, 1]$ for visualisation): the position-axes encoded across conditions are not just orthogonal in subspace orientation (Figure~\ref{fig:format_appendix}) but jointly incompatible at the readout level. Even when the same scenes are visited and the same task is solved, no single linear position-direction transfers between conditions.}
-\label{fig:cross_cond_transfer}
-\end{figure}
+The figures below provide independent geometric tests of the capacity-allocation principle, beyond the headline information-allocation (Fig.~\ref{fig:format_shift}) and LOSO scene-invariance (Fig.~\ref{fig:loso_cv}) results in §\ref{sec:h1}. (The cross-condition probe-transfer matrix is shown as panel~(b) of Figure~\ref{fig:format_appendix}; we do not duplicate it here.)
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.65\linewidth]{fig/fig_position_axis.pdf}
 \caption{\textbf{Position-axis lives in low-variance directions of $\mathbf{h}_2$.} Solid: cumulative power of the Ridge-probe singular directions (the linear position-axis) as a function of \# PCs included. Dashed: cumulative explained variance (the manifold's own variance distribution). For all four conditions, the manifold's variance is concentrated in $\sim 7$--$9$ top PCs (90\% by PC 9), but the position-axis distributes its power across 200+ PCs --- it does not reach 50\% within the first 200 PCs. Position information is encoded in the \emph{low-variance tail} of $\mathbf{h}_2$ across all conditions; the discriminator across conditions is therefore not where (in a high-variance sense) position lives but rather the cross-scene stability of the readout direction (Figure~\ref{fig:loso_cv}).}
 \label{fig:position_axis}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.55\linewidth]{fig/fig_intrinsic_dim.pdf}
-\caption{\textbf{Intrinsic dimensionality (TwoNN).} \citet{facco2017twonn}-style estimate of the intrinsic dimensionality of $\mathbf{h}_2$, on $5\,000$ samples per condition (paper-canonical seed-0 filled markers; seed-2 robustness check hollow). All four conditions yield ID $\approx 2.5$--$2.9$, comparable to the task-intrinsic dimensionality (2-D position $+$ 1-D heading $\approx 3$). The same intrinsic dim across conditions, combined with strongly differing linear $R^2$ and orthogonal subspaces (Figure~\ref{fig:format_appendix}), shows capacity-allocation is about the \emph{orientation} of the task-shaped manifold within the 512-d ambient space rather than about its size.}
-\label{fig:intrinsic_dim}
 \end{figure}
 
 \begin{figure}[!t]
