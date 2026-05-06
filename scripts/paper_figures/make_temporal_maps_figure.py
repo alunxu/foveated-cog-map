@@ -429,11 +429,61 @@ def panel_tgm(ax, cond_key: str, label: str, colour: str,
     return im
 
 
+def panel_tgm_decay(ax, tgm_data: dict):
+    """Decoder-transfer curve: mean TGM R^2 vs trajectory-step lag,
+    one curve per condition.  Collapses each $50{\\times}50$ TGM heatmap
+    into a single curve (R^2 averaged over all (i,j) pairs at fixed
+    $|i-j|$), giving a 1-D summary that fans all five conditions out:
+    coarse holds R^2 highest at small lag (largest stationary block),
+    blind drops to ~0 immediately (diagonal-only), and the three rich
+    sighted variants fan out monotonically between them.  The within-
+    sighted ranking (coarse > fov-LP $\\approx$ foveated > uniform)
+    matches the encoder-bandwidth spectrum: less bandwidth, more
+    stationary memory readout."""
+    max_lag = 50
+    for key, label, colour in CONDS:
+        tgm_key = TGM_KEY_MAP.get(key)
+        if tgm_key not in tgm_data:
+            continue
+        M = tgm_data[tgm_key]
+        n = M.shape[0]
+        # Average R^2 at each lag |i-j|, clipped to the [-2, +2] range
+        # used in the heatmap colormap so very-negative outliers don't
+        # dominate the average.
+        M_clip = np.clip(M, -2.0, 2.0)
+        lags = np.arange(min(max_lag, n))
+        mean_r2 = np.empty(len(lags))
+        for L in lags:
+            vals = []
+            for i in range(n - L):
+                vals.append(M_clip[i, i + L])
+                if L > 0:
+                    vals.append(M_clip[i + L, i])
+            mean_r2[L] = float(np.mean(vals))
+        ax.plot(lags, mean_r2, color=colour, lw=2.0, label=label, zorder=4)
+        # Mark stationary-block strength: R^2 averaged over lag 1-5.
+        block_mean = float(np.mean(mean_r2[1:6]))
+        ax.scatter([3], [block_mean], s=32, color=colour,
+                   edgecolor="white", linewidth=1.0, zorder=5)
+    ax.axhline(0, color="#bbb", lw=0.4, zorder=0)
+    ax.set_xlim(0, max_lag - 1)
+    ax.set_xlabel("step lag $|i-j|$", fontsize=10, fontweight="bold")
+    ax.set_ylabel(r"mean decoder $R^2$ at lag", fontsize=10, fontweight="bold")
+    ax.set_title("decoder-transfer decay (TGM cross-section)",
+                 fontsize=11, fontweight="bold", pad=4)
+    for s_ in ("top", "right"):
+        ax.spines[s_].set_visible(False)
+    ax.grid(linestyle=":", alpha=0.3)
+    ax.legend(loc="upper right", fontsize=8.5, frameon=False, handlelength=1.5)
+
+
 def panel_autocorr_compact(ax, autocorr: dict):
     """Per-unit autocorrelation curves: 5 lines, one per condition, with
     the Murray $1/e$ crossing annotated as the intrinsic timescale
-    $\\tau$.  Discriminates all five conditions (blind $\\tau{\\approx}12$,
-    sighted $\\tau{\\approx}7$--$8$) within a single panel."""
+    $\\tau$.  Discriminates blind ($\\tau{\\approx}12$) from sighted
+    ($\\tau{\\approx}7$--$8$) but the four sighted variants are
+    near-identical at the unit-autocorrelation level; this panel is now
+    moved to App F as a corroborating Murray-style timescale check."""
     lags = np.arange(MAX_LAG + 1)
     for key, _, _ in CONDS:
         if key not in autocorr:
@@ -626,8 +676,8 @@ def main():
     ax_cum       = fig.add_subplot(gs_bot[0, 1])
     panel_cum_h2_lines(ax_cum, eps_by_cond)
 
-    ax_autocorr  = fig.add_subplot(gs_bot[0, 2])
-    panel_autocorr_compact(ax_autocorr, autocorr)
+    ax_decay     = fig.add_subplot(gs_bot[0, 2])
+    panel_tgm_decay(ax_decay, tgm_data)
 
     fig.savefig(OUT, dpi=200, bbox_inches="tight")
     plt.close(fig)
