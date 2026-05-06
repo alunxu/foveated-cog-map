@@ -195,30 +195,29 @@ Uniform               & 0.891         & \textbf{0.993}& $-$1.785$\pm$2.993 & $-$
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{fig/fig_format_axis.pdf}
-\caption{\textbf{Three views of the spatial-format axis.} \emph{(a) Format shift:} slope chart from Linear to MLP probe per condition; steep slope $=$ large gap between linear and non-linear readability. Bottleneck conditions sit on near-horizontal slopes; rich-encoder conditions on near-vertical ones --- a format shift, not an information loss. \emph{(b) Format dichotomy:} LOSO median $R^2$ (within-condition scene-invariance) vs.\ mean cross-condition transplant cost (across-condition non-interchangeability). Bottleneck (blind) sits in the scene-invariant + transplant-robust quadrant; rich-encoder conditions cluster in the scene-conditional + transplant-brittle quadrant. \emph{(c) Subspace divergence:} all $10$ condition pairs plotted by principal angle (between top-$K$ PCA subspaces) and Ridge-probe direction-cosine. All cluster near (90°, 0) --- the ``fully orthogonal'' target --- geometrically corroborating the behavioural transplant test in (b).}
+\caption{\textbf{Three views of the spatial-format axis.} \emph{(a) Format shift:} large gap between linear and non-linear probes in rich encoders; small gap in bottleneck conditions. \emph{(b) Format dichotomy:} bottleneck sits in the scene-invariant + transplant-robust quadrant; rich-encoder conditions cluster in the scene-conditional + transplant-brittle quadrant. \emph{(c) Subspace divergence:} all $10$ condition pairs cluster near ``fully orthogonal'' (90°, cos$\,{=}\,0$), corroborating (b) at the geometric level.}
 \label{fig:format_axis}
 \end{figure}
 
 \noindent\emph{Within-condition: scene-invariance dichotomy.} Leave-one-scene-out cross-validation gives a clean answer (Figure~\ref{fig:format_axis}b, x-axis): bottleneck conditions generalise across held-out scenes (a single direction works in any room), while rich-encoder conditions do not (the position-direction differs per scene, so a single linear hyperplane cannot capture it; a non-linear probe can, by switching its readout on visual context --- exactly the format-shift gap in Panel~a). Intuitively, a bottlenecked encoder has no scene-specific features to bind to, so memory is forced toward a universal direction; a rich encoder lets memory exploit scene-specific features, fragmenting the position-direction across rooms. The dichotomy mirrors the no-remapping vs.\ global-remapping spectrum of hippocampal coding under hidden-state inference~\citep{sanders2020remapping,achille2018invariance}.
 
-\noindent\emph{Across-condition: non-interchangeable subspaces.} The picture sharpens further across conditions: each condition's position-direction lives in a mostly-orthogonal subspace of every other's (Figure~\ref{fig:format_axis}c, all 10 pairs cluster near 90° and direction-cosine $\approx 0$) --- the codes are not just \emph{different}, they are nearly maximally distinct. A behavioural test confirms this in policy-execution terms (Figure~\ref{fig:format_axis}b, y-axis): a $5{\times}5$ memory transplant shows a direction-asymmetry --- a bottleneck-style memory state breaks rich-encoder policies, while a rich-encoder memory state still drives bottleneck policies, paralleling cross-modality remapping in echolocating bats~\citep{geva2016remapping}. Three geometric scalars (Table~\ref{tab:geometry}) corroborate at the manifold level: Procrustes shape distance~\citep{williams2021shape} pairs bottleneck and rich-encoder regimes; participation ratio and intrinsic dimension~\citep{ansuini2019intrinsic} single out the bottleneck-encoder-collapse case; eigenspectrum power-law~\citep{stringer2019high} places sighted conditions near the Stringer optimum and blind well above with a sharper tail (descriptive use; Appendix~\ref{app:eigenspectrum}).
+\noindent\emph{Across-condition: non-interchangeable subspaces.} The picture sharpens further across conditions: each condition's position-direction lives in a mostly-orthogonal subspace of every other's (Figure~\ref{fig:format_axis}c, all 10 pairs cluster near 90° and direction-cosine $\approx 0$) --- the codes are not just \emph{different}, they are nearly maximally distinct. A behavioural test confirms this in policy-execution terms (Figure~\ref{fig:format_axis}b, y-axis): a $5{\times}5$ memory transplant shows a direction-asymmetry --- a bottleneck-style memory state breaks rich-encoder policies, while a rich-encoder memory state still drives bottleneck policies, paralleling cross-modality remapping in echolocating bats~\citep{geva2016remapping}. Geometric scalars on the memory manifold (Table~\ref{tab:geometry}) sharpen the picture per condition: blind separates on the variance fall-off $\alpha$~\citep{stringer2019high} (concentrated in a few directions); foveated-logpolar has the lowest effective dimensionality (PR, ID~\citep{ansuini2019intrinsic}) --- the log-polar resampling onto a $64{\times}64$ retinal grid acts as the most aggressive bottleneck of the five; foveated occupies the most expanded manifold among sighted conditions. Different conditions occupy distinct manifold shapes, not a shared geometry.
 
 \begin{table}[!t]
 \centering
 \small
-\setlength{\tabcolsep}{4pt}
-\caption{\textbf{Geometric scalars by condition (within and across).} \emph{Within-condition (left):} how the memory's manifold is shaped --- participation ratio (PR) and intrinsic dimension (ID) measure effective dimensions; the power-law exponent $\alpha$ measures variance fall-off (the natural-image-statistics value $\approx 1.67$ is the reference point). \emph{Cross-condition (right):} Procrustes shape distance $\theta_1$ between condition pairs (larger $=$ more distinct). Coarse separates on PR/ID (its $1{\times}1$ encoder collapses effective dimensions); blind separates on $\alpha$ (variance concentrated in a few directions). The cross-condition pattern is bandwidth-aligned: bottleneck and rich-encoder pairs are tighter than cross-regime pairs. (Foveated-logpolar awaits recomputation for these scalars; its $\alpha = 1.88$ places it in the rich-encoder regime.)}
+\setlength{\tabcolsep}{6pt}
+\caption{\textbf{Geometric scalars: how the memory's manifold is shaped per condition.} Participation ratio (PR) and intrinsic dimension (ID) measure effective dimensions; the power-law exponent $\alpha$ measures variance fall-off ($\alpha \approx 1.67$ is the natural-image-statistics reference). All values from post-retrain hp-consistent agents (3-seed mean over $30{,}000$-step subsamples; std $< 0.05$ for all entries). \emph{Story:} blind separates on $\alpha$ (variance concentrated in a few directions, sharper tail); foveated-logpolar separates on PR (most aggressively compressed manifold via log-polar resampling); foveated has the most expanded manifold among the four sighted conditions. Cross-condition Procrustes is shown geometrically in Figure~\ref{fig:format_axis}c.}
 \label{tab:geometry}
-\begin{tabular}{lcccccccc}
+\begin{tabular}{lcccc}
 \toprule
- & \multicolumn{4}{c}{\emph{Within condition}} & \multicolumn{4}{c}{\emph{Procrustes $\theta_1$ to other condition}} \\
-\cmidrule(lr){2-5} \cmidrule(lr){6-9}
-Condition & PR & ID-MLE & ID-CDF & $\alpha$ & Bl & Co & Fv & Un \\
+Condition & PR & ID-MLE & ID-CDF & $\alpha$ \\
 \midrule
-Blind                          & $4.10$ & $1.99$ & $1.85$ & $\mathbf{3.85}$ & $-$    & $1.10$ & $1.23$ & $1.22$ \\
-Coarse                         & $\mathbf{3.10}$ & $\mathbf{1.76}$ & $\mathbf{1.64}$ & $1.80$ & $1.10$ & $-$    & $1.14$ & $1.13$ \\
-Foveated                       & $\mathbf{4.34}$ & $1.89$ & $1.77$ & $\mathbf{1.72}$ & $1.23$ & $1.14$ & $-$    & $1.08$ \\
-Uniform                        & $4.01$ & $1.91$ & $1.80$ & $1.90$ & $1.22$ & $1.13$ & $1.08$ & $-$    \\
+Blind              & $4.41$ & $\mathbf{1.72}$ & $\mathbf{1.54}$ & $\mathbf{3.63}$ \\
+Coarse             & $5.25$ & $2.41$ & $2.20$ & $1.81$ \\
+Foveated-logpolar  & $\mathbf{1.70}$ & $2.25$ & $2.04$ & $1.88$ \\
+Foveated           & $9.11$ & $2.41$ & $2.30$ & $1.73$ \\
+Uniform            & $3.09$ & $2.32$ & $2.17$ & $1.92$ \\
 \bottomrule
 \end{tabular}
 \end{table}
