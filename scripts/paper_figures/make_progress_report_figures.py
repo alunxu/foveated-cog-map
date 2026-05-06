@@ -278,7 +278,7 @@ ax.legend(loc="lower left", fontsize=7.5, ncol=2, frameon=True)
 ax.set_title("Linear GPS $R^2$ across training",
              fontsize=12, fontweight="bold", pad=4)
 plt.tight_layout()
-out3 = Path("docs/cs503_progress/fig/fig3_substitution_dynamics.pdf")
+out3 = Path("docs/cs503_progress/fig/figa5_substitution_dynamics.pdf")
 plt.savefig(out3, bbox_inches="tight")
 print(f"wrote {out3}")
 plt.close()

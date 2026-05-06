@@ -135,7 +135,7 @@ def main():
     ax.grid(linestyle=":", alpha=0.3)
 
     plt.tight_layout()
-    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/fig_position_axis.pdf")
+    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/figa12_position_axis.pdf")
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"\nwrote {out}")
 

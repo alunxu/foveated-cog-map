@@ -23,8 +23,7 @@ import numpy as np
 CONDS = [
     ("blind",            "Blind",              "#444444"),
     ("uniform",          "Uniform",            "#4daf4a"),
-    ("foveated",         "Foveated (fix)",     "#e41a1c"),
-    ("foveated_learned", "Foveated (learned)", "#ff7f00"),
+    ("foveated",         "Foveated",     "#e41a1c"),
     ("matched",          "Coarse",    "#377eb8"),
 ]
 TARGETS = [
@@ -141,7 +140,7 @@ def main() -> None:
     args = ap.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    fig_mp3d(args.results_dir, args.out_dir / "appfig13_mp3d_generalization.pdf",
+    fig_mp3d(args.results_dir, args.out_dir / "figa4b_mp3d_generalization.pdf",
              suffix=args.suffix)
 
 

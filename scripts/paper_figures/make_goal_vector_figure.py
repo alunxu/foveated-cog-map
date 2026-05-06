@@ -24,15 +24,13 @@ import numpy as np
 COND_DISPLAY = {
     "blind_gibson":            ("Blind",              "#444444"),
     "uniform_gibson":          ("Uniform",            "#4daf4a"),
-    "foveated_gibson":         ("Foveated (fix)",   "#e41a1c"),
-    "foveated_learned_gibson": ("Foveated (learned)", "#ff7f00"),
+    "foveated_gibson":         ("Foveated",   "#e41a1c"),
     "matched_gibson":          ("Coarse",    "#377eb8"),
 }
 COND_ORDER = [
     "blind_gibson",
     "uniform_gibson",
     "foveated_gibson",
-    "foveated_learned_gibson",
     "matched_gibson",
 ]
 
@@ -115,7 +113,7 @@ def main() -> None:
     args = ap.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    fig_goal_vector_grouped(args.in_path, args.out_dir / "appfig12_goal_vector.pdf")
+    fig_goal_vector_grouped(args.in_path, args.out_dir / "figa10_goal_vector.pdf")
 
 
 if __name__ == "__main__":

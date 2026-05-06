@@ -265,7 +265,7 @@ def main():
     fig.suptitle("Place-cell signature in LSTM hidden states: spatial selectivity, population size, and cross-scene preservation",
                  fontsize=11, fontweight="bold", y=1.0)
     plt.tight_layout()
-    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/fig_place_cells.pdf")
+    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/figa2b_place_cells.pdf")
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"\nwrote {out}")
 

@@ -25,7 +25,7 @@ effective tomorrow).
 
 Reads:  /tmp/cond_npzs/{blind,matched,uniform}_gibson_det.npz
 Writes: /tmp/extra_analyses/subspace_scrubbing.json
-        docs/manuscript/fig/fig_subspace_scrubbing.pdf
+        docs/manuscript/fig/figa14_subspace_scrubbing.pdf
 """
 from __future__ import annotations
 import json
@@ -177,7 +177,7 @@ def main():
     ax.grid(axis="y", linestyle=":", alpha=0.3)
 
     plt.tight_layout()
-    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/fig_subspace_scrubbing.pdf")
+    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/figa14_subspace_scrubbing.pdf")
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"\nwrote {out}")
 

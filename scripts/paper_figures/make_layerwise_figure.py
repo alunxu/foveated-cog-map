@@ -31,10 +31,9 @@ import numpy as np
 
 CONDS = [
     ("blind", "Blind", "#444444", "o"),
-    ("matched", "Coarse (1×1)", "#377eb8", "s"),
+    ("matched", "Coarse", "#377eb8", "s"),
     ("uniform", "Uniform", "#4daf4a", "^"),
-    ("foveated", "Foveated (fix)", "#e41a1c", "D"),
-    ("foveated_learned", "Foveated (learned)", "#ff7f00", "v"),
+    ("foveated", "Foveated", "#e41a1c", "D"),
 ]
 
 
@@ -99,7 +98,7 @@ def main() -> None:
     axes[1].legend(loc="lower left", fontsize=7, frameon=False, ncol=1)
     fig.tight_layout()
 
-    out = args.out_dir / "appfig13_layerwise_decay.pdf"
+    out = args.out_dir / "figa4a_layerwise_decay.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

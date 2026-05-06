@@ -52,8 +52,7 @@ except ImportError:  # pragma: no cover
 COND_DISPLAY = {
     "blind_gibson": ("Blind", "#444444"),
     "uniform_gibson": ("Uniform", "#4daf4a"),
-    "foveated_gibson": ("Foveated (fix)", "#e41a1c"),
-    "foveated_learned_gibson": ("Foveated (learned)", "#ff7f00"),
+    "foveated_gibson": ("Foveated", "#e41a1c"),
     "matched_gibson": ("Matched-compute (48, deprecated)", "#377eb8"),
     "matched128_gibson": ("Matched-compute (128)", "#377eb8"),
 }
@@ -61,7 +60,6 @@ COND_ORDER = [
     "blind_gibson",
     "uniform_gibson",
     "foveated_gibson",
-    "foveated_learned_gibson",
     "matched128_gibson",
 ]
 
@@ -155,7 +153,7 @@ def main() -> None:
          ylim=(0, 1.05))
     fig.tight_layout()
 
-    p = args.out_dir / "appfig7_training_curves.pdf"
+    p = args.out_dir / "figa1_training_curves.pdf"
     fig.savefig(p, dpi=200, bbox_inches="tight")
     print(f"wrote {p}")
     plt.close(fig)

@@ -236,7 +236,7 @@ def main() -> None:
                bbox_to_anchor=(0.5, 0.01))
 
     plt.subplots_adjust(left=0.05, right=0.99, top=0.98, bottom=0.05)
-    out = args.out_dir / "appfig_shortcut_catalog.pdf"
+    out = args.out_dir / "figa17_shortcut_catalog.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

@@ -247,7 +247,7 @@ tint_bg(s)
 add_top_bar(s, "5 conditions on one bandwidth axis",
             kicker="SETUP")
 
-add_pdf_image(s, MANU_FIG_DIR / "fig_pipeline_overview_tikz.pdf",
+add_pdf_image(s, MANU_FIG_DIR / "fig1_setup.pdf",
               0.6, 1.45, width=10.0, png_stem="_pipeline", dpi=180)
 
 panel_left = 11.0
@@ -371,7 +371,7 @@ finding_slide(prs,
 finding_slide(prs,
     title="Allocation emerges across training",
     kicker="FINDING 2 / 3   ·   TRAINING-TIME PROCESS",
-    fig_path=FIG_DIR / "fig3_substitution_dynamics.pdf",
+    fig_path=FIG_DIR / "figa5_substitution_dynamics.pdf",
     png_stem="_fig2",
     takeaway_main="All conditions start with a high linear GPS code; rich-encoder ones decay as the visual route consolidates.",
     takeaway_sub="Decay rate ordered by encoder informativeness — capacity allocation is a training-time process.",
@@ -396,7 +396,7 @@ add_top_bar(s, "Three regimes of cognitive-map format",
             kicker="SYNTHESIS")
 
 # Synthesis figure (left, big)
-add_pdf_image(s, MANU_FIG_DIR / "fig6_synthesis_2axes.pdf",
+add_pdf_image(s, MANU_FIG_DIR / "fig8_synthesis.pdf",
               0.6, 1.5, width=8.4, png_stem="_syn", dpi=180)
 
 # Right-side narrative

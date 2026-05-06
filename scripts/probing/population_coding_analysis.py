@@ -48,11 +48,10 @@ from sklearn.preprocessing import StandardScaler
 
 
 CONDS = [
-    ("blind_gibson",            "Blind",            "#444444"),
-    ("matched_gibson",          "Matched (1×1)",    "#377eb8"),
-    ("uniform_gibson",          "Uniform",          "#4daf4a"),
-    ("foveated_gibson",         "Foveated (fix)",   "#e41a1c"),
-    ("foveated_learned_gibson", "Fov-learned",      "#ff7f00"),
+    ("blind_gibson",            "Blind",      "#444444"),
+    ("matched_gibson",          "Coarse",     "#377eb8"),
+    ("foveated_gibson",         "Foveated",   "#e41a1c"),
+    ("uniform_gibson",          "Uniform",    "#4daf4a"),
 ]
 
 
@@ -377,7 +376,7 @@ def main() -> None:
     axes[1].spines["right"].set_visible(False)
 
     fig.tight_layout()
-    cross_path = args.out_fig_dir / "appfig11_population_coding.pdf"
+    cross_path = args.out_fig_dir / "figa9_population_coding.pdf"
     fig.savefig(cross_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"\nwrote {cross_path}")

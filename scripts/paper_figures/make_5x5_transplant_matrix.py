@@ -39,10 +39,9 @@ import numpy as np
 
 CONDS = [
     ("blind",            "Blind"),
-    ("matched",          "Coarse\n(1×1)"),
+    ("matched",          "Coarse"),
+    ("foveated",         "Foveated"),
     ("uniform",          "Uniform"),
-    ("foveated",         "Foveated\n(fix)"),
-    ("foveated_learned", "Foveated\n(learned)"),
 ]
 
 
@@ -143,7 +142,7 @@ def main() -> None:
     ax.set_title("Cross-condition memory transplants")
 
     plt.tight_layout()
-    out = args.out_dir / "fig4_transplant_5x5.pdf"
+    out = args.out_dir / "figa7a_transplant_5x5.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

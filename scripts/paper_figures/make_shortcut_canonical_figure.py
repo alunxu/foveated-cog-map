@@ -17,7 +17,7 @@ Reads:
     --traj-dir <dir>/{cond}_gibson_traj.npz
     --topdown-dir <dir>/{scene}.{png,json}
 
-Writes: <out-dir>/fig5_shortcut_canonical.pdf
+Writes: <out-dir>/figa16_shortcut_canonical.pdf
 """
 from __future__ import annotations
 
@@ -203,7 +203,7 @@ def main() -> None:
                ncol=5, frameon=False, bbox_to_anchor=(0.5, -0.02))
 
     plt.subplots_adjust(left=0.02, right=0.99, top=0.92, bottom=0.18)
-    out = args.out_dir / "fig5_shortcut_canonical.pdf"
+    out = args.out_dir / "figa16_shortcut_canonical.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

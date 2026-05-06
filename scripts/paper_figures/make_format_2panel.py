@@ -53,37 +53,60 @@ RCP_DIR = Path("/tmp/rcp_analysis")
 RCP_V3 = Path("/tmp/rcp_analysis_v3")
 
 
-# ───────────────────────── Panel A: Slope chart ─────────────────────────
-def panel_a(ax, mlp_json: Path) -> None:
-    """Linear → MLP slope chart per condition. Steep slope = format shift."""
-    data = json.loads(mlp_json.read_text())
-    X_LIN, X_MLP = 0.0, 1.0
-    for _rcp, mlp_key, _loso, label, col, mk in CONDS:
-        d = data[mlp_key]
-        y_lin = float(np.clip(d["linear_r2_mean"], CLIP_MIN, 1.05))
-        y_mlp = float(np.clip(d["mlp_r2_mean"], CLIP_MIN, 1.05))
-        # Connecting line — steep slope shows format-shift gap
-        ax.plot([X_LIN, X_MLP], [y_lin, y_mlp], color=col, linewidth=2.4,
-                alpha=0.85, zorder=2)
-        # End markers
-        ax.plot(X_LIN, y_lin, marker=mk, color=col, markersize=14,
-                markeredgecolor="white", markeredgewidth=1.5, zorder=3)
-        ax.plot(X_MLP, y_mlp, marker=mk, color=col, markersize=14,
-                markeredgecolor="white", markeredgewidth=1.5, zorder=3)
-        # Right-side label aligned with MLP marker
-        ax.text(X_MLP + 0.04, y_mlp, label, fontsize=11, color=col,
+# ───────────────────────── Panel A: Probe-depth sweep ──────────────────
+PROBE_ORDER = ["linear", "MLP-1", "MLP-2", "MLP-4"]
+PROBE_LABELS = {"linear": "Linear", "MLP-1": "MLP-1",
+                "MLP-2": "MLP-2", "MLP-4": "MLP-4"}
+# Map our internal CONDS keys to the probe_depth_sweep.json keys.
+DEPTH_KEY_MAP = {
+    "blind_izar":        "blind",
+    "coarse":            "coarse",
+    "foveated":          "foveated",
+    "foveated_logpolar": "foveated_logpolar",
+    "uniform":           "uniform",
+}
+
+
+def panel_a(ax, depth_json: Path) -> None:
+    """Probe-depth sweep per condition: how much non-linearity does each
+    condition require to recover position? Bottleneck conditions plateau
+    near depth 0 (linear suffices); rich-encoder conditions ramp up with
+    probe depth (position is non-linearly encoded). Format-shift severity
+    per condition becomes visible as the slope of each curve.
+    """
+    data = json.loads(depth_json.read_text())
+    xs = np.arange(len(PROBE_ORDER), dtype=float)
+    for rcp_key, _mlp, _loso, label, col, mk in CONDS:
+        depth_key = DEPTH_KEY_MAP[rcp_key]
+        d = data.get(depth_key, {})
+        ys = []
+        for p in PROBE_ORDER:
+            r = d.get(p, {})
+            v = r.get("r2_mean", np.nan)
+            ys.append(float(np.clip(v, CLIP_MIN, 1.05)))
+        ys = np.array(ys)
+        # Connecting line — steep slope = strong format shift
+        ax.plot(xs, ys, color=col, linewidth=2.2, alpha=0.85, zorder=2)
+        # Markers per depth
+        ax.plot(xs, ys, marker=mk, color=col, markersize=11,
+                markeredgecolor="white", markeredgewidth=1.4,
+                linestyle="", zorder=3)
+        # Right-edge label at the deepest probe
+        ax.text(xs[-1] + 0.08, ys[-1], label, fontsize=11, color=col,
                 va="center", weight="bold")
 
     ax.axhline(0, color="#888", linewidth=0.5, ls="--", zorder=0)
-    # Light gray "no signal" zone
+    # Light gray "no-signal" zone
     ax.axhspan(CLIP_MIN - 0.05, 0, color="#fbe0dc", alpha=0.30, zorder=0)
-    ax.set_xticks([X_LIN, X_MLP])
-    ax.set_xticklabels(["Linear probe", "MLP probe"], fontsize=15, fontweight="bold")
-    ax.set_xlim(-0.18, X_MLP + 0.55)
+    ax.set_xticks(xs)
+    ax.set_xticklabels([PROBE_LABELS[p] for p in PROBE_ORDER],
+                       fontsize=12, fontweight="bold")
+    ax.set_xlim(-0.25, xs[-1] + 0.95)
     ax.set_ylim(CLIP_MIN - 0.05, 1.10)
     ax.set_ylabel(r"GPS $R^2$ at $\mathbf{h}_2$",
                   fontsize=20, fontweight="bold")
-    ax.set_title("(a) Format shift",
+    ax.set_xlabel("probe depth", fontsize=14, fontweight="bold")
+    ax.set_title("(a) Format-shift severity",
                  fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
     ax.tick_params(axis="y", labelsize=12)
     ax.spines["top"].set_visible(False)
@@ -235,13 +258,15 @@ def panel_c(ax, subspace_json: Path) -> None:
 # ──────────────────────────── compose ────────────────────────────
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mlp-json", type=Path, default=RCP_DIR / "mlp_probe.json")
+    ap.add_argument("--mlp-json", type=Path,
+                    default=RCP_DIR / "probe_depth_sweep.json",
+                    help="probe-depth sweep JSON (linear / MLP-1 / MLP-2 / MLP-4)")
     ap.add_argument("--loso-json", type=Path, default=RCP_V3 / "loso_5cond.json")
     ap.add_argument("--transplant-dir", type=Path, default=RCP_V3)
     ap.add_argument("--subspace-json", type=Path,
                     default=RCP_V3 / "subspace_divergence_5cond.json")
     ap.add_argument("--out", type=Path,
-                    default=Path("docs/manuscript/fig/fig_format_axis.pdf"))
+                    default=Path("docs/manuscript/fig/fig3_format_axis.pdf"))
     args = ap.parse_args()
 
     args.out.parent.mkdir(parents=True, exist_ok=True)

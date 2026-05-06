@@ -36,18 +36,17 @@ apply_paper_style()
 from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 
-CONDS = ["Blind", "Coarse\n(1×1)", "Uniform", "Foveated\n(fix)", "Foveated\n(learned)"]
+CONDS = ["Blind", "Coarse", "Foveated", "Uniform"]
 
 # Train (row) x Test (col) probe-transfer R²
 # (paper Table 2). Order matches transplant matrix (fig 4b) for visual
-# pairing: [Blind, Coarse, Uniform, Foveated-fix, Foveated-learned].
+# pairing: [Blind, Coarse, Foveated, Uniform].
 M = np.array([
-    # Blind   Coarse    Uniform   Fov-fix   Fov-lrn
-    [+0.99,   -55706,   -844,     -11301,   -10731],   # Blind
-    [-10621,  +0.96,    -4832,    -4984,    -58169],   # Coarse
-    [-1383,   -110317,  +0.90,    -7046,    -3305],    # Uniform
-    [-2091,   -39100,   -2792,    +0.92,    -1263],    # Fov-fix
-    [-6722,   -38842,   -2423,    -6205,    +0.89],    # Fov-lrn
+    # Blind   Coarse    Foveated  Uniform
+    [+0.99,   -55706,   -11301,   -844],     # Blind
+    [-10621,  +0.96,    -4984,    -4832],    # Coarse
+    [-2091,   -39100,   +0.92,    -2792],    # Foveated
+    [-1383,   -110317,  -7046,    +0.90],    # Uniform
 ], dtype=float)
 
 
@@ -100,7 +99,7 @@ def main() -> None:
     ax.set_title("Cross-condition GPS probe transfer")
 
     plt.tight_layout()
-    out = args.out_dir / "fig4_h2_probe_transfer.pdf"
+    out = args.out_dir / "figa7b_h2_probe_transfer.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

@@ -21,7 +21,7 @@ its Y is single-cell, marked with a hollow marker + footnote in caption.
 Reads:  /tmp/transplant_local/<donor>_to_<recipient>.json (mid=30)
         /tmp/probing_results_local/<cond>_gibson_det_analysis.json
         data/shortcut/<cond>_gibson.json
-Writes: docs/manuscript/fig/fig6_synthesis_2axes.pdf
+Writes: docs/manuscript/fig/fig8_synthesis.pdf
 """
 from __future__ import annotations
 
@@ -45,13 +45,11 @@ apply_paper_style()
 CONDS = [
     # (key,           label,                colour,    marker)
     ("blind",            "Blind",             "#444444", "o"),
-    ("matched",          "Coarse (1×1)",      "#377eb8", "s"),
+    ("matched",          "Coarse",      "#377eb8", "s"),
     ("uniform",          "Uniform",           "#4daf4a", "^"),
-    ("foveated",         "Foveated (fix)",    "#e41a1c", "D"),
-    ("foveated_learned", "Foveated (learned)", "#ff7f00", "v"),
+    ("foveated",         "Foveated",    "#e41a1c", "D"),
 ]
 
-CLIP_X_MIN = -1.5  # for plot; foveated_learned actual GPS R² = -2.43
 
 
 def load_h1_magnitude(probing_dir: Path) -> dict[str, float]:
@@ -152,6 +150,7 @@ def main() -> None:
 
     GPS_THRESH = 0.4
     TOX_THRESH = 0.12  # "above" = format-isolated as donor
+    CLIP_X_MIN = -0.5  # plot x-axis lower bound
 
     # Quadrant background tints — make the 4 regions visually distinct.
     Q_COLORS = {
@@ -206,10 +205,9 @@ def main() -> None:
         # Label
         offsets = {
             "Blind":              (-0.06, +0.014),
-            "Coarse (1×1)":       (+0.07, +0.018),
+            "Coarse":       (+0.07, +0.018),
             "Uniform":            (-0.06, +0.014),
-            "Foveated (fix)":     (+0.06, -0.013),
-            "Foveated (learned)": (+0.11, +0.000),
+            "Foveated":     (+0.06, -0.013),
         }
         dx, dy = offsets.get(label, (0.05, 0.0))
         ha = "right" if dx < 0 else "left"
@@ -270,7 +268,7 @@ def main() -> None:
     leg.get_frame().set_edgecolor("#999")
 
     fig.tight_layout()
-    out = args.out_dir / "fig6_synthesis_2axes.pdf"
+    out = args.out_dir / "fig8_synthesis.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

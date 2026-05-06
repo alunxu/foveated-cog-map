@@ -35,7 +35,7 @@ CONDS = [
     ("blind",      "Blind",          "#444444"),
     ("matched128", "Coarse (1$\\times$1)", "#377eb8"),
     ("uniform",    "Uniform",        "#4daf4a"),
-    ("foveated",   "Foveated (fix)", "#e41a1c"),
+    ("foveated",   "Foveated", "#e41a1c"),
 ]
 
 

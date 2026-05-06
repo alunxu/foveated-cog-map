@@ -99,7 +99,8 @@ def run(probing_dir: Path, out: Path):
 
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump(out_data, open(out, "w"), indent=2)
-    print(f"\nwrote {out}", flush=True)
+    print("")
+    print(f"wrote {out}", flush=True)
 
 
 if __name__ == "__main__":

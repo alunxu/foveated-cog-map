@@ -41,17 +41,17 @@ mkdir -p "$FEAT_TRAIN" "$FEAT_EVAL" "$LSTM_OUT" "$PROBE_OUT"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ "${SKIP_CACHE:-0}" != "1" ]]; then
-    LIMIT_FLAG=()
+    LIMIT_FLAGS=""
     if [[ -n "${CACHE_LIMIT:-}" ]]; then
-        LIMIT_FLAG=(--limit "${CACHE_LIMIT}")
+        LIMIT_FLAGS="--limit ${CACHE_LIMIT}"
     fi
     echo "================================================================="
     echo "Stage 1: caching DINOv2 features"
     echo "================================================================="
     "$PYTHON" "$SCRIPT_DIR/02_cache_features.py" \
-        --data_dir "$DATA_TRAIN" --out_root "$FEAT_TRAIN" "${LIMIT_FLAG[@]}"
+        --data_dir "$DATA_TRAIN" --out_root "$FEAT_TRAIN" $LIMIT_FLAGS
     "$PYTHON" "$SCRIPT_DIR/02_cache_features.py" \
-        --data_dir "$DATA_EVAL" --out_root "$FEAT_EVAL" "${LIMIT_FLAG[@]}"
+        --data_dir "$DATA_EVAL" --out_root "$FEAT_EVAL" $LIMIT_FLAGS
 fi
 
 if [[ "${SKIP_LSTM:-0}" != "1" ]]; then

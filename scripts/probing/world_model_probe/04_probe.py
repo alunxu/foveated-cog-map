@@ -85,9 +85,9 @@ def stack_records(records, window=(250, 500), include_last_action=True):
 
 
 def train_probe(probe, X_train, Y_train, X_eval, Y_eval, device,
-                  lr=1e-3, steps=10000, batch=256):
+                  lr=1e-3, steps=10000, batch=256, weight_decay=1e-3):
     probe = probe.to(device)
-    opt = torch.optim.Adam(probe.parameters(), lr=lr)
+    opt = torch.optim.AdamW(probe.parameters(), lr=lr, weight_decay=weight_decay)
     X_train, Y_train = X_train.to(device), Y_train.to(device)
     X_eval, Y_eval = X_eval.to(device), Y_eval.to(device)
     N = X_train.size(0)

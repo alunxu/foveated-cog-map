@@ -22,7 +22,7 @@ Test 3: Conditional variance ratio — Var(h | (x,z) bin) / Var(h).
 
 Reads:  /tmp/cond_npzs/{cond}_gibson_det.npz
 Writes: /tmp/extra_analyses/pc_cumulative.json
-        docs/manuscript/fig/fig_pc_cumulative.pdf
+        docs/manuscript/fig/figa13_pc_cumulative.pdf
 """
 from __future__ import annotations
 import json
@@ -178,7 +178,7 @@ def run():
                  fontsize=12, fontweight="bold", y=1.04)
 
     plt.tight_layout()
-    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/fig_pc_cumulative.pdf")
+    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/figa13_pc_cumulative.pdf")
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

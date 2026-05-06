@@ -42,10 +42,9 @@ import numpy as np
 # Encoder feature probe is meaningful only for sighted conditions
 # (blind has no encoder).
 CONDS = [
-    ("matched",           "Coarse (1×1)",    "#377eb8"),
+    ("matched",           "Coarse",    "#377eb8"),
     ("uniform",           "Uniform",          "#4daf4a"),
-    ("foveated",          "Foveated (fix)",   "#e41a1c"),
-    ("foveated_learned",  "Foveated (learned)",      "#ff7f00"),
+    ("foveated",          "Foveated",   "#e41a1c"),
 ]
 
 

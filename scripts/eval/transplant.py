@@ -280,16 +280,18 @@ def main():
     # Pick the env config from whichever side has visual sensors. If donor is
     # blind and recipient is sighted, the env MUST come from recipient (else
     # the recipient policy is built thinking it's blind and ckpt load fails on
-    # compression-layer shape mismatch).
-    donor_has_rgb = "rgb" in str(donor_config.habitat.simulator.agents).lower()
-    recip_has_rgb = "rgb" in str(recip_config.habitat.simulator.agents).lower()
-    if donor_has_rgb or not recip_has_rgb:
-        env_source = "donor"
-        env_config = donor_config.habitat
-    else:
+    # compression-layer shape mismatch). Detect blind via config name (the
+    # config dict's str repr always contains "rgb" because the schema lists
+    # the sensor; only path-name discriminates).
+    donor_blind = "blind" in args.donor_config.lower()
+    recip_blind = "blind" in args.recipient_config.lower()
+    if donor_blind and not recip_blind:
         env_source = "recipient"
         env_config = recip_config.habitat
-    print(f"\n=== Building shared env (from {env_source} config; donor_rgb={donor_has_rgb} recip_rgb={recip_has_rgb}) ===")
+    else:
+        env_source = "donor"
+        env_config = donor_config.habitat
+    print(f"\n=== Building shared env (from {env_source} config; donor_blind={donor_blind} recip_blind={recip_blind}) ===")
     env = habitat.Env(config=env_config)
     _ = env.reset()
 

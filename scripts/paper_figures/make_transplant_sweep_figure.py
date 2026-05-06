@@ -25,7 +25,6 @@ import numpy as np
 PAIRS = [
     ("foveated_to_uniform",          "Fov$\\rightarrow$Uniform",      "#d95f02"),
     ("foveated_to_blind",            "Fov$\\rightarrow$Blind",        "#7570b3"),
-    ("foveated_learned_to_foveated", "FovLrn$\\rightarrow$Fov",       "#1b9e77"),
 ]
 DEFAULT_MID = 30
 
@@ -119,7 +118,7 @@ def main() -> None:
     args = ap.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    fig_sweep(args.in_dir, args.out_dir / "appfig9_transplant_sweep.pdf")
+    fig_sweep(args.in_dir, args.out_dir / "figa18_transplant_sweep.pdf")
 
 
 if __name__ == "__main__":

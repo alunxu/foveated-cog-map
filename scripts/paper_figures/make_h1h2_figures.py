@@ -40,11 +40,10 @@ import numpy as np
 COND_DISPLAY = {
     "blind": ("Blind", "#444444"),
     "uniform": ("Uniform", "#4daf4a"),
-    "foveated": ("Foveated (fix)", "#e41a1c"),
-    "foveated_learned": ("Foveated (learned)", "#ff7f00"),
-    "matched": ("Coarse", "#377eb8"),  # matched-48 is the probed run; paper text calls it Matched-compute
+    "foveated": ("Foveated", "#e41a1c"),
+    "matched": ("Coarse", "#377eb8"),  # matched-48 is the probed run; paper text calls it Coarse
 }
-COND_ORDER = ["blind", "uniform", "foveated", "foveated_learned", "matched"]
+COND_ORDER = ["blind", "matched", "foveated", "uniform"]
 
 
 def _load_analysis(in_dir: Path, cond: str) -> dict | None:
@@ -56,19 +55,14 @@ def _load_analysis(in_dir: Path, cond: str) -> dict | None:
     if the deterministic version is missing.  Figures built under the
     stochastic fallback should carry a caveat in the paper caption.
 
-    For foveated_learned we additionally prefer the truncated
     (matched-distribution) analysis because its full 85k-step probe
     dataset covers a spatial range ~40x wider than the other
     conditions, making direct comparison of R^2 values misleading.
     """
-    candidates = (
-        [f"{cond}_gibson_det_analysis.json",
-         f"{cond}_gibson_truncated_analysis.json",
-         f"{cond}_gibson_analysis.json"]
-        if cond == "foveated_learned"
-        else [f"{cond}_gibson_det_analysis.json",
-              f"{cond}_gibson_analysis.json"]
-    )
+    candidates = [
+        f"{cond}_gibson_det_analysis.json",
+        f"{cond}_gibson_analysis.json",
+    ]
     for name in candidates:
         path = in_dir / name
         if not path.exists():
@@ -105,12 +99,9 @@ def fig_path_history(in_dir: Path, out_dir: Path) -> None:
     artefacts, not representation-quality signal. Paper text §4.3
     discusses this exclusion explicitly.
     """
-    # H1 comparison conditions: exclude fov-learned (see docstring)
-    h1_order = [c for c in COND_ORDER if c != "foveated_learned"]
-
     fig, ax = plt.subplots(figsize=(5.2, 3.2))
 
-    for cond in h1_order:
+    for cond in COND_ORDER:
         d = _load_analysis(in_dir, cond)
         if d is None or "2c_path_history" not in d:
             continue
@@ -295,7 +286,7 @@ def fig_cka_heatmap(in_dir: Path, out_dir: Path) -> None:
     fig.colorbar(im, ax=ax, shrink=0.8, label="CKA (clipped at 0.05)")
     fig.tight_layout()
 
-    p = out_dir / "appfig8_h2_cka_heatmap.pdf"
+    p = out_dir / "figa8_cka_heatmap.pdf"
     fig.savefig(p, dpi=200, bbox_inches="tight")
     print(f"wrote {p}")
     plt.close(fig)

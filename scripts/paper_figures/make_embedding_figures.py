@@ -23,27 +23,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-COND_ORDER = ["blind", "uniform", "foveated", "foveated_learned", "matched"]
 COND_DISPLAY = {
     "blind": ("Blind", "#444444"),
     "uniform": ("Uniform", "#4daf4a"),
-    "foveated": ("Foveated (fix)", "#e41a1c"),
-    "foveated_learned": ("Foveated (learned)", "#ff7f00"),
+    "foveated": ("Foveated", "#e41a1c"),
     "matched": ("Coarse", "#377eb8"),
 }
 
 
 def _load_npz(in_dir: Path, cond: str) -> dict | None:
-    # Prefer deterministic-rollout NPZ (post-c81352e fix). Fall back to
-    # the stochastic NPZ so this script still runs on old probing_data;
-    # figures from those inputs need a caveat in the paper caption.
-    if cond == "foveated_learned":
-        candidates = [f"{cond}_gibson_det.npz",
-                      f"{cond}_gibson_truncated.npz",
-                      f"{cond}_gibson.npz"]
-    else:
-        candidates = [f"{cond}_gibson_det.npz",
-                      f"{cond}_gibson.npz"]
+    # Prefer deterministic-rollout NPZ (post-c81352e fix).
+    candidates = [f"{cond}_gibson_det.npz",
+                  f"{cond}_gibson.npz"]
     for name in candidates:
         p = in_dir / name
         if p.exists():
