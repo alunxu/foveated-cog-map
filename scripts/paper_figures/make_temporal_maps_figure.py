@@ -657,10 +657,13 @@ def main():
         left=0.06, right=0.96, top=0.46, bottom=0.08,
     )
 
-    # ── Row 1: TGM heatmaps ──────────────────────────────────────────
+    # ── Row 1 (panel a): 5 TGM heatmaps ──────────────────────────────
     last_im = None
+    first_tgm_ax = None
     for i, (cond_key, label, colour) in enumerate(CONDS):
         ax = fig.add_subplot(gs_top[0, i])
+        if first_tgm_ax is None:
+            first_tgm_ax = ax
         im = panel_tgm(ax, cond_key, label, colour,
                        tgm_data, tgm_vmin, tgm_vmax)
         if im is not None:
@@ -671,12 +674,24 @@ def main():
         cb_top.set_label("decoder $R^2$", fontsize=13, fontweight="bold")
         cb_top.ax.tick_params(labelsize=11)
 
-    # ── Row 2: 2 line plots ─────────────────────────────────────────
+    # ── Row 2 (panels b, c): 2 line plots ───────────────────────────
     ax_cum       = fig.add_subplot(gs_bot[0, 0])
     panel_cum_h2_lines(ax_cum, eps_by_cond)
 
     ax_decay     = fig.add_subplot(gs_bot[0, 1])
     panel_tgm_decay(ax_decay, tgm_data)
+
+    # ── Panel labels (a)/(b)/(c) in figure-coordinates ──────────────
+    # (a) above the leftmost TGM heatmap, slightly above the title.
+    # (b) above the cum-h2 line plot.
+    # (c) above the TGM-decay line plot.
+    # Using fig.text() in figure-fraction coords so labels are stable
+    # across panel-internal title/spine adjustments.
+    label_kw = dict(fontsize=20, fontweight="bold",
+                    ha="left", va="top", color="black")
+    fig.text(0.012, 0.985, "(a)", **label_kw)
+    fig.text(0.012, 0.495, "(b)", **label_kw)
+    fig.text(0.515, 0.495, "(c)", **label_kw)
 
     fig.savefig(OUT, dpi=200, bbox_inches="tight")
     plt.close(fig)
