@@ -40,29 +40,22 @@ apply_paper_style()
 
 
 # ──────────────────────────────────────────────────────────────────────
-# Trajectory-map panels (4 conditions, single shared scene).
+# Trajectory-map + autocorrelation panels — all 5 conditions, single
+# shared scene, single canonical post-retrain NPZ per condition.
 # ──────────────────────────────────────────────────────────────────────
-SCENE = "8WUmhLawc2A"        # has top-down PNG + 10 episodes per cond
-EP_RANK = 0                  # 0 = first reset episode in this scene
+SCENE = "8WUmhLawc2A"        # has top-down PNG + episodes for every cond
 
-TRAJ_CONDS = [
-    # (filename_key, label,   colour)
-    ("blind",         "Blind",          "#444444"),
-    ("matched",       "Coarse",         "#377eb8"),
-    ("foveated",      "Foveated",       "#e41a1c"),
-    ("uniform",       "Uniform",        "#4daf4a"),
+# Canonical post-retrain NPZs (positions, scene_ids, hidden_states all
+# in the same file).  Order matches paper-canonical condition order.
+CONDS = [
+    # (npz_key,             label,         colour)
+    ("blind_izar",          "Blind",       "#444444"),
+    ("coarse",              "Coarse",      "#377eb8"),
+    ("foveated_logpolar",   "Fov-LP",      "#984ea3"),
+    ("foveated",            "Foveated",    "#e41a1c"),
+    ("uniform",             "Uniform",     "#4daf4a"),
 ]
-
-# Autocorrelation panel — uses the canonical post-retrain NPZs.
-AUTOCORR_CONDS = [
-    ("blind_izar",        "Blind",          "#444444"),
-    ("coarse",            "Coarse",         "#377eb8"),
-    ("foveated_logpolar", "Fov-LP",         "#984ea3"),
-    ("foveated",          "Foveated",       "#e41a1c"),
-    ("uniform",           "Uniform",        "#4daf4a"),
-]
-AUTOCORR_NPZ_DIR = Path("/tmp/rcp_analysis_v3")
-TRAJ_DIR = Path("results/shortcut_results")
+NPZ_DIR = Path("/tmp/rcp_analysis_v3")
 TOPDOWN_DIR = Path("results/topdown_fig5")
 OUT = Path("docs/manuscript/fig/fig5_temporal.pdf")
 
@@ -82,20 +75,83 @@ def load_topdown(scene: str):
     return img, meta["world_lower_bound"], meta["world_upper_bound"]
 
 
-def load_episode(cond_key: str, scene: str, rank: int):
-    """Pick the rank-th 'reset' episode from this condition's traj NPZ
-    in the given scene. Returns (positions Tx3, n_steps)."""
-    d = np.load(TRAJ_DIR / f"{cond_key}_gibson_traj.npz", allow_pickle=True)
-    mask = (d["scenes"] == scene) & (d["conditions"] == "reset")
-    idx_list = np.where(mask)[0]
-    if len(idx_list) <= rank:
-        rank = 0
-    idx = idx_list[rank]
-    pos = np.array(d["positions"][idx])         # (T, 3): (x, y, z)
-    steps = int(d["steps"][idx])
-    start = np.array(d["starts"][idx])
-    goal = np.array(d["goals"][idx])
-    return pos, steps, start, goal
+def find_scene_id(d: np.lib.npyio.NpzFile, target_lo: list[float],
+                  target_hi: list[float]) -> int | None:
+    """Return the integer scene_id whose episode-position bounds fit
+    inside the target topdown's world bounds. The post-retrain NPZs
+    use integer scene indices; this function recovers which integer
+    corresponds to the named topdown scene by bounding-box matching."""
+    sids = d["scene_ids"]
+    pos = d["positions"]
+    margin = 2.0  # tolerate a few steps off the navmesh
+    for sid in np.unique(sids):
+        m = sids == sid
+        p = pos[m]
+        if len(p) < 5:
+            continue
+        lo = p.min(axis=0)
+        hi = p.max(axis=0)
+        if (target_lo[0] - margin <= lo[0] and hi[0] <= target_hi[0] + margin and
+                target_lo[2] - margin <= lo[2] and hi[2] <= target_hi[2] + margin):
+            return int(sid)
+    return None
+
+
+def load_episode_from_npz(cond_key: str, scene: str):
+    """Load a representative episode from this cond's post-retrain NPZ in
+    the named scene. Returns (positions Tx3, n_steps, start, goal). Picks
+    the longest episode in that scene (most informative trajectory)."""
+    p_npz = NPZ_DIR / f"{cond_key}_det_RCP.npz"
+    d = np.load(p_npz, allow_pickle=True)
+    # Resolve named scene -> integer scene_id via topdown world-bounds.
+    img, lo, hi = load_topdown(scene)
+    sid = find_scene_id(d, lo, hi)
+    if sid is None:
+        return None
+    sids = d["scene_ids"]
+    eps = d["episode_ids"]
+    steps_arr = d["step_in_episode"] if "step_in_episode" in d.files \
+        else np.arange(len(sids))
+    dtg = d["distance_to_goal"] if "distance_to_goal" in d.files else None
+    # Episodes in this scene that reached the goal (final dtg < 0.2 m,
+    # the canonical PointGoal success threshold) and have a reasonable
+    # step count (filters out stuck-loop episodes that ran the 2 000-
+    # step max).
+    ep_in_scene = np.unique(eps[sids == sid])
+    candidates = []
+    for e in ep_in_scene:
+        m = (eps == e) & (sids == sid)
+        nstep = int(m.sum())
+        if not (20 <= nstep <= 600):  # reasonable navigation episode
+            continue
+        if dtg is not None:
+            final_dtg = float(dtg[m][np.argmax(steps_arr[m])])
+            if final_dtg > 0.5:        # didn't reach goal
+                continue
+        candidates.append((e, nstep))
+    if not candidates:
+        # Fall back: any episode in the [20, 600] range, no success filter
+        candidates = [(e, int(((eps == e) & (sids == sid)).sum()))
+                      for e in ep_in_scene
+                      if 20 <= ((eps == e) & (sids == sid)).sum() <= 600]
+    if not candidates:
+        return None
+    # Pick the one closest to the per-condition median step count
+    # (most-typical successful run, not the longest outlier).
+    candidates.sort(key=lambda t: t[1])
+    chosen_ep, n_steps = candidates[len(candidates) // 2]
+
+    mask = (eps == chosen_ep) & (sids == sid)
+    pos = d["positions"][mask]           # (T, 3)
+    s_steps = steps_arr[mask]
+    order = np.argsort(s_steps)
+    pos = pos[order]
+    start = pos[0]
+    if "goal_positions" in d.files:
+        goal = d["goal_positions"][mask][0]
+    else:
+        goal = pos[-1]
+    return pos, int(n_steps), np.asarray(start), np.asarray(goal)
 
 
 def panel_traj_map(ax, cond_key: str, label: str, colour: str,
@@ -112,7 +168,14 @@ def panel_traj_map(ax, cond_key: str, label: str, colour: str,
               origin="lower", alpha=0.55, zorder=0,
               interpolation="bilinear")
 
-    pos, n_steps, start, goal = load_episode(cond_key, SCENE, EP_RANK)
+    loaded = load_episode_from_npz(cond_key, SCENE)
+    if loaded is None:
+        ax.text(0.5, 0.5, f"{label}\n(no data)",
+                transform=ax.transAxes, ha="center", va="center")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        return
+    pos, n_steps, start, goal = loaded
     # Habitat positions are (x, y, z); top-down uses the (x, z) plane.
     xz = pos[:, [0, 2]]
 
@@ -172,8 +235,8 @@ def compute_per_cond_autocorr() -> dict:
     """Return {cond_key: (mean_curve, tau_value, colour, label)}."""
     rng = np.random.default_rng(0)
     out = {}
-    for key, label, colour in AUTOCORR_CONDS:
-        p = AUTOCORR_NPZ_DIR / f"{key}_det_RCP.npz"
+    for key, label, colour in CONDS:
+        p = NPZ_DIR / f"{key}_det_RCP.npz"
         if not p.exists():
             continue
         d = np.load(p, allow_pickle=True)
@@ -217,7 +280,7 @@ def panel_autocorr_compact(ax, autocorr: dict):
     """Compact 1-panel autocorrelation summary (smaller than the full
     line plot in v1)."""
     lags = np.arange(MAX_LAG + 1)
-    for key, _, _ in AUTOCORR_CONDS:
+    for key, _, _ in CONDS:
         if key not in autocorr:
             continue
         curve, tau, colour, label = autocorr[key]
@@ -252,32 +315,25 @@ def main():
     autocorr = compute_per_cond_autocorr()
     print(f"  ({time.time()-t0:.1f}s)")
 
-    # Map traj-NPZ key -> autocorr key for tau lookup.
-    AUTOCORR_FOR_TRAJ = {
-        "blind":    "blind_izar",
-        "matched":  "coarse",
-        "foveated": "foveated",
-        "uniform":  "uniform",
-    }
-
-    fig = plt.figure(figsize=(17.0, 4.0))
+    # 2-row layout: 5 trajectory maps on top (one per condition),
+    # autocorrelation summary on the bottom (full width, narrow).
+    fig = plt.figure(figsize=(17.0, 5.6))
     gs = fig.add_gridspec(
-        1, 5,
-        width_ratios=[1.0, 1.0, 1.0, 1.0, 1.10],
-        wspace=0.05,
-        left=0.01, right=0.99, top=0.91, bottom=0.13,
+        2, 5,
+        height_ratios=[1.0, 0.55],
+        hspace=0.30, wspace=0.04,
+        left=0.02, right=0.98, top=0.92, bottom=0.10,
     )
-    for i, (cond_key, label, colour) in enumerate(TRAJ_CONDS):
+    for i, (cond_key, label, colour) in enumerate(CONDS):
         ax = fig.add_subplot(gs[0, i])
-        ac_key = AUTOCORR_FOR_TRAJ.get(cond_key)
         tau_text = None
-        if ac_key in autocorr:
-            tau = autocorr[ac_key][1]
+        if cond_key in autocorr:
+            tau = autocorr[cond_key][1]
             tau_text = f"$\\tau{{=}}{tau:.0f}$"
         panel_traj_map(ax, cond_key, label, colour, tau_text=tau_text)
 
-    # Autocorr panel (5th column).
-    ax_ac = fig.add_subplot(gs[0, 4])
+    # Autocorr panel spans the full bottom row.
+    ax_ac = fig.add_subplot(gs[1, :])
     panel_autocorr_compact(ax_ac, autocorr)
 
     fig.savefig(OUT, dpi=200, bbox_inches="tight")
