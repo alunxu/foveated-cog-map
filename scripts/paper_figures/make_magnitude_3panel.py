@@ -68,13 +68,13 @@ def panel_a(ax, mlp_json: Path) -> None:
     ax.axhline(0, color="#888", lw=0.6, ls="--", zorder=0)
 
     # Index-based positions to keep blind and coarse from overlapping;
-    # cell counts shown below in xtick labels.
+    # cell counts shown below in xtick labels (1×1, 2×2, 4×4 notation).
     POS_MAP = {  # mlp_key → x_position
         "blind_izar": 0,
         "coarse": 1,
         "foveated_logpolar": 2,
-        "foveated": 3,
-        "uniform": 3.5,  # share "16 cells" with foveated, slight x-jitter
+        "foveated": 2.85,  # share "16 cells" with uniform but stagger
+        "uniform": 3.55,
     }
     for _rcp, mlp_key, label, _cells, col, mk, _ in CONDS:
         d = data[mlp_key]
@@ -91,9 +91,9 @@ def panel_a(ax, mlp_json: Path) -> None:
                  fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
     ax.set_xlim(-0.4, 4.0)
     ax.set_ylim(-2.5, 1.15)
-    ax.set_xticks([0, 1, 2, 3, 3.5])
-    ax.set_xticklabels(["0\n(blind)", "1\n(coarse)", "4\n(fov-LP)",
-                         "16\n(foveated)", "16\n(uniform)"],
+    ax.set_xticks([0, 1, 2, 2.85, 3.55])
+    ax.set_xticklabels(["0\n(blind)", "1×1\n(coarse)", "2×2\n(fov-LP)",
+                         "4×4\n(foveated)", "4×4\n(uniform)"],
                         fontsize=12)
     ax.tick_params(axis="y", labelsize=12)
     ax.spines["top"].set_visible(False)
@@ -212,81 +212,57 @@ def panel_b(ax) -> None:
     ax.grid(axis="y", linestyle=":", alpha=0.25)
 
 
-# ───────────────────── Panel C: format shift at L2 ──────────────────────────
+# ───────────────────── Panel C: pipeline view (magnitude only) ─────────────
 def panel_c(ax, mlp_json: Path) -> None:
-    """Format shift at L2 (policy-readable layer): grouped bars per condition
-    showing linear vs MLP probe R^2 (5-fold CV). The gap = format shift.
-    L0 is condition-flat (~0.95) per the LSTM-input sensor concat — noted in
-    the caption rather than crowding the panel.
+    """Pipeline view: linear GPS R^2 along L0 (LSTM input) → L1 → L2 (top,
+    policy-readable) per condition. The magnitude divergence emerges at L2
+    only — at L0 (sensor concat) all conditions are comparable.
+
+    Magnitude-axis only — the linear-vs-MLP format-shift comparison is
+    Figure 3 (§3.2). mlp_json kept in signature for backward compatibility.
     """
-    mlp_data = json.loads(mlp_json.read_text())
-    mlp_keymap = {
-        "blind_izar": "blind_izar", "coarse": "coarse",
-        "foveated_logpolar": "foveated_logpolar",
-        "foveated": "foveated", "uniform": "uniform",
-    }
+    _ = mlp_json  # not used here; format-shift lives in §3.2
 
-    n = len(CONDS)
-    xs = np.arange(n)
-    bw = 0.36
-    lin_vals, mlp_vals, lin_errs, mlp_errs, colors, labels = [], [], [], [], [], []
-    for rcp_key, _mlp, label, _cells, col, _mk, _ in CONDS:
-        mlp_key = mlp_keymap.get(rcp_key)
-        if mlp_key not in mlp_data:
-            lin_vals.append(0); mlp_vals.append(0)
-            lin_errs.append(0); mlp_errs.append(0)
-        else:
-            d = mlp_data[mlp_key]
-            lin_vals.append(float(np.clip(d["linear_r2_mean"], CLIP_MIN, 1.05)))
-            mlp_vals.append(float(np.clip(d["mlp_r2_mean"], CLIP_MIN, 1.05)))
-            lin_errs.append(float(d.get("linear_r2_std", 0)))
-            mlp_errs.append(float(d.get("mlp_r2_std", 0)))
-        colors.append(col); labels.append(label)
+    for rcp_key, _mlp, label, _cells, col, mk, _ in CONDS:
+        main_p = RCP_DIR / f"{rcp_key}_det_analysis.json"
+        layer_r2 = {0: None, 1: None, 2: None}
+        if main_p.exists():
+            try:
+                d = json.loads(main_p.read_text())
+                for entry in d.get("1d_multilayer", []):
+                    if entry.get("state") == "h":
+                        L = entry["layer"]
+                        if L in layer_r2:
+                            layer_r2[L] = float(np.clip(entry["gps_r2"],
+                                                       CLIP_MIN, 1.05))
+            except Exception:
+                pass
 
-    # Linear bars (filled, hatched-empty); MLP bars (filled, solid) — same
-    # colour per condition with slight saturation difference
-    bars_lin = ax.bar(xs - bw/2, lin_vals, bw, yerr=lin_errs,
-                      color=colors, edgecolor="black", linewidth=0.6,
-                      capsize=2, alpha=0.45,
-                      error_kw={"elinewidth": 0.6, "ecolor": "#444"},
-                      label="Linear probe")
-    bars_mlp = ax.bar(xs + bw/2, mlp_vals, bw, yerr=mlp_errs,
-                      color=colors, edgecolor="black", linewidth=0.6,
-                      capsize=2,
-                      error_kw={"elinewidth": 0.6, "ecolor": "#444"},
-                      label="MLP probe")
-
-    # Connect linear→MLP per condition with a thin red line = format shift gap
-    for i in range(n):
-        ax.annotate("", xy=(xs[i] + bw/2, mlp_vals[i]),
-                    xytext=(xs[i] - bw/2, lin_vals[i]),
-                    arrowprops=dict(arrowstyle="->", color="#a02528",
-                                    lw=0.9, alpha=0.55, shrinkA=2, shrinkB=2),
-                    zorder=5)
+        xs, ys = [], []
+        for L in (0, 1, 2):
+            if layer_r2[L] is not None:
+                xs.append(L); ys.append(layer_r2[L])
+        if xs:
+            ax.plot(xs, ys, marker=mk, label=label,
+                    color=col, linewidth=2.2, markersize=10,
+                    markeredgecolor="white", markeredgewidth=1.0,
+                    zorder=3)
 
     ax.axhline(0, color="black", linewidth=0.5, zorder=1)
-
-    ax.set_xticks(xs)
-    ax.set_xticklabels(labels, fontsize=12, rotation=20, ha="right")
+    ax.set_xticks([0, 1, 2])
+    ax.set_xticklabels(["L0\n(LSTM input)", "L1", "L2\n(top, policy)"],
+                       fontsize=12)
+    ax.set_xlim(-0.4, 2.4)
     ax.set_ylim(CLIP_MIN - 0.05, 1.10)
-    ax.set_xlim(-0.6, n - 0.4)
-    ax.set_ylabel(r"GPS $R^2$ at L2 (5-fold CV)",
+    ax.set_xlabel("Pipeline location", fontsize=15, fontweight="bold")
+    ax.set_ylabel(r"linear GPS $R^2$ (single-fit)",
                   fontsize=15, fontweight="bold")
-    ax.set_title("(c) Format shift at L2 (policy-readable)",
+    ax.set_title("(c) Pipeline view: where the divergence sits",
                  fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
     ax.tick_params(axis="y", labelsize=12)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.grid(axis="y", linestyle=":", alpha=0.25)
-    # Custom legend showing linear (light) vs MLP (solid) — neutral grey
-    from matplotlib.patches import Patch
-    legend_elems = [
-        Patch(facecolor="#888", edgecolor="black", alpha=0.45,
-              label="Linear probe"),
-        Patch(facecolor="#888", edgecolor="black", label="MLP probe"),
-    ]
-    ax.legend(handles=legend_elems, loc="lower left", fontsize=11,
-              frameon=True, framealpha=0.92)
 
 
 # ───────────────────────── compose ────────────────────────────────────
