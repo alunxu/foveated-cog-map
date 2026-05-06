@@ -84,11 +84,11 @@ def panel_a(ax, mlp_json: Path) -> None:
                     markeredgecolor="white", markeredgewidth=1.4,
                     capsize=4, lw=2.0, zorder=4, label=label)
 
-    ax.set_xlabel("Encoder spatial output (cells)", fontsize=15, fontweight="bold")
-    ax.set_ylabel(r"top-layer linear GPS $R^2$ (5-fold CV)",
-                  fontsize=15, fontweight="bold")
+    ax.set_xlabel("Encoder spatial output", fontsize=20, fontweight="bold")
+    ax.set_ylabel(r"top-layer linear GPS $R^2$",
+                  fontsize=20, fontweight="bold")
     ax.set_title("(a) Magnitude collapse",
-                 fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
+                 fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
     ax.set_xlim(-0.4, 4.0)
     ax.set_ylim(-2.5, 1.15)
     ax.set_xticks([0, 1, 2, 2.85, 3.55])
@@ -202,10 +202,10 @@ def panel_b(ax) -> None:
     ax.set_xticks([50, 100, 150, 200, 250])
     ax.set_xticklabels(["50", "100", "150", "200", "250"],
                         rotation=0, fontsize=12)
-    ax.set_xlabel("training frames (M)", fontsize=15, fontweight="bold")
-    ax.set_ylabel(r"top-layer GPS $R^2$ (5-fold CV)", fontsize=15, fontweight="bold")
+    ax.set_xlabel("training frames (M)", fontsize=20, fontweight="bold")
+    ax.set_ylabel(r"top-layer GPS $R^2$", fontsize=20, fontweight="bold")
     ax.set_title("(b) Substitution mechanism",
-                 fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
+                 fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.tick_params(axis="y", labelsize=12)
@@ -270,11 +270,11 @@ def panel_c(ax, mlp_json: Path) -> None:
     ax.set_xlim(-0.3, 60)
     ax.set_ylim(Y_DISPLAY_MIN - 0.05, 1.10)
     ax.set_xlabel("predictive horizon $k$ (steps ahead)",
-                  fontsize=15, fontweight="bold")
-    ax.set_ylabel(r"GPS $R^2$ at $\mathbf{h}_t \to \mathrm{pos}_{t+k}$",
-                  fontsize=15, fontweight="bold")
+                  fontsize=20, fontweight="bold")
+    ax.set_ylabel(r"future-position $R^2$",
+                  fontsize=20, fontweight="bold")
     ax.set_title("(c) Predictive horizon",
-                 fontsize=17, fontweight="bold", loc="left", x=0.0, pad=10)
+                 fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
     ax.tick_params(axis="y", labelsize=12)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
