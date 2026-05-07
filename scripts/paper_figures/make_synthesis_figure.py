@@ -230,9 +230,10 @@ def main() -> None:
         # Label
         offsets = {
             "Blind":              (-0.06, +0.014),
-            "Coarse":       (+0.07, +0.018),
-            "Uniform":            (-0.06, +0.014),
-            "Foveated":     (+0.06, -0.013),
+            "Coarse":             (-0.07, +0.020),
+            "Uniform":            (+0.06, +0.014),
+            "Foveated":           (+0.06, -0.013),
+            "Fov-logpolar":       (+0.06, +0.014),
         }
         dx, dy = offsets.get(label, (0.05, 0.0))
         ha = "right" if dx < 0 else "left"
@@ -247,23 +248,23 @@ def main() -> None:
     # Quadrant labels — bigger, clearer, with concise descriptions.
     quad_kw = dict(transform=ax.transAxes, fontsize=10, color="#222",
                    style="italic", weight="bold", alpha=0.7)
-    ax.text(0.97, 0.96, "GPS-readable\nformat-isolated",
+    ax.text(0.97, 0.96, "linearly readable\nformat-isolated",
             ha="right", va="top", **quad_kw)
-    ax.text(0.03, 0.96, "no GPS\nformat-isolated",
+    ax.text(0.03, 0.96, "non-linear only\nformat-isolated",
             ha="left", va="top", **quad_kw)
-    ax.text(0.97, 0.04, "GPS-readable\nformat-shared",
+    ax.text(0.97, 0.04, "linearly readable\nformat-shared",
             ha="right", va="bottom", **quad_kw)
-    ax.text(0.03, 0.04, "no GPS\nformat-shared",
+    ax.text(0.03, 0.04, "non-linear only\nformat-shared",
             ha="left", va="bottom", **quad_kw)
 
-    ax.set_title("Three-axis synthesis of sensor-structure effects",
+    ax.set_title("Three views of one capacity allocation",
                  loc="left", pad=10)
-    ax.set_xlabel(r"H1 magnitude: top-layer GPS $R^2$ (probe on $\mathbf{h}_2$)",
+    ax.set_xlabel(r"Magnitude: top-layer GPS $R^2$ (probe on $\mathbf{h}_2$)",
                   fontsize=12, labelpad=6)
-    ax.set_ylabel("H2 format isolation\n(donor transplant cost)",
+    ax.set_ylabel("Format isolation\n(donor transplant cost)",
                   fontsize=12, labelpad=6)
     ax.set_xlim(CLIP_X_MIN - 0.05, 1.10)
-    ax.set_ylim(-0.04, 0.32)
+    ax.set_ylim(-0.16, 0.32)
     ax.tick_params(axis="both", labelsize=11)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
@@ -284,7 +285,7 @@ def main() -> None:
                    markersize=(s ** 0.5), label=f"{d:.0f}%")
         handles.append(h)
     leg = ax.legend(handles=handles,
-                    title="shortcut SPL drop\n(behavioural\nmemory reliance)",
+                    title="Consumption: shortcut SPL drop\n(behavioural memory reliance)",
                     loc="upper left",
                     bbox_to_anchor=(1.02, 1.0),
                     fontsize=9.5, title_fontsize=9.5,
