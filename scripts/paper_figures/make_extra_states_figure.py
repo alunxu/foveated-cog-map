@@ -29,10 +29,11 @@ import numpy as np
 
 
 CONDS = [
-    ("blind",            "Blind",             "#444444", "o"),
-    ("matched",          "Coarse",      "#377eb8", "s"),
-    ("uniform",          "Uniform",           "#4daf4a", "^"),
-    ("foveated",         "Foveated",    "#e41a1c", "D"),
+    ("blind",             "Blind",    "#444444", "o"),
+    ("coarse",            "Coarse",   "#377eb8", "s"),
+    ("foveated_logpolar", "Fov-LP",   "#984ea3", "v"),
+    ("foveated",          "Foveated", "#e41a1c", "D"),
+    ("uniform",           "Uniform",  "#4daf4a", "^"),
 ]
 CLIP_MIN = -1.5
 

@@ -22,16 +22,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 COND_DISPLAY = {
-    "blind_gibson":            ("Blind",              "#444444"),
-    "uniform_gibson":          ("Uniform",            "#4daf4a"),
-    "foveated_gibson":         ("Foveated",   "#e41a1c"),
-    "matched_gibson":          ("Coarse",    "#377eb8"),
+    "blind":             ("Blind",    "#444444"),
+    "coarse":            ("Coarse",   "#377eb8"),
+    "foveated_logpolar": ("Fov-LP",   "#984ea3"),
+    "foveated":          ("Foveated", "#e41a1c"),
+    "uniform":           ("Uniform",  "#4daf4a"),
+    # Backwards-compat (old goal_vector.json schema):
+    "blind_gibson":   ("Blind",    "#444444"),
+    "matched_gibson": ("Coarse",   "#377eb8"),
+    "foveated_gibson": ("Foveated", "#e41a1c"),
+    "uniform_gibson":  ("Uniform",  "#4daf4a"),
 }
 COND_ORDER = [
+    "blind",
+    "coarse",
+    "foveated_logpolar",
+    "foveated",
+    "uniform",
+    # Backwards-compat fallbacks:
     "blind_gibson",
-    "uniform_gibson",
-    "foveated_gibson",
     "matched_gibson",
+    "foveated_gibson",
+    "uniform_gibson",
 ]
 
 
