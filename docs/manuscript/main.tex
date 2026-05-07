@@ -432,125 +432,79 @@ with $T_{\theta}: \mathcal{X} \times \mathcal{Z} \to \mathbb{R}$ a neural networ
 \section{Spatial Format: corroborating diagnostics}
 \label{app:format-spatial-detail}
 
-This appendix collects spatial-format diagnostics referenced from §\ref{sec:format-spatial}: the full $5{\times}5$ transplant matrix with cross-condition probe transfer and subspace evolution (Figure~\ref{fig:format_appendix}); a linear-similarity null (CKA) and a non-linear similarity check (t-SNE; Figures~\ref{fig:supp_cka},~\ref{fig:supp_tsne}); the geometric structure of the position code within $\mathbf{h}_2$ (Section~\ref{app:cap_allocation_extras}); a population-coding analysis (Figure~\ref{fig:supp_pop_coding}); per-condition eigenspectrum power-law and associated geometric scalars (Section~\ref{app:eigenspectrum}); and a causal subspace ablation (Section~\ref{app:scrubbing}). Where individual figures use the 4-condition cache (population-coding, position-axis, t-SNE, $\beta$-scrubbing) we say so explicitly in the caption; the headline 5-condition results are in the main text and in Figure~\ref{fig:format_appendix}.
+This appendix collects spatial-format diagnostics in four consolidated figures: convergent format-divergence metrics (Figure~\ref{fig:format_divergence}); capacity-allocation geometry within $\mathbf{h}_2$ (Figure~\ref{fig:capacity_geometry}); eigenspectrum and causal $\beta$-scrubbing (Figure~\ref{fig:eigen_scrub}); and the goal-vector probe (Figure~\ref{fig:supp_goal_vec}). Where individual panels use the original 4-condition cache (population-coding, position-axis, t-SNE, $\beta$-scrubbing), we say so explicitly; the headline 5-condition results are in the main text and in the transplant + probe-transfer + subspace-evolution panels of Figure~\ref{fig:format_divergence}.
+
+\begin{figure}[!t]
+\centering
+\begin{minipage}[c]{0.50\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/figa7a_transplant_5x5.pdf}\\[-2pt]
+  {\footnotesize\textbf{(a) $5{\times}5$ memory-transplant matrix}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.48\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/figa7b_h2_probe_transfer.pdf}\\[-2pt]
+  {\footnotesize\textbf{(b) Cross-condition probe transfer}}
+\end{minipage}\\[8pt]
+\begin{minipage}[c]{0.48\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/figa7c_subspace_evolution.pdf}\\[-2pt]
+  {\footnotesize\textbf{(c) Subspace evolution over training}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.50\linewidth}\centering
+  \includegraphics[width=0.8\linewidth]{fig/figa8_cka_heatmap.pdf}\\[-2pt]
+  {\footnotesize\textbf{(d) Linear-similarity null (CKA)}}
+\end{minipage}\\[8pt]
+\begin{minipage}[c]{\linewidth}\centering
+  \includegraphics[width=0.92\linewidth]{fig/figa11_tsne.pdf}\\[-2pt]
+  {\footnotesize\textbf{(e) Non-linear similarity (t-SNE) of $\mathbf{h}_2$}}
+\end{minipage}
+\caption{\textbf{Format divergence: five convergent metrics.} \textbf{(a)} Full $5{\times}5$ memory-transplant matrix at midpoint $t{=}30$ (the per-recipient mean enters main Figure~\ref{fig:format_axis}b as the transplant-cost axis); the matrix shows the same direction-asymmetry condensed there. \textbf{(b)} Cross-condition probe transfer matrix (train on row, test on column): off-diagonal $R^2$ is catastrophically negative ($-3.5{\times}10^2$ to $-3.5{\times}10^4$ unclipped; clipped to $[-1, 1]$ here) --- position-axes are jointly incompatible at the readout level even when the same scenes are visited and the same task is solved. \textbf{(c)} Principal angles between conditions' position-direction subspaces over training: already near-orthogonal at the earliest probed checkpoint ($\sim 50$M frames) and stay so throughout, so the structural separation is laid down well before convergence. \textbf{(d)} Unaligned linear CKA~\citep{kornblith2019cka} between top-layer LSTM hidden states ($n{=}95{,}640$ steps/cond): every off-diagonal $< 10^{-4}$; within-condition split-half CKA $\approx 1$. CKA is the least informative of the five measures because it cannot read the asymmetric structure that transplant + probe-transfer show. \textbf{(e)} t-SNE of top-layer hidden states (perplexity 30, $5{,}000$ samples; left: joint embedding, $1$-NN purity $1.000$ vs.\ chance $0.20$; right: per-condition embedding coloured by distance-to-goal). Blind shows the clearest DtG gradient, consistent with its more directly readable position code. (Cache: panels d, e use 4 conditions; fov-LP omitted.)}
+\label{fig:format_divergence}
+\label{fig:format_appendix}
+\label{fig:supp_cka}
+\label{fig:supp_tsne}
+\end{figure}
 
 \begin{figure}[!t]
 \centering
 \begin{minipage}[c]{\linewidth}\centering
-  \includegraphics[width=0.7\linewidth]{fig/figa7a_transplant_5x5.pdf}\\[-2pt]
-  {\footnotesize\textbf{(a) $5{\times}5$ memory-transplant matrix (full)}}
+  \includegraphics[width=0.92\linewidth]{fig/figa9_population_coding.pdf}\\[-2pt]
+  {\footnotesize\textbf{(a) Per-unit spatial info (left) vs.\ sparse-vs-distributed GPS decoding (right)}}
 \end{minipage}\\[6pt]
-\begin{minipage}[c]{0.49\linewidth}\centering
-  \includegraphics[width=\linewidth]{fig/figa7b_h2_probe_transfer.pdf}\\[-2pt]
-  {\footnotesize\textbf{(b) Cross-condition probe transfer}}
+\begin{minipage}[c]{0.46\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/figa12_position_axis.pdf}\\[-2pt]
+  {\footnotesize\textbf{(b) Position-axis vs.\ explained variance, by PC index}}
 \end{minipage}\hfill
-\begin{minipage}[c]{0.49\linewidth}\centering
-  \includegraphics[width=\linewidth]{fig/figa7c_subspace_evolution.pdf}\\[-2pt]
-  {\footnotesize\textbf{(c) Subspace evolution over training}}
+\begin{minipage}[c]{0.52\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/figa13_pc_cumulative.pdf}\\[-2pt]
+  {\footnotesize\textbf{(c) Linear readout vs.\ \# PCs (left) and participation ratio (right)}}
 \end{minipage}
-\caption{\textbf{Spatial Format: corroborating diagnostics (referenced from §\ref{sec:format-spatial}).} \emph{(a)}~The full $5{\times}5$ memory-transplant matrix at midpoint $t{=}30$ (the per-recipient mean enters main Figure~\ref{fig:format_axis}b as the ``transplant cost'' axis); the matrix shows the same direction-asymmetry condensed there. \emph{(b)}~Cross-condition probe transfer matrix (train on row, test on column): off-diagonal $R^2$ is catastrophically negative ($-3.5{\times}10^2$ to $-3.5{\times}10^4$ unclipped; clipped to $[-1, 1]$ for visualisation) --- the position-axes encoded across conditions are jointly incompatible at the readout level, even when the same scenes are visited and the same task is solved. \emph{(c)}~Subspace divergence is established early: principal angles are already near-orthogonal at the earliest probed checkpoint ($\sim 50$M frames) and stay so throughout, indicating the structural separation is laid down well before convergence.}
-\label{fig:format_appendix}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.55\linewidth]{fig/figa8_cka_heatmap.pdf}
-\caption{Unaligned linear CKA~\citep{kornblith2019cka} between top-layer LSTM hidden states ($n{=}95{,}640$ steps per condition under deterministic-rollout probes); every off-diagonal is below $10^{-4}$. Within-condition split-half CKA $\approx 1$ confirms the near-zero off-diagonals are not estimator noise. Pairs that look identical here differ markedly under transplant and probe-transfer (Figure~\ref{fig:format_appendix}); CKA is the least informative of the three format-divergence measures because it cannot read the asymmetric structure that transplant and probe-transfer show.}
-\label{fig:supp_cka}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.95\linewidth]{fig/figa9_population_coding.pdf}
-\caption{\textbf{Population-coding analysis: per-unit spatial information vs.\ population readout.} \textbf{(a)} Per-unit spatial-information distribution per condition (units sorted by spatial information, descending; log $x$). Rich-encoder conditions (uniform, foveated) have a few more peaked spatially-tuned units (max $\approx 2$ bits) than bottleneck conditions; blind has the flattest distribution (max $\approx 1$ bit). \textbf{(b)} Sparse-vs-distributed GPS decoding: probe $R^2$ when only the top-$k$ spatial-info units are used as features. Blind reaches $R^2 \approx 1.0$ at $k{=}512$; coarse climbs to $R^2 \approx 0.5$; rich-encoder networks fail to decode GPS at any $k$ even though their top units carry higher per-unit spatial information. The picture is: higher per-unit spatial information $\neq$ population position readout. Rich-encoder peaked units encode features correlated with position (visual landmarks, trajectory phase) rather than position itself. Cache: 4 conditions; fov-LP omitted as in §\ref{app:magnitude-detail}.}
+\caption{\textbf{Capacity-allocation geometry within $\mathbf{h}_2$.} \textbf{(a)} \emph{Population coding.} Per-unit spatial-information distribution per condition (units sorted by spatial information, descending; log $x$): rich-encoder conditions have a few more peaked spatially-tuned units (max $\approx 2$ bits) than bottleneck conditions, but sparse-vs-distributed GPS decoding (right sub-panel) goes the opposite way --- blind reaches $R^2 \approx 1.0$ with the top-$k$ spatial-info units, while rich-encoder networks fail to decode GPS at any $k$. Higher per-unit spatial information $\neq$ population position readout: rich-encoder peaked units encode features correlated with position (visual landmarks, trajectory phase) rather than position itself. \textbf{(b)} \emph{Position-axis lives in the low-variance tail.} Solid: cumulative power of the Ridge-probe singular directions (the linear position-axis) vs.\ \# PCs. Dashed: cumulative explained variance. The manifold's variance is concentrated in $\sim 7$--$9$ top PCs (90\% by PC 9), but the position-axis distributes its power across 200+ PCs and does not reach 50\% within the first 200 PCs. The discriminator across conditions is therefore not where (in a high-variance sense) position lives but the cross-scene stability of the readout direction (Figure~\ref{fig:format_axis}b). \textbf{(c)} \emph{Linear readout vs.\ \# PCs and participation ratio.} Ridge-probe GPS $R^2$ as a function of the number of top PCs of $\mathbf{h}_2$ used as the probe input: blind plateaus quickly with $\leq 10$ PCs (axis aligned with low-variance dirs); rich-encoder conditions barely climb across 50 PCs (information distributed). The participation ratio $(\Sigma\lambda)^2/\Sigma\lambda^2$ is similarly compact across conditions; what differs is how position information is laid out within these dimensions. (Cache: 4 conditions; fov-LP omitted.)}
+\label{fig:capacity_geometry}
 \label{fig:supp_pop_coding}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.7\linewidth]{fig/figa10_goal_vector.pdf}
-\caption{\textbf{Goal-vector probe $R^2$.} Goal distance (DtG) decodes strongly across all conditions ($R^2 \in [0.81, 0.90]$); goal direction and the full ego-frame goal vector are at chance or negative everywhere. PointGoal provides the goal vector as a per-step input, so the policy has no incentive to re-encode it.}
-\label{fig:supp_goal_vec}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{fig/figa11_tsne.pdf}
-\caption{\textbf{Non-linear similarity: t-SNE of top-layer hidden states.} \textbf{Left:} joint t-SNE of $5{,}000$ samples ($1{,}000$ per condition) in $512$-d hidden space (perplexity 30; the 4-condition cache --- fov-LP not included --- complements the 5-condition CKA, transplant, and probe-transfer measures of Figure~\ref{fig:format_appendix}). The four conditions form clearly separable clusters; 1-NN purity is $1.000$ vs.\ chance $0.20$, complementing pairwise linear CKA ($<10^{-4}$): format divergence is robust under both linear and non-linear similarity tests. \textbf{Right:} per-condition t-SNE coloured by distance-to-goal ($n{=}2{,}000$ per panel). Blind shows a clearer DtG gradient than the rich-encoder conditions, consistent with §\ref{sec:h1}: blind's hidden state carries position information more directly while rich-encoder conditions encode it less linearly.}
-\label{fig:supp_tsne}
-\end{figure}
-
-\subsection{Capacity-allocation: additional geometric tests}
-\label{app:cap_allocation_extras}
-
-The figures below provide independent geometric tests of the capacity-allocation principle, beyond the headline information-allocation (Fig.~\ref{fig:format_axis}a) and LOSO scene-invariance (Fig.~\ref{fig:format_axis}b) results in §\ref{sec:h1}. (The cross-condition probe-transfer matrix is shown as panel~(b) of Figure~\ref{fig:format_appendix}; we do not duplicate it here.)
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.65\linewidth]{fig/figa12_position_axis.pdf}
-\caption{\textbf{Position-axis lives in low-variance directions of $\mathbf{h}_2$.} Solid: cumulative power of the Ridge-probe singular directions (the linear position-axis) as a function of \# PCs. Dashed: cumulative explained variance (the manifold's own variance distribution). The manifold's variance is concentrated in $\sim 7$--$9$ top PCs (90\% by PC 9), but the position-axis distributes its power across 200+ PCs --- it does not reach 50\% within the first 200 PCs. Position information is encoded in the low-variance tail of $\mathbf{h}_2$ across all conditions; the discriminator across conditions is therefore not where (in a high-variance sense) position lives but rather the cross-scene stability of the readout direction (Figure~\ref{fig:format_axis}b). Cache: 4 conditions; fov-LP omitted as in §\ref{app:magnitude-detail}.}
 \label{fig:position_axis}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{fig/figa13_pc_cumulative.pdf}
-\caption{\textbf{Linear readout vs.\ \# PCs.} \emph{(a)} Ridge-probe GPS $R^2$ as a function of the number of top PCs of $\mathbf{h}_2$ used as the probe input. Per-cond pattern: blind plateaus quickly even with $\leq 10$ PCs (linear axis aligned with low-variance dirs); rich-encoder conditions barely climb across 50 PCs (information distributed). \emph{(b)} Participation ratio $(\Sigma\lambda)^2/\Sigma\lambda^2$ (number of effectively active dimensions, ignoring tail) across conds. Variance distribution is similarly compact across conditions; what differs is how position information is laid out within these dimensions, supporting the position-axis analysis (Figure~\ref{fig:position_axis}).}
 \label{fig:pc_cumulative}
 \end{figure}
 
-\subsection{Single-direction $\beta$-scrubbing reveals redundant population coding}
-\label{app:scrubbing}
-
-The Ridge probe identifies a $2$-d direction $\beta$ in $\mathbf{h}_2$ that linearly predicts $(x, y)$. We test whether this direction is \emph{causally responsible} for the recoverable position code by projecting $\mathbf{h}_2$ onto the null-space of $\beta$ (rank-$510$ subspace) and re-evaluating both Ridge and MLP probes (Heimersheim \& Nanda 2024 noising-style patching: tests whether $\beta$ was \emph{necessary} for the encoded behavior~\citep{heimersheim2024activation}).
-
-\begin{center}
-\begin{tabular}{l|cccc}
-\toprule
-& Linear orig & Linear scrub & MLP orig & MLP scrub \\
-\midrule
-Blind   & $+0.95$ & $+0.93$ & $+0.94$ & $+0.95$ \\
-Coarse  & $+0.72$ & $+0.62$ & $+0.79$ & $+0.84$ \\
-Uniform & $-1.08$ & $-1.46$ & $+0.42$ & $+0.31$ \\
-\bottomrule
-\end{tabular}
-\end{center}
-
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.65\linewidth]{fig/figa14_subspace_scrubbing.pdf}
-\caption{\textbf{$\beta$-subspace scrubbing.} For each condition Ridge $\beta$ identifies a 2-d direction in $\mathbf{h}_2$ that linearly predicts $(x, y)$; scrubbed $\mathbf{h}_2 = (I - \beta^+ \beta)\, \mathbf{h}_2$ removes this 2-d subspace. The MLP probe is essentially unaffected by scrubbing: position information is redundantly distributed across many $\mathbf{h}_2$ dimensions, not concentrated in the 2-d $\beta$ subspace. Cache: Blind / Coarse / Uniform (the rich-encoder probes were piloted but suffered from the same MLP-recovery effect; foveated and fov-LP are not separately included).}
+\begin{minipage}[c]{0.66\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/figa15_eigenspectrum.pdf}\\[-2pt]
+  {\footnotesize\textbf{(a) Eigenvalue $\lambda_n$ vs.\ PC index (left) and fitted power-law $\alpha$ per condition (right)}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}\centering
+  \includegraphics[width=\linewidth]{fig/figa14_subspace_scrubbing.pdf}\\[-2pt]
+  {\footnotesize\textbf{(b) $\beta$-subspace scrubbing}}
+\end{minipage}
+\caption{\textbf{Eigenspectrum and causal redundancy of the position code.} \textbf{(a)} Eigenvalue $\lambda_n$ vs.\ PC index $n$ for $\mathbf{h}_2$, log--log (reference exponents $\alpha = 1$, Stringer V1; $\alpha = 1 + 2/3$, theoretical critical exponent for $d_{\rm task}{=}3$); fitted exponent $\alpha$ per condition (linear fit on log-$\lambda_n$ vs.\ log-$n$, PCs $5$--$200$). Blind sits well above the critical exponent ($\alpha \approx 3.85$, top-10 PCs capture 95\% variance), in a few-dim concentrated regime; the four sighted conditions cluster around $\alpha \approx 1.7$--$1.9$, near the smoothness/efficiency border, distributing hidden-state variance across more directions. The split is the geometric reading of the capacity-allocation principle: blind's heavy reliance on the integrated GPS code crystallises into a low-dimensional eigenspectrum; sighted conditions distribute variance across more directions to support encoder-route information. \textbf{(b)} $\beta$-subspace scrubbing. Ridge $\beta$ identifies a 2-d direction in $\mathbf{h}_2$ that linearly predicts $(x, y)$; scrubbed $\mathbf{h}_2 = (I - \beta^+ \beta)\, \mathbf{h}_2$ removes this 2-d subspace. The MLP probe is essentially unaffected: position information is redundantly distributed across many $\mathbf{h}_2$ dimensions, not concentrated in the 2-d $\beta$ subspace --- the population-coding-redundancy property of biological place-cell systems~\citep{stringer2019high}. (Cache for (b): Blind / Coarse / Uniform.)}
+\label{fig:eigen_scrub}
+\label{fig:eigenspectrum}
 \label{fig:subspace_scrubbing}
 \end{figure}
-
-The MLP probe is essentially unaffected by scrubbing across all three conditions ($\Delta R^2 \in [-0.05, +0.11]$). Ridge shows small drops for Blind ($-0.02$) and Coarse ($-0.10$); Uniform's already-negative Ridge $R^2$ becomes more negative due to estimator variance. Two readings are consistent. Either the rank-$2$ subspace identified by Ridge is one of many redundant directions encoding position --- when removed, Ridge re-fits to a different direction in the remaining $510$ dims; or MLP, having access to non-linear combinations of remaining dims, trivially recovers the position code from this redundant population. This is the population-coding-redundancy property familiar from biological place-cell systems~\citep{stringer2019high}: single-cell or low-rank ablation does not break the code because of high-dimensional distributed representation. Methodologically, single-direction scrubbing is too weak to causally localise position in $\mathbf{h}_2$; higher-rank ablation, attribution-based pruning, or path-patching~\citep{heimersheim2024activation} would be next steps.
-
-\subsection{Eigenspectrum power-law per condition}
-\label{app:eigenspectrum}
-
-We adapt the eigenspectrum analysis of \citet{stringer2019high} to the LSTM hidden state, fitting a power law $\lambda_n \propto n^{-\alpha}$ to the eigenvalues of $\mathbf{h}_2$ per condition (PCs $n \in [5, 200]$ to skip finite-sample bias and machine-precision tail). All five conditions show a tight power-law eigenspectrum (Figure~\ref{fig:eigenspectrum}, $R^2 \geq 0.99$). The fitted exponent shows a sharp bottleneck-vs-rich-encoder split:
-
-\begin{center}
-\begin{tabular}{lccc}
-\toprule
-Condition & $\alpha$ & $R^2$ & Var. top 10 PCs \\
-\midrule
-Blind             & $3.85 \pm 0.03$ & $0.99$ & $95\%$ \\
-Coarse            & $1.80 \pm 0.01$ & $1.00$ & $82\%$ \\
-Foveated          & $1.72 \pm 0.01$ & $1.00$ & $76\%$ \\
-Foveated-logpolar & $1.80 \pm 0.01$ & $1.00$ & $95\%$ \\
-Uniform           & $1.90 \pm 0.01$ & $1.00$ & $91\%$ \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-Two observations. (i) Blind sits well above the critical exponent $1 + 2/d_{\rm task} \approx 1.67$ that demarcates differentiable from fractal manifolds for a $d_{\rm task} = 3$ stimulus (current position + heading), and far above Stringer's V1 value ($\alpha \approx 1.04$). With $\alpha = 3.85$, blind's eigenspectrum decays sharply: variance is concentrated in the top few PCs (top-$10$ already capture $95\%$). We do not claim that Stringer's specific theoretical bound ($\alpha = 1 + 2/d$, derived for smooth tuning curves over a $d$-dim stimulus manifold) directly applies to our recurrent setting; the observation is descriptive. (ii) The four sighted conditions cluster tightly around $\alpha \approx 1.7$--$1.9$, all near the $1 + 2/d_{\rm task} \approx 1.67$ critical exponent --- the smoothness/efficiency border. Blind is the outlier above, in a few-dim concentrated regime, while the four sighted conditions distribute variance across more PCs. The split bottleneck-vs-rich-encoder reading: blind's heavy reliance on the integrated GPS code crystallises into a low-dimensional eigenspectrum, while sighted conditions (including coarse, whose $1{\times}1$ encoder still feeds a ResNet-18 stack with diverse channels) distribute hidden-state variance across more directions to support encoder-route information.
 
 \begin{table}[!t]
 \centering
 \small
 \setlength{\tabcolsep}{6pt}
-\caption{\textbf{Geometric scalars: per-condition manifold shape (companion to Figure~\ref{fig:eigenspectrum}; referenced from §\ref{sec:format-spatial}).} Participation ratio (PR), intrinsic dimension (ID-MLE / ID-CDF), and eigenspectrum power-law exponent $\alpha$ on $\mathbf{h}_2$. All values from post-retrain hp-consistent agents (3-seed mean over $30{,}000$-step subsamples; std $< 0.05$). Blind separates on $\alpha$ (sharper tail) and on ID (lowest); the four sighted conditions cluster on $\alpha$ and ID (1.73--1.92, 2.04--2.41). PR varies more across sighted conditions and does not track encoder bandwidth monotonically; we read it as different geometric distributions of the visual route's residual variance rather than a clean ordering.}
+\caption{\textbf{Geometric scalars: per-condition manifold shape (companion to Figure~\ref{fig:eigen_scrub}a).} Participation ratio (PR), intrinsic dimension (ID-MLE / ID-CDF), and eigenspectrum power-law exponent $\alpha$ on $\mathbf{h}_2$ (post-retrain hp-consistent agents; 3-seed mean over $30{,}000$-step subsamples, std $< 0.05$). Blind separates on $\alpha$ (sharper tail) and on ID (lowest); the four sighted conditions cluster on $\alpha$ and ID. PR varies across sighted conditions and does not track encoder bandwidth monotonically; we read it as different geometric distributions of the visual route's residual variance rather than a clean ordering.}
 \label{tab:geometry}
 \begin{tabular}{lcccc}
 \toprule
@@ -567,9 +521,9 @@ Uniform            & $3.09$ & $2.32$ & $2.17$ & $1.92$ \\
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=\linewidth]{fig/figa15_eigenspectrum.pdf}
-\caption{\textbf{Eigenspectrum power-law per condition.} \emph{(a)} Eigenvalue $\lambda_n$ vs.\ PC index $n$ for $\mathbf{h}_2$, log--log; reference power laws $\alpha = 1$ (Stringer V1) and $\alpha = 1 + 2/3$ (theoretical critical exponent for $d_{\rm task} = 3$) shown for comparison. \emph{(b)} Fitted power-law exponent $\alpha$ per condition (linear fit on log-$\lambda_n$ vs.\ log-$n$, PCs $5$--$200$); error bars are the std of the slope estimate. The monotonic ordering is consistent with the capacity-allocation principle: rich-encoder conditions distribute variance across more PCs and obtain lower $\alpha$ than bottleneck conditions.}
-\label{fig:eigenspectrum}
+\includegraphics[width=0.65\linewidth]{fig/figa10_goal_vector.pdf}
+\caption{\textbf{Goal-vector probe $R^2$.} Goal distance (DtG) decodes strongly across all conditions ($R^2 \in [0.81, 0.90]$); goal direction and the full ego-frame goal vector are at chance or negative everywhere. PointGoal provides the goal vector as a per-step input, so the policy has no incentive to re-encode it.}
+\label{fig:supp_goal_vec}
 \end{figure}
 
 \section{Temporal Format: corroborating diagnostics}
