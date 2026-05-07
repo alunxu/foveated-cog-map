@@ -237,22 +237,17 @@ Two further interventions characterise the consumption mechanism but without sep
 
 \begin{figure}[!t]
 \centering
-\begin{minipage}[t]{0.49\linewidth}
+\begin{minipage}[b]{0.27\linewidth}
 \centering
-\includegraphics[width=\linewidth]{fig/fig6a_consumption_scatter.pdf}\\[-2pt]
-{\footnotesize\textbf{(a) The dissociation: probe-readability $\neq$ policy reliance}}
+\includegraphics[width=\linewidth]{fig/fig6a_consumption_scatter.pdf}\\[2pt]
+{\footnotesize\textbf{(a) The dissociation}}
 \end{minipage}\hfill
-\begin{minipage}[t]{0.49\linewidth}
+\begin{minipage}[b]{0.72\linewidth}
 \centering
-\includegraphics[width=\linewidth]{fig/fig6b_consumption_margin.pdf}\\[-2pt]
-{\footnotesize\textbf{(b) Persistent agent goes to OLD goal --- uniform only}}
-\end{minipage}\\[6pt]
-\begin{minipage}{\linewidth}
-\centering
-\includegraphics[width=\linewidth]{fig/figa16_shortcut_canonical.pdf}\\[-2pt]
-{\footnotesize\textbf{(c) Qualitative confirmation: paired-episode trajectories per condition}}
+\includegraphics[width=\linewidth]{fig/figa16_shortcut_canonical.pdf}\\[2pt]
+{\footnotesize\textbf{(b) Where does the persistent agent end up? Canonical paired-episode case per condition}}
 \end{minipage}
-\caption{\textbf{Probe-readable position is not what drives behaviour.} \textbf{(a) The dissociation:} per-condition shortcut SPL drop ($y$-axis $=$ policy reliance on persistent memory) vs.\ linear position decoding from memory ($x$-axis $=$ probe-readability). Coarse sits in ``readable but unused''; uniform in ``unused but readable via a substitute'' --- the two off-diagonal cases. \textbf{(b) The quantitative finding:} end-trajectory margin $=$ avg dist(persistent end $\to$ old goal) $-$ avg dist(persistent end $\to$ new goal) over same-floor failures (reset SPL $>0.5$, persistent SPL $<0.2$). Three conditions sit at $-0.38$ to $-0.59$\,m (closer to NEW goal); \textbf{only uniform sits at $+1.83$\,m, closer to OLD goal}. Foveated-logpolar excluded ($n{=}2$ paired failures). \textbf{(c) The qualitative confirmation:} canonical paired-episode case per condition (same scene, two goals; reset trajectory $=$ solid colour, persistent $=$ dashed; new goal $=$ filled star, old goal $=$ open star). Blind / Coarse / Foveated still try the new goal direction; only Uniform's persistent trajectory drifts toward the old goal --- the visual / scene-history anchor reading. Full $4{\times}4$ failure-mode catalog and boundary-check interventions in Appendix~\ref{app:probing-details}.}
+\caption{\textbf{Probe-readable position is not what drives behaviour.} \textbf{(a)} Per-condition shortcut SPL drop ($y$-axis $=$ policy reliance on persistent memory) vs.\ linear position decoding from memory ($x$-axis $=$ probe-readability). Coarse sits in ``readable but unused''; uniform in ``unused but readable via a substitute'' --- the two off-diagonal cases. \textbf{(b)} Canonical paired-episode case per condition (same scene, two goals; reset $=$ solid line, persistent $=$ dashed bold line, persistent endpoint marked $\boldsymbol{\times}$; new goal $=$ filled star, old goal $=$ open star). Blind and Coarse try the new-goal direction but fail to reach (\emph{tries-new}); Fov-LP successfully reaches the new goal even with persistent memory (\emph{robust to memory carryover}); Foveated wanders; \textbf{only Uniform's persistent endpoint sits next to the OLD goal} --- the visual / scene-history anchor reading (``head to where I was going last time I was here''). Aggregate margin (avg dist persistent end$\to$new $-$ persistent end$\to$old, over same-floor failures): blind, coarse, foveated, fov-LP all negative (closer to NEW); only uniform positive at $+1.06$\,m (closer to OLD, $n{=}38$). Full $4{\times}4$ failure-mode catalog and boundary-check interventions in Appendix~\ref{app:probing-details}.}
 \label{fig:consumption}
 \label{fig:consumption_summary}
 \label{fig:shortcut_paired_traj}

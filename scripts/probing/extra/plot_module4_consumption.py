@@ -8,6 +8,7 @@ Composed in main.tex into a 3-panel layout with the existing
 fig5_shortcut_canonical (which becomes panel c).
 """
 import argparse, json
+from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -74,23 +75,71 @@ def plot_scatter(out_path):
     print(f"wrote {out_path}")
 
 
-def plot_margin(out_path):
-    """Panel (b): per-condition margin (dist-to-OLD − dist-to-NEW goal)."""
-    # From fig5_shortcut_canonical caption (line 714 of main.tex)
-    margins = {
-        "blind": (-0.38, 27),
-        "coarse": (-0.57, 35),
-        "foveated": (-0.59, 16),
-        "foveated_logpolar": (-0.60, 30),  # estimate; recompute if data avail
-        "uniform": (+1.83, 46),
+def _compute_margin_from_npz(npz_path, persist_spl_max=0.2,
+                              reset_spl_min=0.5, min_steps=30,
+                              same_floor_dy=0.5):
+    """Compute margin = dist(persist_end, NEW goal) - dist(persist_end, OLD
+    goal) over same-floor failure cases.  Sign convention matches the
+    figure y-axis label "↑ closer to OLD": positive value means persist
+    end is FARTHER from new than from old, i.e. closer to old."""
+    d = np.load(npz_path, allow_pickle=True)
+    scenes = d["scenes"]; ep_idx = d["ep_idx"]; conds = d["conditions"]
+    spl = d["spl"]; steps = d["steps"]; goals = d["goals"]; positions = d["positions"]
+    margins = []
+    for sc, ep in sorted(set(zip(scenes, ep_idx))):
+        if ep == 0:
+            continue
+        mask = (scenes == sc) & (ep_idx == ep)
+        if mask.sum() != 2:
+            continue
+        r_idx = np.where(mask & (conds == "reset"))[0]
+        p_idx = np.where(mask & (conds == "persistent"))[0]
+        if len(r_idx) != 1 or len(p_idx) != 1:
+            continue
+        r, p = r_idx[0], p_idx[0]
+        if (spl[r] <= reset_spl_min or spl[p] >= persist_spl_max
+                or steps[p] < min_steps):
+            continue
+        prev = (scenes == sc) & (ep_idx == ep - 1) & (conds == "reset")
+        if not prev.any():
+            continue
+        old_goal = goals[np.where(prev)[0][0]]
+        new_goal = goals[r]
+        if abs(old_goal[1] - new_goal[1]) >= same_floor_dy:
+            continue
+        p_end = positions[p][-1]
+        d_old = float(np.linalg.norm(p_end[[0, 2]] - old_goal[[0, 2]]))
+        d_new = float(np.linalg.norm(p_end[[0, 2]] - new_goal[[0, 2]]))
+        margins.append(d_new - d_old)        # positive = closer to OLD
+    return np.array(margins)
+
+
+def plot_margin(out_path, traj_dir=None):
+    """Panel (b): per-condition margin (dist-to-NEW − dist-to-OLD goal,
+    so positive = closer to OLD goal, matching the figure y-axis label).
+    Margins computed live from each condition's shortcut NPZ rather than
+    hardcoded — the analysis is reproducible from data on every render.
+    """
+    if traj_dir is None:
+        traj_dir = Path(__file__).resolve().parents[3] / "results" / "shortcut_results"
+    cond_to_npz_stem = {                       # NPZ uses encoder-side name
+        "blind": "blind", "coarse": "matched", "foveated": "foveated",
+        "foveated_logpolar": "foveated_logpolar", "uniform": "uniform",
     }
-    # Filter to conditions with reported data (skip fov-LP if estimate not in paper)
-    conds = ["blind", "coarse", "foveated", "uniform"]
+    conds = ["blind", "coarse", "foveated_logpolar", "foveated", "uniform"]
+    vals, ns = [], []
+    for c in conds:
+        npz = Path(traj_dir) / f"{cond_to_npz_stem[c]}_gibson_traj.npz"
+        if not npz.exists():
+            print(f"WARN: missing {npz}")
+            vals.append(0.0); ns.append(0); continue
+        m = _compute_margin_from_npz(npz)
+        vals.append(float(m.mean()) if len(m) else 0.0)
+        ns.append(int(len(m)))
+        print(f"  {c}: margin={vals[-1]:+.2f}m, n={ns[-1]}")
 
     fig, ax = plt.subplots(1, 1, figsize=(4.4, 3.6), constrained_layout=True)
     xs = np.arange(len(conds))
-    vals = [margins[c][0] for c in conds]
-    ns = [margins[c][1] for c in conds]
     bars = ax.bar(xs, vals, color=[COLORS[c] for c in conds], edgecolor="black",
                     linewidth=0.5)
     ax.axhline(0, color="black", linewidth=0.7)
@@ -99,18 +148,15 @@ def plot_margin(out_path):
                         fontsize=9)
     ax.set_ylabel("end-trajectory margin (m)\n  ↓ closer to NEW   |   closer to OLD ↑",
                     fontsize=9)
-    ax.set_title("Persistent agent goes to OLD goal — uniform only", fontsize=10)
+    ax.set_title("Persistent agent goes to OLD goal --- uniform only", fontsize=10)
     ax.grid(axis="y", linestyle=":", alpha=0.3)
+    pad = max(0.4, max(abs(min(vals)), abs(max(vals))) * 0.15)
     for i, (v, n) in enumerate(zip(vals, ns)):
-        if v >= 0:
-            # Place text BELOW positive bars to avoid title overlap
-            ax.text(i, v - 0.5, f"{v:+.2f}m\nn={n}",
-                     ha="center", va="top", fontsize=8, color="white", weight="bold")
-        else:
-            ax.text(i, v - 0.18, f"{v:+.2f}m\nn={n}",
-                     ha="center", va="top", fontsize=8)
-    # Extend ylim a bit for breathing room
-    ax.set_ylim(min(vals) - 0.6, max(vals) + 0.4)
+        ax.text(i, v + (pad * 0.5 if v >= 0 else -pad * 0.5),
+                f"{v:+.2f}m\nn={n}",
+                ha="center", va="bottom" if v >= 0 else "top",
+                fontsize=8, color="black", weight="bold" if v > 0 else "normal")
+    ax.set_ylim(min(vals) - pad * 1.5, max(vals) + pad * 1.5)
     fig.savefig(out_path, bbox_inches="tight", dpi=150)
     fig.savefig(out_path.replace(".pdf", ".png"), bbox_inches="tight", dpi=150)
     plt.close(fig)
