@@ -77,21 +77,24 @@ class MLP(nn.Module):
     def forward(self, x): return self.net(x)
 
 
-def fit_mlp(X_tr, y_tr, X_te, y_te, hidden=256, l2=1e-4, epochs=50, bs=512, lr=1e-3):
-    m = MLP(X_tr.shape[1], y_tr.shape[1], hidden)
+_DEV = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def fit_mlp(X_tr, y_tr, X_te, y_te, hidden=256, l2=1e-4, epochs=40, bs=512, lr=1e-3):
+    m = MLP(X_tr.shape[1], y_tr.shape[1], hidden).to(_DEV)
     opt = torch.optim.Adam(m.parameters(), lr=lr, weight_decay=l2)
-    Xt = torch.tensor(X_tr, dtype=torch.float32); yt = torch.tensor(y_tr, dtype=torch.float32)
-    Xv = torch.tensor(X_te, dtype=torch.float32)
+    Xt = torch.tensor(X_tr, dtype=torch.float32, device=_DEV)
+    yt = torch.tensor(y_tr, dtype=torch.float32, device=_DEV)
+    Xv = torch.tensor(X_te, dtype=torch.float32, device=_DEV)
     n = len(Xt)
     for _ in range(epochs):
-        idx = torch.randperm(n)
+        idx = torch.randperm(n, device=_DEV)
         for i in range(0, n, bs):
             b = idx[i:i+bs]
             yhat = m(Xt[b])
             loss = nn.MSELoss()(yhat, yt[b])
             opt.zero_grad(); loss.backward(); opt.step()
     m.eval()
-    with torch.no_grad(): yhp = m(Xv).numpy()
+    with torch.no_grad(): yhp = m(Xv).cpu().numpy()
     return r2_score(y_te, yhp, multioutput='uniform_average')
 
 

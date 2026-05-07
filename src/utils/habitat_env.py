@@ -104,14 +104,21 @@ def load_habitat_config(config_name, ckpt_path, overrides=None):
     return config
 
 
-def load_policy(config, env, ckpt_path, device):
+def load_policy(config, env, ckpt_path, device,
+                observation_space=None, action_space=None):
     """Instantiate and load a policy from a checkpoint.
 
     Args:
         config: Habitat config (from load_habitat_config)
-        env: Habitat environment instance
+        env: Habitat environment instance (used for obs/action space when
+             explicit override is not given).  May be None if both
+             observation_space and action_space are passed explicitly.
         ckpt_path: path to checkpoint .pth file
         device: torch.device
+        observation_space: optional override for env.observation_space
+            (use this when constructing a policy whose checkpoint was
+            trained with a different obs shape than the current env).
+        action_space: optional override for env.action_space.
 
     Returns:
         policy: loaded policy in eval mode
@@ -126,10 +133,12 @@ def load_policy(config, env, ckpt_path, device):
     policy_cls = baseline_registry.get_policy(policy_name)
     assert policy_cls is not None, f"Policy '{policy_name}' not found in registry"
 
+    obs_space = observation_space if observation_space is not None else env.observation_space
+    act_space = action_space if action_space is not None else env.action_space
     policy = policy_cls.from_config(
         config=config,
-        observation_space=env.observation_space,
-        action_space=env.action_space,
+        observation_space=obs_space,
+        action_space=act_space,
     )
 
     ckpt = torch.load(ckpt_path, map_location="cpu")
