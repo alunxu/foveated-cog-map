@@ -12,9 +12,9 @@
 #   - analysis-only setups (Path 3 in README, no Habitat sim)
 #   - additional pip installs after the conda/habitat install (Path 2)
 #
-# Pinning rationale: matches docker/Dockerfile so any environment built from
-# this list is byte-compatible with the RCP image
-# (registry.rcp.epfl.ch/dhlab-wxu/habitat:v2).
+# Pinning rationale: matches docker/Dockerfile so any environment built
+# from this list is byte-compatible with the container image
+# (`docker/Dockerfile` is the source of truth).
 
 # --- Deep learning core ------------------------------------------------------
 torch==2.1.0

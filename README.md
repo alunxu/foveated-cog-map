@@ -31,13 +31,13 @@ results. **This README only covers code structure and setup.**
 │   │   └── wijmans_sensors.py           # GPS / compass / goal-in-start-frame
 │   └── utils/                 # Probe helpers, env loader, common utilities
 ├── scripts/
-│   ├── cluster/               # Job submission scripts (RCP RunAI + Izar SLURM)
+│   ├── cluster/               # Job submission scripts (Kubernetes/RunAI + SLURM)
 │   │   ├── submit_blind_retrain.sh / submit_blind_resume.sh
 │   │   ├── submit_F2_normaliser.sh / submit_F_LP2.sh
 │   │   ├── submit_5cond_eval.sh / submit_5cond_eval_mp3d_test.sh
-│   │   ├── submit_probe_collect_rcp.sh
-│   │   ├── submit_transplant_rcp.sh / submit_shortcut_rcp.sh
-│   │   └── _*_inner.sh        # PVC-resident scripts called by submitters
+│   │   ├── submit_probe_collect.sh
+│   │   ├── submit_transplant.sh / submit_shortcut.sh
+│   │   └── _*_inner.sh        # PVC-resident inner scripts (called by submitters)
 │   ├── eval/                  # SPL/Success evaluators, shortcut, transplant
 │   │   ├── eval_paper_5cond.py          # Main eval: SPL, Success, mean steps
 │   │   ├── shortcut.py / shortcut_with_trajectories.py
@@ -65,7 +65,7 @@ results. **This README only covers code structure and setup.**
 │   ├── manuscript/            # LaTeX source for the paper (main.tex + figs + literature.bib)
 │   └── release/               # Release notes
 ├── docker/
-│   └── Dockerfile             # RCP container build (Habitat + DD-PPO)
+│   └── Dockerfile             # Container build for Kubernetes/RunAI deployments (Habitat + DD-PPO)
 ├── data/                      # Habitat-format datasets (gitignored; populated on cluster)
 ├── requirements.txt           # Pip deps (for analysis-only setups; full env needs Docker / conda)
 └── pyproject.toml             # Editable-install metadata
@@ -73,11 +73,11 @@ results. **This README only covers code structure and setup.**
 
 **Where the heavy data lives** (not in git):
 
-| Cluster | Path | Contents |
+| Where | Path | Contents |
 |---|---|---|
-| RCP PVC `dhlab-scratch` | `/scratch/wxu/habitat-lab-izar/data/` | Canonical Habitat data (~36 GB): Gibson + MP3D scene meshes + PointNav episode JSONs |
-| RCP PVC `dhlab-scratch` | `/scratch/wxu/habitat_checkpoints_rcp/` | Trained checkpoints (`dh-blind/`, `dh-probe-1..4/`, `dh-fnorm/`, `dh-flp2/`) + probing NPZs |
-| Izar SLURM | `/scratch/izar/wxu/habitat_data/` | Mirror of habitat data (rsync'd from RCP) |
+| Kubernetes/RunAI PVC | `<your-scratch>/data/` | Canonical Habitat data (~36 GB): Gibson + MP3D scene meshes + PointNav episode JSONs |
+| Kubernetes/RunAI PVC | `<your-scratch>/habitat_checkpoints/` | Trained checkpoints (`dh-blind/`, `dh-probe-1..4/`, `dh-fnorm/`, `dh-flp2/`) + probing NPZs |
+| Izar SLURM | `/scratch/izar/$USER/habitat_data/` | Same Habitat data (mirror, populated via rsync) |
 
 ---
 
@@ -85,17 +85,16 @@ results. **This README only covers code structure and setup.**
 
 There are three paths depending on what you want to do.
 
-### Path 1 — RCP cluster (recommended, full training + eval pipeline)
+### Path 1 — Kubernetes/RunAI cluster (recommended, full training + eval pipeline)
 
 The Dockerfile at `docker/Dockerfile` is the source of truth for the env.
-Pre-built image is on the EPFL registry:
+Build it once and push to your private container registry:
 
-```
-registry.rcp.epfl.ch/dhlab-wxu/habitat:v2
+```bash
+bash docker/build_with_kaniko.sh    # kaniko-based build, adjust destination tag in the script
 ```
 
-Just use this image in any RunAI submission; no setup required on your
-side. The image bundles:
+The image bundles:
 
 - Python 3.9 + Miniconda
 - `habitat-sim 0.3.3` (with bullet, headless)
@@ -103,11 +102,10 @@ side. The image bundles:
   for the blind-policy `normalize_visual_inputs` guard)
 - `torch 2.1.0 + CUDA 12.1`, `protobuf<5`, `numpy<2`, `pillow 10.4`
 
-To rebuild the image (rare):
-
-```bash
-bash docker/build_with_kaniko.sh
-```
+Once the image is in your registry, use it in any RunAI / Kubernetes Job
+submission spec. The `scripts/cluster/submit_*.sh` launchers expect the
+image to be reachable by the cluster's container runtime; adjust the
+`IMAGE=` variable in each script to your registry path.
 
 ### Path 2 — Izar cluster (SLURM, conda-based)
 
@@ -160,30 +158,29 @@ NPZs work fine.
 
 ### Habitat data setup (cluster only)
 
-Configs reference paths relative to a fixed Habitat data root. On RCP this
-is auto-mounted via the `dhlab-scratch` PVC. On Izar, set:
+Configs reference paths relative to a fixed Habitat data root. On a
+Kubernetes/RunAI cluster this is auto-mounted via your PVC; on Izar, set:
 
 ```bash
 export HABITAT_DATA_DIR=/scratch/izar/$USER/habitat_data
 ```
 
-And either rsync from RCP (the canonical copy lives in
-`/scratch/wxu/habitat-lab-izar/data/`) or use the dataset downloader:
+Either rsync from the cluster's canonical copy, or use the dataset
+downloader (run on cluster):
 
 ```bash
 bash scripts/cluster/download_gibson_0plus.sh   # 411 Gibson + 61 MP3D-train scenes
 ```
 
 For the Wijmans-protocol eval, you also need the MP3D test PointNav
-episodes (`mp3d/v1/test/test.json.gz`, ~43KB) and the 18 MP3D test scene
-meshes — these are already on RCP under
-`/scratch/wxu/habitat-lab-izar/data/`.
+episodes (`mp3d/v1/test/test.json.gz`, ~43 KB) and the 18 MP3D test scene
+meshes (~6 GB) under `HABITAT_DATA_DIR/scene_datasets/mp3d/`.
 
 ---
 
 ## Common workflows
 
-### Train a single condition (RCP)
+### Train a single condition (Kubernetes/RunAI)
 
 ```bash
 # Blind from scratch (250M frames, ~21h on 4×A100; or resume from existing ckpt)
@@ -212,8 +209,8 @@ bash scripts/cluster/submit_5cond_eval.sh
 ### Collect hidden states for probing
 
 ```bash
-# One condition (writes /scratch/.../probing_data_rcp/<cond>_det.npz)
-bash scripts/cluster/submit_probe_collect_rcp.sh coarse 500     # 500 deterministic rollouts
+# One condition (writes <scratch>/probing_data/<cond>_det.npz)
+bash scripts/cluster/submit_probe_collect.sh coarse 500     # 500 deterministic rollouts
 ```
 
 ### Run downstream probe analyses on collected NPZ
@@ -227,8 +224,8 @@ python scripts/probing/analyze.py \
 ### Memory transplant + shortcut paradigm
 
 ```bash
-bash scripts/cluster/submit_transplant_rcp.sh     # 5×5 cross-condition memory transplant
-bash scripts/cluster/submit_shortcut_rcp.sh      # paired-episode Tolman-style test
+bash scripts/cluster/submit_transplant.sh     # 5×5 cross-condition memory transplant
+bash scripts/cluster/submit_shortcut.sh      # paired-episode Tolman-style test
 ```
 
 ### Regenerate paper figures
@@ -243,18 +240,18 @@ python scripts/paper_figures/render_5cond_appendix.py      # Appendix figures
 
 ## Cluster cheatsheet
 
-| Task | RCP (RunAI) | Izar (SLURM) |
+| Task | Kubernetes/RunAI | Izar (SLURM) |
 |---|---|---|
-| Submit training | `runai-rcp-prod submit ... --command -- bash -c "..."` | `sbatch scripts/cluster/submit_*.sh` |
+| Submit training | `runai submit ... --command -- bash -c "..."` | `sbatch scripts/cluster/submit_*.sh` |
 | Watch logs | `kubectl logs -f <pod>` | `tail -f slurm_logs/<jobid>.out` |
-| Cancel | `runai-rcp-prod delete job <name>` | `scancel <jobid>` |
-| GPU resources | A100 80GB / H100 (4-GPU pods) | V100 / A100 (varies) |
-| Storage | `/scratch/wxu/...` (PVC, persistent) | `/scratch/izar/wxu/...` (Lustre, persistent) |
+| Cancel | `runai delete job <name>` | `scancel <jobid>` |
+| GPU resources | A100 80GB / H100 (4-GPU pods, typical) | V100 / A100 (varies) |
+| Storage | `<your-scratch>/` (PVC, persistent) | `/scratch/izar/$USER/...` (Lustre, persistent) |
 
-When submitting on RCP, use the **PVC-resident inner-script pattern** to
-avoid the runai-cli inline-quoting bug: the inner script lives in
-`scripts/cluster/_*_inner.sh` (on the PVC) and the submit script just
-invokes it via `bash /scratch/.../scripts/cluster/_*_inner.sh ARGS`.
+When submitting on Kubernetes/RunAI, use the **PVC-resident inner-script
+pattern** to avoid the runai-cli inline-quoting bug: the inner script
+lives in `scripts/cluster/_*_inner.sh` (on the PVC) and the submit script
+just invokes it via `bash <scratch>/scripts/cluster/_*_inner.sh ARGS`.
 
 ---
 
