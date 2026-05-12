@@ -59,6 +59,9 @@ from src.habitat.foveated_sigma12_policy import (  # noqa: F401
 from src.habitat.foveated_logpolar_policy import (  # noqa: F401
     FoveatedLogPolarWijmansPolicy,
 )
+from src.habitat.foveated_logpolar_normalised_policy import (  # noqa: F401
+    FoveatedLogPolarNormalisedWijmansPolicy,
+)
 
 # Auxiliary losses (ablation experiments):
 #  - gaze_diversity: anti-collapse regulariser for learned-gaze policies.
