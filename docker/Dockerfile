@@ -1,14 +1,14 @@
-# Habitat-sim + DD-PPO + custom dh-spatial policies, runtime image for RCP H200/A100.
+# Habitat-sim + DD-PPO + custom policies, runtime image for H200/A100 GPUs.
 #
 # Solves the EGL/fork/CUDA-binding issues we hit when trying to run habitat-sim
 # inside minimal cuda:devel container by pre-installing all the system libs
 # habitat-sim needs at OS level (apt packages), not user-level conda-forge.
 #
-# Build (on RCP via kaniko):
-#   kaniko --dockerfile=docker/Dockerfile --context=. --destination=registry.rcp.epfl.ch/dhlab-wxu/habitat:v1
+# Build (e.g. via kaniko on a Kubernetes cluster):
+#   kaniko --dockerfile=docker/Dockerfile --context=. --destination=<your-registry>/habitat:v1
 #
 # Use:
-#   runai-rcp-prod submit ... --image=registry.rcp.epfl.ch/dhlab-wxu/habitat:v1 ...
+#   <your-launcher> submit ... --image=<your-registry>/habitat:v1 ...
 
 FROM nvidia/cuda:12.1.0-devel-ubuntu22.04
 

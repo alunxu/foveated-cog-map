@@ -88,11 +88,9 @@ There are three paths depending on what you want to do.
 ### Path 1 — Kubernetes/RunAI cluster (recommended, full training + eval pipeline)
 
 The Dockerfile at `docker/Dockerfile` is the source of truth for the env.
-Build it once and push to your private container registry:
-
-```bash
-bash docker/build_with_kaniko.sh    # kaniko-based build, adjust destination tag in the script
-```
+Build it once and push to your private container registry (any standard
+Docker / Buildah / Kaniko workflow works — the Dockerfile has no
+cluster-specific dependencies).
 
 The image bundles:
 
