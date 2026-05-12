@@ -11,8 +11,9 @@ Conditions: `blind`, `coarse` (48×48), `foveated` (256×256 + Gaussian blur),
 normaliser-ablation variants: `F2` (foveated + RunningMeanAndVar),
 `F-LP2` (log-polar + RunningMeanAndVar).
 
-See `docs/manuscript/main.pdf` for the writeup with full motivation and
-results. **This README only covers code structure and setup.**
+**This README only covers code structure and Izar setup.** The paper
+write-up (motivation, methods, results, biology background) is
+distributed separately.
 
 ---
 
@@ -31,13 +32,6 @@ results. **This README only covers code structure and setup.**
 │   │   └── wijmans_sensors.py           # GPS / compass / goal-in-start-frame
 │   └── utils/                 # Probe helpers, env loader, common utilities
 ├── scripts/
-│   ├── cluster/               # Job submission scripts (Kubernetes/RunAI + SLURM)
-│   │   ├── submit_blind_retrain.sh / submit_blind_resume.sh
-│   │   ├── submit_F2_normaliser.sh / submit_F_LP2.sh
-│   │   ├── submit_5cond_eval.sh / submit_5cond_eval_mp3d_test.sh
-│   │   ├── submit_probe_collect.sh
-│   │   ├── submit_transplant.sh / submit_shortcut.sh
-│   │   └── _*_inner.sh        # PVC-resident inner scripts (called by submitters)
 │   ├── eval/                  # SPL/Success evaluators, shortcut, transplant
 │   │   ├── eval_paper_5cond.py          # Main eval: SPL, Success, mean steps
 │   │   ├── shortcut.py / shortcut_with_trajectories.py
@@ -61,51 +55,27 @@ results. **This README only covers code structure and setup.**
 │   ├── probing_results/
 │   ├── shortcut_results/
 │   └── transplant_results/
-├── docs/
-│   ├── manuscript/            # LaTeX source for the paper (main.tex + figs + literature.bib)
-│   └── release/               # Release notes
 ├── docker/
-│   └── Dockerfile             # Container build for Kubernetes/RunAI deployments (Habitat + DD-PPO)
+│   └── Dockerfile             # Reference container build (Habitat + DD-PPO)
 ├── data/                      # Habitat-format datasets (gitignored; populated on cluster)
-├── requirements.txt           # Pip deps (for analysis-only setups; full env needs Docker / conda)
+├── requirements.txt           # Pip deps (for analysis-only setups; full env needs conda)
 └── pyproject.toml             # Editable-install metadata
 ```
 
 **Where the heavy data lives** (not in git):
 
-| Where | Path | Contents |
-|---|---|---|
-| Kubernetes/RunAI PVC | `<your-scratch>/data/` | Canonical Habitat data (~36 GB): Gibson + MP3D scene meshes + PointNav episode JSONs |
-| Kubernetes/RunAI PVC | `<your-scratch>/habitat_checkpoints/` | Trained checkpoints (`dh-blind/`, `dh-probe-1..4/`, `dh-fnorm/`, `dh-flp2/`) + probing NPZs |
-| Izar SLURM | `/scratch/izar/$USER/habitat_data/` | Same Habitat data (mirror, populated via rsync) |
+| Path | Contents |
+|---|---|
+| `/scratch/izar/$USER/habitat_data/` | Canonical Habitat data (~36 GB): Gibson + MP3D scene meshes + PointNav episode JSONs |
+| `/scratch/izar/$USER/habitat_checkpoints/` | Trained checkpoints (one dir per condition) + probing NPZs |
 
 ---
 
 ## Setup
 
-There are three paths depending on what you want to do.
+Two paths depending on what you want to do.
 
-### Path 1 — Kubernetes/RunAI cluster (recommended, full training + eval pipeline)
-
-The Dockerfile at `docker/Dockerfile` is the source of truth for the env.
-Build it once and push to your private container registry (any standard
-Docker / Buildah / Kaniko workflow works — the Dockerfile has no
-cluster-specific dependencies).
-
-The image bundles:
-
-- Python 3.9 + Miniconda
-- `habitat-sim 0.3.3` (with bullet, headless)
-- `habitat-lab` + `habitat-baselines` (from source, with a one-line patch
-  for the blind-policy `normalize_visual_inputs` guard)
-- `torch 2.1.0 + CUDA 12.1`, `protobuf<5`, `numpy<2`, `pillow 10.4`
-
-Once the image is in your registry, use it in any RunAI / Kubernetes Job
-submission spec. The `scripts/cluster/submit_*.sh` launchers expect the
-image to be reachable by the cluster's container runtime; adjust the
-`IMAGE=` variable in each script to your registry path.
-
-### Path 2 — Izar cluster (SLURM, conda-based)
+### Path 1 — Izar cluster (SLURM, conda-based)
 
 ```bash
 # 1. Load CUDA module
@@ -137,7 +107,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### Path 3 — local analysis-only (no GPU, no Habitat sim)
+### Path 2 — local analysis-only (no GPU, no Habitat sim)
 
 If you only want to re-analyse existing NPZ files (probing, plotting,
 paper figure regen) without running new rollouts:
@@ -154,20 +124,23 @@ You will **not** be able to run `scripts/eval/eval_paper_5cond.py`,
 spins up `habitat.Env(...)`. Probing/figure scripts that load existing
 NPZs work fine.
 
-### Habitat data setup (cluster only)
+### Habitat data setup (Izar)
 
-Configs reference paths relative to a fixed Habitat data root. On a
-Kubernetes/RunAI cluster this is auto-mounted via your PVC; on Izar, set:
+Configs reference paths relative to a fixed Habitat data root. On Izar:
 
 ```bash
 export HABITAT_DATA_DIR=/scratch/izar/$USER/habitat_data
 ```
 
-Either rsync from the cluster's canonical copy, or use the dataset
-downloader (run on cluster):
+Layout under `HABITAT_DATA_DIR/`:
 
-```bash
-bash scripts/cluster/download_gibson_0plus.sh   # 411 Gibson + 61 MP3D-train scenes
+```
+scene_datasets/
+  gibson/              # 411 .glb + .navmesh (Gibson 0+ split)
+  mp3d/                # 90 MP3D scenes (.glb + region metadata)
+datasets/pointnav/
+  gibson/v1/{train,val}/...
+  mp3d/v1/{train,val,test}/test.json.gz   # 1008 Wijmans eval episodes
 ```
 
 For the Wijmans-protocol eval, you also need the MP3D test PointNav
@@ -178,52 +151,57 @@ meshes (~6 GB) under `HABITAT_DATA_DIR/scene_datasets/mp3d/`.
 
 ## Common workflows
 
-### Train a single condition (Kubernetes/RunAI)
+All scripts below assume `conda activate habitat` + the Habitat data root
+exported as in **Setup → Path 1**. On Izar wrap each invocation in an
+`sbatch` job (1 GPU, `--time=24:00:00` for training, `--time=04:00:00`
+for eval / probing).
+
+### Train a single condition
 
 ```bash
-# Blind from scratch (250M frames, ~21h on 4×A100; or resume from existing ckpt)
-bash scripts/cluster/submit_blind_retrain.sh        # fresh
-bash scripts/cluster/submit_blind_resume.sh         # resume from latest checkpoint
-
-# Sighted conditions are pre-trained as dh-probe-1..4 (coarse / foveated /
-# uniform / log-polar). To re-train one, edit the relevant submit script's
-# config-name override and run it.
-
-# Normaliser ablations
-bash scripts/cluster/submit_F2_normaliser.sh        # foveated + normaliser
-bash scripts/cluster/submit_F_LP2.sh                # log-polar + normaliser
+# DD-PPO entry point — config selects the condition + the sensor stack
+python -m habitat_baselines.run \
+  --config-name=pointnav/ddppo_pointnav_blind_gibson \
+  habitat_baselines.total_num_steps=2.5e8 \
+  habitat_baselines.num_environments=16 \
+  habitat_baselines.rl.ppo.num_steps=256
 ```
+
+Swap the config to switch condition: `*_coarse_*`, `*_foveated_*`,
+`*_uniform_*`, `*_foveated_logpolar_*` (see `habitat_configs/`).
 
 ### Evaluate trained agents (SPL, Success, mean steps)
 
 ```bash
 # Wijmans-protocol: 1008 episodes on 18 held-out MP3D test scenes (canonical)
-bash scripts/cluster/submit_5cond_eval_mp3d_test.sh
-
-# Train-pool sample: 500 random episodes from training scenes (faster, less rigorous)
-bash scripts/cluster/submit_5cond_eval.sh
+python scripts/eval/eval_paper_5cond.py \
+  --config pointnav/ddppo_pointnav_foveated_gibson \
+  --ckpt   /path/to/checkpoints/foveated/ckpt.49.pth \
+  --data-path ${HABITAT_DATA_DIR}/datasets/pointnav/mp3d/v1/test/test.json.gz \
+  --split test --no-sample \
+  --out    results/eval/foveated_mp3d_test.json
 ```
 
-### Collect hidden states for probing
+### Collect hidden states + run probing
 
 ```bash
-# One condition (writes <scratch>/probing_data/<cond>_det.npz)
-bash scripts/cluster/submit_probe_collect.sh coarse 500     # 500 deterministic rollouts
-```
+# 1. Collect deterministic rollouts (writes <out>.npz)
+python scripts/eval/probe_agent.py \
+  --config pointnav/ddppo_pointnav_foveated_gibson \
+  --ckpt   /path/to/checkpoints/foveated/ckpt.49.pth \
+  --episodes 500 --out probing_data/foveated_det.npz
 
-### Run downstream probe analyses on collected NPZ
-
-```bash
+# 2. Run probe battery
 python scripts/probing/analyze.py \
-  --data /scratch/.../coarse_det.npz \
-  --out  /tmp/coarse_probe.json
+  --data probing_data/foveated_det.npz \
+  --out  results/probing/foveated_probe.json
 ```
 
 ### Memory transplant + shortcut paradigm
 
 ```bash
-bash scripts/cluster/submit_transplant.sh     # 5×5 cross-condition memory transplant
-bash scripts/cluster/submit_shortcut.sh      # paired-episode Tolman-style test
+python scripts/eval/transplant.py --out results/transplant_results/
+python scripts/eval/shortcut.py   --out results/shortcut_results/
 ```
 
 ### Regenerate paper figures
@@ -236,20 +214,19 @@ python scripts/paper_figures/render_5cond_appendix.py      # Appendix figures
 
 ---
 
-## Cluster cheatsheet
+## SLURM cheatsheet (Izar)
 
-| Task | Kubernetes/RunAI | Izar (SLURM) |
-|---|---|---|
-| Submit training | `runai submit ... --command -- bash -c "..."` | `sbatch scripts/cluster/submit_*.sh` |
-| Watch logs | `kubectl logs -f <pod>` | `tail -f slurm_logs/<jobid>.out` |
-| Cancel | `runai delete job <name>` | `scancel <jobid>` |
-| GPU resources | A100 80GB / H100 (4-GPU pods, typical) | V100 / A100 (varies) |
-| Storage | `<your-scratch>/` (PVC, persistent) | `/scratch/izar/$USER/...` (Lustre, persistent) |
+| Task | Command |
+|---|---|
+| Submit training | `sbatch --gres=gpu:1 --time=24:00:00 -p gpu run_training.sh` |
+| Watch logs | `tail -f slurm_logs/<jobid>.out` |
+| Cancel | `scancel <jobid>` |
+| GPU resources | V100 / A100 (`-p gpu`) |
+| Storage | `/scratch/izar/$USER/...` (Lustre, persistent) |
 
-When submitting on Kubernetes/RunAI, use the **PVC-resident inner-script
-pattern** to avoid the runai-cli inline-quoting bug: the inner script
-lives in `scripts/cluster/_*_inner.sh` (on the PVC) and the submit script
-just invokes it via `bash <scratch>/scripts/cluster/_*_inner.sh ARGS`.
+Training is GPU-bound — a single A100 reaches 250M frames in ~36h with
+`num_environments=16, ppo.num_steps=256`. Eval (1008 episodes) is
+single-env and runs ~2.5-4h depending on condition.
 
 ---
 
@@ -270,5 +247,5 @@ just invokes it via `bash <scratch>/scripts/cluster/_*_inner.sh ARGS`.
 
 ## Pointers
 
-- Paper draft: `docs/manuscript/main.tex` → compile via `cd docs/manuscript && pdflatex main && bibtex main && pdflatex main && pdflatex main`
-- Old README (with full motivation, biology background, hypotheses): `README.OLD.md`
+- Hydra training configs: `habitat_configs/ddppo_pointnav_*_gibson.yaml`
+- Reference container env: `docker/Dockerfile` (apt + conda pin list — also useful as a setup checklist when conda step ordering is unclear)
