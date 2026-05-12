@@ -75,3 +75,13 @@ docs/MERGENCE OF MAPS*.pdf
 
 # Large release checkpoints (790 MB — distributed via Hugging Face, not git)
 release_ckpts/
+
+# Big experiment outputs (4-8 GB each — kept on cluster, not git)
+results/visual_ablation/
+results/gps_ablation/
+results/excursion_results/
+results/tsne_subsamples/
+
+# Trajectory NPZs (~500KB each, but 6+ accumulated; gitignore by default,
+# keep summary JSONs which are smaller and human-readable)
+results/shortcut_results/*_traj.npz
