@@ -40,7 +40,7 @@ import numpy as np
 CONDS = [
     ("blind",             "Blind"),
     ("coarse",            "Coarse"),
-    ("foveated_logpolar", "Fov-LP"),
+    ("foveated_logpolar", "Log-polar"),
     ("foveated",          "Foveated"),
     ("uniform",           "Uniform"),
 ]

@@ -46,7 +46,7 @@ CONDS = [
     # (key,                 label,             colour,    marker)
     ("blind",            "Blind",            "#444444", "o"),
     ("coarse",           "Coarse",           "#377eb8", "s"),
-    ("foveated_logpolar", "Fov-logpolar",    "#984ea3", "v"),
+    ("foveated_logpolar", "Log-polar",    "#984ea3", "v"),
     ("foveated",         "Foveated",         "#e41a1c", "D"),
     ("uniform",          "Uniform",          "#4daf4a", "^"),
 ]
@@ -233,7 +233,7 @@ def main() -> None:
             "Coarse":             (-0.07, +0.020),
             "Uniform":            (+0.06, +0.014),
             "Foveated":           (+0.06, -0.013),
-            "Fov-logpolar":       (+0.06, +0.014),
+            "Log-polar":       (+0.06, +0.014),
         }
         dx, dy = offsets.get(label, (0.05, 0.0))
         ha = "right" if dx < 0 else "left"

@@ -4,11 +4,11 @@ import argparse, json
 import matplotlib.pyplot as plt
 import numpy as np
 
-CONDITIONS = ["blind", "coarse", "foveated", "uniform", "foveated_logpolar"]
-NICE = {"blind": "blind", "coarse": "coarse 1×1", "foveated": "foveated",
-         "uniform": "uniform", "foveated_logpolar": "fov-logpolar"}
-COLORS = {"blind": "#5b5b5b", "coarse": "#d97a35", "foveated": "#2c7fb8",
-           "uniform": "#6a51a3", "foveated_logpolar": "#7fcdbb"}
+CONDITIONS = ["blind", "coarse", "foveated_logpolar", "foveated", "uniform"]
+NICE = {"blind": "Blind", "coarse": "Coarse", "foveated": "Foveated",
+         "uniform": "Uniform", "foveated_logpolar": "Log-polar"}
+COLORS = {"blind": "#444444", "coarse": "#377eb8", "foveated": "#e41a1c",
+           "uniform": "#4daf4a", "foveated_logpolar": "#984ea3"}
 
 
 def main():

@@ -40,7 +40,7 @@ ENC_DIM = {
 LABEL = {
     "blind": "Blind",
     "coarse": "Coarse",
-    "foveated_logpolar": "Fov-logpolar",
+    "foveated_logpolar": "Log-polar",
     "foveated": "Foveated",
     "uniform": "Uniform",
 }
@@ -114,7 +114,7 @@ for i, c in enumerate(order):
 label_dy = {"blind": 0.10, "coarse": 0.10, "foveated_logpolar": 0.13,
             "foveated": -0.30, "uniform": 0.13}
 for c in order:
-    ax.annotate(LABEL[c].replace("Foveated-logpolar", "Fov-LP"),
+    ax.annotate(LABEL[c].replace("Log-polar", "Log-polar"),
                 xy=(x_pos[c], lin_means[order.index(c)] + label_dy[c]),
                 ha="center", va="bottom", fontsize=9, fontweight="bold",
                 color=COLOR[c])
@@ -163,7 +163,7 @@ lags_paper = [0, 2, 5, 10, 20]
 HEAT_CLIP = (-2.0, 1.0)
 # Order conditions by encoder bandwidth (top = bottleneck, bottom = rich)
 heat_order = ["blind", "coarse", "foveated_logpolar", "foveated", "uniform"]
-heat_labels = ["Blind$^\\dagger$", "Coarse", "Fov-LP", "Foveated", "Uniform"]
+heat_labels = ["Blind$^\\dagger$", "Coarse", "Log-polar", "Foveated", "Uniform"]
 
 # Diverging colormap centred at 0
 cmap = plt.get_cmap("RdYlGn")

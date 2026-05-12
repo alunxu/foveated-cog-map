@@ -44,13 +44,14 @@ CONDS = [
     # (rcp_key,            mlp_key,             loso_key,            label,     color,    marker)
     ("blind_izar",        "blind_izar",        "blind",            "Blind",         "#444444", "o"),
     ("coarse",            "coarse",            "coarse",           "Coarse",        "#377eb8", "s"),
-    ("foveated_logpolar", "foveated_logpolar", "foveated_logpolar","Fov-logpolar",  "#984ea3", "v"),
+    ("foveated_logpolar", "foveated_logpolar", "foveated_logpolar","Log-polar",  "#984ea3", "v"),
     ("foveated",          "foveated",          "foveated",          "Foveated",      "#e41a1c", "D"),
     ("uniform",           "uniform",           "uniform",          "Uniform",       "#4daf4a", "^"),
 ]
 CLIP_MIN = -1.0
 RCP_DIR = Path("/tmp/rcp_analysis")
 RCP_V3 = Path("/tmp/rcp_analysis_v3")
+NPZ_DIR = Path("/tmp/rcp_analysis_v3")  # h_layers npz files
 
 
 # ───────────────────────── Panel A: Probe-depth sweep ──────────────────
@@ -67,51 +68,82 @@ DEPTH_KEY_MAP = {
 }
 
 
-def panel_a(ax, depth_json: Path) -> None:
-    """Probe-depth sweep per condition: how much non-linearity does each
-    condition require to recover position? Bottleneck conditions plateau
-    near depth 0 (linear suffices); rich-encoder conditions ramp up with
-    probe depth (position is non-linearly encoded). Format-shift severity
-    per condition becomes visible as the slope of each curve.
+def panel_a_manifold(fig, parent_gs) -> None:
+    """5 mini-panels: PCA-2D projection of top-layer h_2 per condition,
+    coloured by ground-truth position. Reads the manifold geometry of the
+    position code: blind = clean position-organized manifold (linear-readable);
+    coarse = position-organized but more diffuse; rich-encoder = scene-clustered
+    fragments (each scene a separate cloud). Direct visual evidence for the
+    'info preserved, format shifted' story carried abstractly by panels (b, c).
     """
-    data = json.loads(depth_json.read_text())
-    xs = np.arange(len(PROBE_ORDER), dtype=float)
-    for rcp_key, _mlp, _loso, label, col, mk in CONDS:
-        depth_key = DEPTH_KEY_MAP[rcp_key]
-        d = data.get(depth_key, {})
-        ys = []
-        for p in PROBE_ORDER:
-            r = d.get(p, {})
-            v = r.get("r2_mean", np.nan)
-            ys.append(float(np.clip(v, CLIP_MIN, 1.05)))
-        ys = np.array(ys)
-        # Connecting line — steep slope = strong format shift
-        ax.plot(xs, ys, color=col, linewidth=2.2, alpha=0.85, zorder=2)
-        # Markers per depth
-        ax.plot(xs, ys, marker=mk, color=col, markersize=11,
-                markeredgecolor="white", markeredgewidth=1.4,
-                linestyle="", zorder=3)
-        # Right-edge label at the deepest probe
-        ax.text(xs[-1] + 0.08, ys[-1], label, fontsize=11, color=col,
-                va="center", weight="bold")
+    sub = parent_gs.subgridspec(1, 6, wspace=0.06, hspace=0.0,
+                                  width_ratios=[1, 1, 1, 1, 1, 0.06])
+    rng = np.random.RandomState(42)
+    SUB_N = 1500
+    sc_last = None
 
-    ax.axhline(0, color="#888", linewidth=0.5, ls="--", zorder=0)
-    # Light gray "no-signal" zone
-    ax.axhspan(CLIP_MIN - 0.05, 0, color="#fbe0dc", alpha=0.30, zorder=0)
-    ax.set_xticks(xs)
-    ax.set_xticklabels([PROBE_LABELS[p] for p in PROBE_ORDER],
-                       fontsize=12, fontweight="bold")
-    ax.set_xlim(-0.25, xs[-1] + 0.95)
-    ax.set_ylim(CLIP_MIN - 0.05, 1.10)
-    ax.set_ylabel(r"GPS $R^2$ at $\mathbf{h}_2$",
-                  fontsize=20, fontweight="bold")
-    ax.set_xlabel("probe depth", fontsize=14, fontweight="bold")
-    ax.set_title("(a) Format-shift severity",
-                 fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
-    ax.tick_params(axis="y", labelsize=12)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.grid(axis="y", linestyle=":", alpha=0.25)
+    # Precompute global x-range (5th-95th percentile across all conditions)
+    # so all panels share an absolute colorbar scale yet ignore extreme
+    # outliers that would otherwise compress the visible colour range.
+    pooled_x = []
+    sampled = {}
+    for rcp_key, *_ in CONDS:
+        p = NPZ_DIR / f"{rcp_key}_det_RCP.npz"
+        if not p.exists():
+            continue
+        d = np.load(p, allow_pickle=True)
+        H = d["h_layers"][:, 2, :]
+        pos = d["positions"][:, [0, 2]]
+        n = min(SUB_N, H.shape[0])
+        idx = rng.choice(H.shape[0], n, replace=False)
+        sampled[rcp_key] = (H[idx], pos[idx])
+        pooled_x.append(pos[idx, 0])
+    pooled_x = np.concatenate(pooled_x) if pooled_x else np.array([0.0])
+    vmin = float(np.percentile(pooled_x, 5))
+    vmax = float(np.percentile(pooled_x, 95))
+
+    for col_i, (rcp_key, _, _, label, col, _) in enumerate(CONDS):
+        ax = fig.add_subplot(sub[0, col_i])
+        if rcp_key not in sampled:
+            ax.text(0.5, 0.5, "(npz missing)", ha="center", va="center",
+                    transform=ax.transAxes, color="grey")
+            continue
+        H_s, pos_s = sampled[rcp_key]
+        # Centre + PCA-2 (np SVD; no sklearn dep)
+        Hc = H_s - H_s.mean(0, keepdims=True)
+        U, S, Vt = np.linalg.svd(Hc, full_matrices=False)
+        H2 = Hc @ Vt[:2].T            # (n, 2)
+        sc = ax.scatter(H2[:, 0], H2[:, 1], c=pos_s[:, 0],
+                        cmap="viridis", s=6, alpha=0.7,
+                        edgecolors="none", rasterized=True,
+                        vmin=vmin, vmax=vmax)
+        sc_last = sc
+        # Variance-explained annotation (bottom-right)
+        var_pc12 = float((S[:2] ** 2).sum() / (S ** 2).sum())
+        ax.text(0.97, 0.03, f"{var_pc12*100:.0f}% PC1+2",
+                transform=ax.transAxes, fontsize=11, color="#666",
+                ha="right", va="bottom", style="italic")
+        ax.set_title(label, fontsize=18, color=col, fontweight="bold", pad=4)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for sname in ("top", "right"):
+            ax.spines[sname].set_visible(False)
+        ax.spines["left"].set_color("#bbb")
+        ax.spines["bottom"].set_color("#bbb")
+        ax.spines["left"].set_linewidth(0.5)
+        ax.spines["bottom"].set_linewidth(0.5)
+    # Joint axis labels
+    sub_axes = fig.axes[-5:]
+    if len(sub_axes) >= 1:
+        sub_axes[0].set_ylabel("PC2", fontsize=15, fontweight="bold")
+        for ax in sub_axes:
+            ax.set_xlabel("PC1", fontsize=15, fontweight="bold")
+    # Compact colorbar at right of the manifold row (absolute metres).
+    if sc_last is not None:
+        cax = fig.add_subplot(sub[0, 5])
+        cb = fig.colorbar(sc_last, cax=cax)
+        cb.set_label("position $x$ (m)", fontsize=20, fontweight="bold")
+        cb.ax.tick_params(labelsize=14)
 
 
 # ───────────────────────── Panel B: 2D scatter ──────────────────────────
@@ -166,13 +198,13 @@ def panel_b(ax, loso_json: Path, transplant_dir: Path) -> None:
         OFFSETS = {
             "Blind":         (0.04, 0.005),
             "Coarse":        (0.04, 0.0),
-            "Fov-logpolar":  (-0.05, 0.005),
+            "Log-polar":  (-0.05, 0.005),
             "Foveated":      (0.04, 0.0),
             "Uniform":       (-0.05, 0.0),
         }
         dx, dy = OFFSETS.get(label, (0.04, 0.005))
         ha = "right" if dx < 0 else "left"
-        ax.text(x + dx, y + dy, label, fontsize=11, color=col,
+        ax.text(x + dx, y + dy, label, fontsize=17, color=col,
                 ha=ha, va="center", weight="bold")
 
     # Median-split guide line
@@ -180,21 +212,20 @@ def panel_b(ax, loso_json: Path, transplant_dir: Path) -> None:
     # Quadrant labels in axes-fraction coordinates
     ax.text(0.04, 0.95,
             "scene-conditional\n+ brittle to transplant",
-            transform=ax.transAxes, fontsize=9, color="#a02528",
+            transform=ax.transAxes, fontsize=17, color="#a02528",
             ha="left", va="top", style="italic", weight="bold", alpha=0.9)
     ax.text(0.96, 0.05,
             "scene-invariant\n+ robust to transplant",
-            transform=ax.transAxes, fontsize=9, color="#3a7d3a",
+            transform=ax.transAxes, fontsize=17, color="#3a7d3a",
             ha="right", va="bottom", style="italic", weight="bold", alpha=0.9)
 
     xlo, xhi = -0.05, 1.05
     ylo, yhi = -0.01, 0.26
-    ax.set_xlabel("LOSO median $R^2$ (scene-invariance, within)",
+    ax.set_xlabel("LOSO $R^2$ (scene-invariance)",
                   fontsize=20, fontweight="bold")
-    ax.set_ylabel("transplant cost\n(non-interchangeability, across)",
+    ax.set_ylabel("transplant cost",
                   fontsize=20, fontweight="bold")
-    ax.set_title("(b) Format dichotomy",
-                 fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
+    # Title placed via fig.text in main() so all three panel titles align.
     ax.set_xlim(xlo, xhi)
     ax.set_ylim(ylo, yhi)
     ax.tick_params(axis="both", labelsize=12)
@@ -217,7 +248,7 @@ def panel_c(ax, subspace_json: Path) -> None:
     conds = data["conds"]
     pretty = {"blind": "Blind", "coarse": "Coarse",
               "foveated": "Foveated",
-              "foveated_logpolar": "Fov-LP",
+              "foveated_logpolar": "Log-polar",
               "uniform": "Uniform"}
     angle_mat = np.array(data["angle_matrix_deg"])
 
@@ -249,33 +280,50 @@ def panel_c(ax, subspace_json: Path) -> None:
         ax.scatter(ang, y[i], s=110, color=col,
                    edgecolor="white", linewidth=1.4, zorder=3)
 
-    # Pair labels to the LEFT of each row (left-justified at 64°).
-    for i, (label, _, _, _) in enumerate(pairs):
-        ax.text(64.5, y[i], label, ha="left", va="center",
-                fontsize=12, color="#222")
+    # Pair labels to the LEFT of each row. Each half rendered in its own
+    # condition colour so the row can be cross-referenced to the manifold/
+    # phase-diagram panels at a glance. Composed via HPacker (matplotlib
+    # offsetbox machinery) so the three sub-strings — name1, dash, name2 —
+    # share a single anchor and mixed colours.
+    from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, HPacker
+    cond_colour = {
+        "Blind":     "#444444",
+        "Coarse":    "#377eb8",
+        "Log-polar": "#984ea3",
+        "Foveated":  "#e41a1c",
+        "Uniform":   "#4daf4a",
+    }
+    for i, (_, _, c1, c2) in enumerate(pairs):
+        name1, name2 = pretty[c1], pretty[c2]
+        col1 = cond_colour.get(name1, "#222")
+        col2 = cond_colour.get(name2, "#222")
+        t1 = TextArea(name1, textprops=dict(color=col1, fontsize=18,
+                                              weight="bold"))
+        t_dash = TextArea("–", textprops=dict(color="#666", fontsize=18))
+        t2 = TextArea(name2, textprops=dict(color=col2, fontsize=18,
+                                              weight="bold"))
+        pack = HPacker(children=[t1, t_dash, t2], align="center",
+                       pad=0, sep=2)
+        ab = AnchoredOffsetbox(loc="center left", child=pack, pad=0,
+                               frameon=False,
+                               bbox_to_anchor=(48.0, y[i]),
+                               bbox_transform=ax.transData)
+        ax.add_artist(ab)
 
     # Reference line at 90° = fully orthogonal.
     ax.axvline(90, color="#222", ls="--", lw=1.0, alpha=0.7, zorder=1)
     ax.text(90, n - 0.1, "  fully\n  orthogonal",
-            fontsize=11, color="#222", style="italic",
+            fontsize=17, color="#222", style="italic",
             ha="left", va="top")
+    # (median/IQR summary deferred to prose / appendix; figure stays clean)
 
-    # Summary annotation: median + IQR.
-    med = float(np.median(angles))
-    q1, q3 = float(np.percentile(angles, 25)), float(np.percentile(angles, 75))
-    ax.text(64.5, -1.0,
-            f"median {med:.0f}° (IQR {q1:.0f}–{q3:.0f}°); "
-            f"9/10 pairs $\\geq 75°$, only Foveated–Fov-LP at $\\sim$67°",
-            fontsize=11, color="#444", style="italic")
-
-    ax.set_xlabel("principal angle (deg)  --  larger = more orthogonal",
-                  fontsize=18, fontweight="bold")
-    ax.set_title("(c) Subspace divergence",
-                 fontsize=26, fontweight="bold", loc="left", x=0.0, pad=12)
-    ax.set_xlim(63.5, 93.5)
-    ax.set_ylim(-1.6, n - 0.4)
+    ax.set_xlabel("principal angle (deg)",
+                  fontsize=20, fontweight="bold")
+    # Title placed via fig.text in main() so all three panel titles align.
+    ax.set_xlim(47.0, 93.5)
+    ax.set_ylim(-0.8, n - 0.4)
     ax.set_yticks([])
-    ax.tick_params(axis="x", labelsize=12)
+    ax.tick_params(axis="x", labelsize=14)
     for s_ in ("top", "right", "left"):
         ax.spines[s_].set_visible(False)
     ax.grid(axis="x", linestyle=":", alpha=0.25)
@@ -297,20 +345,32 @@ def main() -> None:
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
-    fig = plt.figure(figsize=(20.0, 5.8))
+    fig = plt.figure(figsize=(22.0, 7.0))
+    # 4-column outer layout with an explicit spacer between (a) and (b)
+    # to push (b) further right of (a) without changing (a)'s sub-grid.
     gs = fig.add_gridspec(
-        1, 3,
-        width_ratios=[0.85, 1.20, 1.0],
-        wspace=0.32,
-        top=0.86, bottom=0.16, left=0.05, right=0.99,
+        1, 4,
+        width_ratios=[1.25, 0.18, 1.05, 1.10],  # col 1 = empty spacer
+        wspace=0.10,
+        top=0.84, bottom=0.13, left=0.04, right=0.99,
     )
-    ax_a = fig.add_subplot(gs[0, 0])
-    ax_b = fig.add_subplot(gs[0, 1])
-    ax_c = fig.add_subplot(gs[0, 2])
+    ax_b = fig.add_subplot(gs[0, 2])
+    ax_c = fig.add_subplot(gs[0, 3])
 
-    panel_a(ax_a, args.mlp_json)
+    # Panel (a): 5 sub-panels carved from gs[0, 0]
+    panel_a_manifold(fig, gs[0, 0])
     panel_b(ax_b, args.loso_json, args.transplant_dir)
     panel_c(ax_c, args.subspace_json)
+
+    # Panel titles: (a) sits a touch higher because it has sub-panel
+    # condition labels (Blind / Coarse / ...) immediately below it that
+    # need clearance; (b)/(c) drop a touch so they sit just above their
+    # axes content rather than floating at the figure top.
+    TITLE_FS = 26
+    title_kw = dict(fontsize=TITLE_FS, fontweight="bold", ha="left", va="top")
+    fig.text(0.04, 0.97, "(a) Manifold Geometry", **title_kw)
+    fig.text(ax_b.get_position().x0, 0.94, "(b) Format dichotomy", **title_kw)
+    fig.text(ax_c.get_position().x0, 0.94, "(c) Subspace divergence", **title_kw)
 
     fig.savefig(args.out, dpi=200, bbox_inches="tight")
     fig.savefig(str(args.out).replace(".pdf", ".png"), dpi=200,

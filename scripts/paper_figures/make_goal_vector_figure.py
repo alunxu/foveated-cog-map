@@ -24,7 +24,7 @@ import numpy as np
 COND_DISPLAY = {
     "blind":             ("Blind",    "#444444"),
     "coarse":            ("Coarse",   "#377eb8"),
-    "foveated_logpolar": ("Fov-LP",   "#984ea3"),
+    "foveated_logpolar": ("Log-polar",   "#984ea3"),
     "foveated":          ("Foveated", "#e41a1c"),
     "uniform":           ("Uniform",  "#4daf4a"),
     # Backwards-compat (old goal_vector.json schema):

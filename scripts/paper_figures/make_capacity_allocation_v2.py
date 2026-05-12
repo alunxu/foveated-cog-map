@@ -35,7 +35,7 @@ OUT_PDF = REPO_ROOT / "docs/manuscript/fig/fig_capacity_allocation.pdf"
 CONDS = [
     ("blind_izar",        "Blind",     0,  "#444444", "o"),
     ("coarse",            "Coarse",    1,  "#377eb8", "s"),
-    ("foveated_logpolar", "Fov-logpolar", 4,  "#984ea3", "v"),
+    ("foveated_logpolar", "Log-polar", 4,  "#984ea3", "v"),
     ("foveated",          "Foveated",  16, "#e41a1c", "D"),
     ("uniform",           "Uniform",   16, "#4daf4a", "^"),
 ]
@@ -64,7 +64,7 @@ def main():
             ax.annotate(label, (x + 1.2, r2), fontsize=10, color=col,
                         weight="bold", va="center")
         elif key == "foveated_logpolar":
-            ax.annotate("Fov-logpolar", (x + 0.7, r2 - 0.06), fontsize=10,
+            ax.annotate("Log-polar", (x + 0.7, r2 - 0.06), fontsize=10,
                         color=col, weight="bold", va="top")
         elif key == "foveated":
             ax.annotate("Foveated", (x - 1.0, r2 + 0.05), fontsize=10,

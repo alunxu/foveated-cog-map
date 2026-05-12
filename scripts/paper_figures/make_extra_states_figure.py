@@ -31,7 +31,7 @@ import numpy as np
 CONDS = [
     ("blind",             "Blind",    "#444444", "o"),
     ("coarse",            "Coarse",   "#377eb8", "s"),
-    ("foveated_logpolar", "Fov-LP",   "#984ea3", "v"),
+    ("foveated_logpolar", "Log-polar", "#984ea3", "v"),
     ("foveated",          "Foveated", "#e41a1c", "D"),
     ("uniform",           "Uniform",  "#4daf4a", "^"),
 ]

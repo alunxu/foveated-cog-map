@@ -75,7 +75,7 @@ def fig_sweep(in_dir: Path, out_path: Path) -> None:
     ax_spl.set_ylabel("SPL", fontsize=9)
     ax_spl.grid(linestyle=":", alpha=0.4)
     ax_spl.set_ylim(0, 1.0)
-    ax_spl.legend(fontsize=6, loc="lower left", ncol=3, frameon=True)
+    ax_spl.legend(fontsize=6, loc="upper right", ncol=1, frameon=True)
     ax_spl.set_title("(a) Full SPL per transplant condition", fontsize=9)
 
     # Right: cross−self = pure condition-mismatch effect
@@ -91,7 +91,7 @@ def fig_sweep(in_dir: Path, out_path: Path) -> None:
     ax_delta.set_xlabel("Transplant midpoint (steps)", fontsize=9)
     ax_delta.set_ylabel("Cross$-$Self SPL", fontsize=9)
     ax_delta.grid(linestyle=":", alpha=0.4)
-    ax_delta.legend(fontsize=8, loc="lower left", frameon=True)
+    ax_delta.legend(fontsize=8, loc="lower right", frameon=True)
     ax_delta.set_title("(b) Pure condition-mismatch effect", fontsize=9)
 
     fig.tight_layout()

@@ -48,7 +48,7 @@ CANONICAL = [
      "tries new, can't reach"),
     ("matched", "Coarse (1$\\times$1)", "Ackermanville", 9, "#377eb8",
      "tries new, can't reach"),
-    ("foveated_logpolar", "Fov-LP", "1pXnuDYAj8r", 5, "#984ea3",
+    ("foveated_logpolar", "Log-polar", "1pXnuDYAj8r", 5, "#984ea3",
      "robust to memory carryover"),
     ("foveated", "Foveated", "1pXnuDYAj8r", 8, "#e41a1c",
      "wanders"),

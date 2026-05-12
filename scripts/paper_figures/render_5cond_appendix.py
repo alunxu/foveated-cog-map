@@ -18,11 +18,11 @@ DATA = Path("/tmp")
 OUT = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig")
 
 CONDS = [
-    ("blind",             "Blind",    "#444444"),
-    ("coarse",            "Coarse",   "#377eb8"),
-    ("foveated_logpolar", "Fov-LP",   "#984ea3"),
-    ("foveated",          "Foveated", "#e41a1c"),
-    ("uniform",           "Uniform",  "#4daf4a"),
+    ("blind",             "Blind",     "#444444"),
+    ("coarse",            "Coarse",    "#377eb8"),
+    ("foveated_logpolar", "Log-polar", "#984ea3"),
+    ("foveated",          "Foveated",  "#e41a1c"),
+    ("uniform",           "Uniform",   "#4daf4a"),
 ]
 COLOR = {k: c for k, _, c in CONDS}
 LABEL = {k: l for k, l, _ in CONDS}
@@ -102,6 +102,8 @@ def render_population_coding():
     info = json.loads((DATA / "spatial_info_5cond.json").read_text())
     sparse = json.loads((DATA / "sparse_decoding_5cond.json").read_text())
     keys = info["conds"]
+
+    # Combined 2-panel for backwards compatibility
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.0),
                              gridspec_kw={"wspace": 0.25})
     # (a) Per-unit spatial info distribution
@@ -144,6 +146,52 @@ def render_population_coding():
     plt.close(fig)
     print("wrote figa9_population_coding.pdf")
 
+    # Separate per-panel PDFs for 3-even-width LaTeX layout
+    # Sub-panel a: per-unit spatial-information distribution
+    fig, ax = plt.subplots(figsize=(5.4, 4.4))
+    for k in keys:
+        if k not in info["per_cond"]: continue
+        si = np.array(info["per_cond"][k])
+        si_sorted = np.sort(si)[::-1]
+        ax.plot(np.arange(1, len(si_sorted) + 1), si_sorted,
+                color=COLOR[k], lw=2.0, label=LABEL[k])
+    ax.set_xscale("log")
+    ax.axhline(1.0, ls="--", color="#888", lw=0.8)
+    ax.text(1.1, 1.05, "1-bit threshold", fontsize=9, color="#666")
+    ax.set_xlabel("unit rank (sorted by spatial info, descending)")
+    ax.set_ylabel("spatial information (bits)")
+    ax.set_title("Per-unit spatial-information distribution",
+                 fontsize=11, fontweight="bold", pad=4)
+    ax.legend(fontsize=9, frameon=False, loc="upper right")
+    for s in ("top", "right"): ax.spines[s].set_visible(False)
+    ax.grid(linestyle=":", alpha=0.3)
+    plt.tight_layout()
+    fig.savefig(OUT / "figa9a_per_unit_info.pdf", dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    print("wrote figa9a_per_unit_info.pdf")
+
+    # Sub-panel b: sparse-vs-distributed GPS decoding
+    fig, ax = plt.subplots(figsize=(5.4, 4.4))
+    k_values = sparse["k_values"]
+    for k in keys:
+        if k not in sparse["per_cond"]: continue
+        r2 = sparse["per_cond"][k]
+        ax.plot(k_values, r2, color=COLOR[k], lw=2.0, marker="o",
+                markersize=5, label=LABEL[k])
+    ax.set_xscale("log")
+    ax.axhline(0, color="#888", lw=0.5)
+    ax.set_xlabel("number of top-spatial-info units used")
+    ax.set_ylabel("GPS $R^2$ (5-fold CV mean)")
+    ax.set_title("Sparse-vs-distributed GPS decoding",
+                 fontsize=11, fontweight="bold", pad=4)
+    ax.legend(fontsize=9, frameon=False, loc="lower right")
+    for s in ("top", "right"): ax.spines[s].set_visible(False)
+    ax.grid(linestyle=":", alpha=0.3)
+    plt.tight_layout()
+    fig.savefig(OUT / "figa9b_sparse_decoding.pdf", dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    print("wrote figa9b_sparse_decoding.pdf")
+
 
 def render_position_axis():
     d = json.loads((DATA / "position_axis_5cond.json").read_text())
@@ -185,11 +233,8 @@ def render_pc_cumulative():
     d = json.loads((DATA / "pc_cumulative_5cond.json").read_text())
     keys = d["conds"]
     n_pcs = d["n_pcs"]
-    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.2),
-                             gridspec_kw={"wspace": 0.30,
-                                          "width_ratios": [1.8, 1.0]})
-    # (a) R^2 vs # PCs
-    ax = axes[0]
+    # Single panel: linear readout vs # PCs (PR values inlined in caption).
+    fig, ax = plt.subplots(figsize=(5.4, 4.4))
     for k in keys:
         if k not in d["per_cond"]: continue
         r2 = d["per_cond"][k]["r2_vs_pcs"]
@@ -197,29 +242,12 @@ def render_pc_cumulative():
                 markersize=3.5, label=LABEL[k])
     ax.axhline(0, color="#888", lw=0.5)
     ax.set_xlabel("# top PCs used as probe input")
-    ax.set_ylabel("Ridge probe GPS $R^2$\n(5-fold ep-CV mean)",
-                  fontweight="bold")
-    ax.set_title("(a) Linear readout vs. # PCs", fontsize=11,
-                 fontweight="bold", pad=4, loc="left")
+    ax.set_ylabel("Ridge probe GPS $R^2$  (5-fold ep-CV mean)")
+    ax.set_title("Linear readout vs.\\ \\# PCs",
+                 fontsize=11, fontweight="bold", pad=4)
     ax.legend(fontsize=9, frameon=False, loc="lower right")
     for s in ("top", "right"): ax.spines[s].set_visible(False)
     ax.grid(linestyle=":", alpha=0.3)
-    # (b) Participation ratio bars
-    ax = axes[1]
-    labs = [LABEL[k] for k in keys if k in d["per_cond"]]
-    cols = [COLOR[k] for k in keys if k in d["per_cond"]]
-    prs = [d["per_cond"][k]["participation_ratio"] for k in keys if k in d["per_cond"]]
-    x = np.arange(len(labs))
-    ax.bar(x, prs, color=cols, edgecolor="black", linewidth=0.6)
-    for i, v in enumerate(prs):
-        ax.text(i, v + 0.1, f"{v:.1f}", ha="center", fontsize=9)
-    ax.set_xticks(x); ax.set_xticklabels(labs, rotation=15, ha="right")
-    ax.set_ylabel("Participation ratio\n$(\\Sigma\\lambda)^2 / \\Sigma\\lambda^2$",
-                  fontweight="bold")
-    ax.set_title("(b) Variance spread", fontsize=11, fontweight="bold",
-                 pad=4, loc="left")
-    for s in ("top", "right"): ax.spines[s].set_visible(False)
-    ax.grid(axis="y", linestyle=":", alpha=0.3)
     plt.tight_layout()
     fig.savefig(OUT / "figa13_pc_cumulative.pdf", dpi=200, bbox_inches="tight")
     plt.close(fig)

@@ -40,7 +40,7 @@ import json
 
 # Order matches transplant matrix (figa7a) for visual pairing.
 COND_KEYS = ["blind", "coarse", "foveated_logpolar", "foveated", "uniform"]
-COND_LABELS = ["Blind", "Coarse", "Fov-LP", "Foveated", "Uniform"]
+COND_LABELS = ["Blind", "Coarse", "Log-polar", "Foveated", "Uniform"]
 
 
 def main() -> None:

@@ -51,14 +51,15 @@ CONDS = [
     # (npz_key,             label,         colour)
     ("blind_izar",          "Blind",       "#444444"),
     ("coarse",              "Coarse",      "#377eb8"),
-    ("foveated_logpolar",   "Fov-LP",      "#984ea3"),
+    ("foveated_logpolar",   "Log-polar",      "#984ea3"),
     ("foveated",            "Foveated",    "#e41a1c"),
     ("uniform",             "Uniform",     "#4daf4a"),
 ]
 NPZ_DIR = Path("/tmp/rcp_analysis_v3")
 TOPDOWN_DIR = Path("results/topdown_fig5")
 TGM_NPZ = Path("results/cogneuro_data/tgm_results.npz")
-OUT = Path("docs/manuscript/fig/fig5_temporal.pdf")
+LAGK_JSON = Path("/tmp/rcp_analysis/lagk_summary.json")
+OUT = Path("docs/manuscript/fig/fig4_temporal.pdf")
 
 MAX_LAG = 50
 N_UNITS_AUTOCORR = 256
@@ -344,9 +345,14 @@ def autocorr_per_unit(x: np.ndarray, max_lag: int) -> np.ndarray:
 
 
 def compute_per_cond_autocorr() -> dict:
-    """Return {cond_key: (mean_curve, tau_value, colour, label)}."""
+    """Return {cond_key: (mean_curve, std_curve, tau_value, per_unit_taus,
+    colour, label)}.  Per-unit autocorr curves let us recover (i) the
+    mean curve, (ii) the across-unit std band, and (iii) the per-unit
+    distribution of intrinsic timescales (1/e crossing per unit) — much
+    more discriminative than only the mean."""
     rng = np.random.default_rng(0)
     out = {}
+    threshold = 1.0 / np.e
     for key, label, colour in CONDS:
         p = NPZ_DIR / f"{key}_det_RCP.npz"
         if not p.exists():
@@ -381,10 +387,17 @@ def compute_per_cond_autocorr() -> dict:
                 unit_curves.append(np.nanmean(curves, axis=0))
         unit_curves = np.array(unit_curves)
         mean_curve = np.nanmean(unit_curves, axis=0)
-        threshold = 1.0 / np.e
+        std_curve = np.nanstd(unit_curves, axis=0)
+        # Per-unit τ (1/e crossing of each unit's autocorr)
+        per_unit_taus = []
+        for c in unit_curves:
+            cross = np.where(c < threshold)[0]
+            if len(cross):
+                per_unit_taus.append(int(cross[0]))
+        per_unit_taus = np.array(per_unit_taus)
         crossings = np.where(mean_curve < threshold)[0]
         tau = float(crossings[0]) if len(crossings) else np.nan
-        out[key] = (mean_curve, tau, colour, label)
+        out[key] = (mean_curve, std_curve, tau, per_unit_taus, colour, label)
     return out
 
 
@@ -420,95 +433,184 @@ def panel_tgm(ax, cond_key: str, label: str, colour: str,
     im = ax.imshow(M_clipped, origin="lower", cmap="RdBu_r",
                    vmin=vmin, vmax=vmax, aspect="equal",
                    interpolation="nearest")
-    ax.set_title(label, fontsize=17, fontweight="bold", color=colour, pad=4)
-    ax.set_xlabel("test step", fontsize=13)
-    ax.set_ylabel("train step", fontsize=13)
-    ax.tick_params(axis="both", labelsize=11)
+    ax.set_title(label, fontsize=20, fontweight="bold", color=colour, pad=4)
+    ax.set_xlabel("test step", fontsize=22)
+    # y-label only on the leftmost panel (sub-panel 0); rest get blank
+    # tick labels so the axis itself stays visible without redundant text
+    if ax.get_subplotspec() is not None and ax.get_subplotspec().colspan.start == 0:
+        ax.set_ylabel("train step", fontsize=22)
+    else:
+        ax.set_yticklabels([])
+    ax.tick_params(axis="both", labelsize=14)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
     return im
 
 
-def panel_tgm_decay(ax, tgm_data: dict):
-    """Decoder-transfer curve: mean TGM R^2 vs trajectory-step lag,
-    one curve per condition.  Collapses each $50{\\times}50$ TGM heatmap
-    into a single curve (R^2 averaged over all (i,j) pairs at fixed
-    $|i-j|$), giving a 1-D summary that fans all five conditions out:
-    coarse holds R^2 highest at small lag (largest stationary block),
-    blind drops to ~0 immediately (diagonal-only), and the three rich
-    sighted variants fan out monotonically between them.  The within-
-    sighted ranking (coarse > fov-LP $\\approx$ foveated > uniform)
-    matches the encoder-bandwidth spectrum: less bandwidth, more
-    stationary memory readout."""
-    max_lag = 50
+def panel_predictive_horizon(ax, _unused=None):
+    """Predictive horizon: GPS R² of decoding pos_{t+k} from h_t vs lag k.
+
+    The Stachenfeld (2017) successor-representation cognitive-map
+    signature — blind sustains high R² over long horizons (the
+    integration route maintains a forward-looking position trajectory),
+    while rich-encoder conditions fall to chance because their L2
+    carries scene-conditional visual features rather than a stable
+    forward-position code.  This is the within-episode counterpart of
+    Figure 2(b)'s across-training trajectory and grounds the cogneuro
+    framing of §4.2 in a single line plot.
+    """
+    if not LAGK_JSON.exists():
+        ax.text(0.5, 0.5, "(lagk_summary.json missing)",
+                ha="center", va="center", transform=ax.transAxes, color="grey")
+        return
+    data = json.loads(LAGK_JSON.read_text())
+    KS = [0, 1, 2, 5, 10, 20, 50]
+    HIGH_STD_THRESHOLD = 0.5
+    Y_MIN = -1.5
+
+    # Marker shapes per condition (match make_magnitude_3panel.py)
+    MARKERS = {"blind_izar": "o", "coarse": "s", "foveated_logpolar": "v",
+               "foveated": "D", "uniform": "^"}
+
+    # Shaded "no-signal" zone first
+    ax.axhspan(Y_MIN - 0.2, 0, color="#fbe0dc", alpha=0.30, zorder=0)
+    ax.axhline(0, color="black", linewidth=0.7, zorder=1)
+
     for key, label, colour in CONDS:
-        tgm_key = TGM_KEY_MAP.get(key)
-        if tgm_key not in tgm_data:
+        if key not in data:
             continue
-        M = tgm_data[tgm_key]
-        n = M.shape[0]
-        # Average R^2 at each lag |i-j|, clipped to the [-2, +2] range
-        # used in the heatmap colormap so very-negative outliers don't
-        # dominate the average.
-        M_clip = np.clip(M, -2.0, 2.0)
-        lags = np.arange(min(max_lag, n))
-        mean_r2 = np.empty(len(lags))
-        for L in lags:
-            vals = []
-            for i in range(n - L):
-                vals.append(M_clip[i, i + L])
-                if L > 0:
-                    vals.append(M_clip[i + L, i])
-            mean_r2[L] = float(np.mean(vals))
-        ax.plot(lags, mean_r2, color=colour, lw=2.0, label=label, zorder=4)
-        # Mark stationary-block strength: R^2 averaged over lag 1-5.
-        block_mean = float(np.mean(mean_r2[1:6]))
-        ax.scatter([3], [block_mean], s=32, color=colour,
-                   edgecolor="white", linewidth=1.0, zorder=5)
-    ax.axhline(0, color="#bbb", lw=0.4, zorder=0)
-    ax.set_xlim(0, max_lag - 1)
-    ax.set_xlabel("step lag $|i-j|$", fontsize=14, fontweight="bold")
-    ax.set_ylabel(r"mean decoder $R^2$ at lag", fontsize=14, fontweight="bold")
-    ax.set_title("decoder-transfer decay (TGM cross-section)",
-                 fontsize=15, fontweight="bold", pad=4)
-    ax.tick_params(axis="both", labelsize=12)
+        gps = data[key].get("GPS", {})
+        xs, ys, errs, stds = [], [], [], []
+        for k in KS:
+            entry = gps.get(f"k{k}")
+            if entry is None or entry.get("mean") is None:
+                continue
+            r2 = float(entry["mean"]); sd = float(entry.get("std", 0))
+            xs.append(k); ys.append(float(np.clip(r2, Y_MIN, 1.05)))
+            errs.append(min(sd, 0.3))
+            stds.append(sd)
+        if not xs:
+            continue
+        ax.plot(xs, ys, color=colour, lw=2.0, alpha=0.9,
+                label=label, zorder=3)
+        mk = MARKERS.get(key, "o")
+        for xi, yi, ei, si in zip(xs, ys, errs, stds):
+            if si <= HIGH_STD_THRESHOLD:
+                ax.errorbar(xi, yi, yerr=ei, marker=mk, color=colour,
+                            markersize=8, markeredgecolor=colour,
+                            markerfacecolor=colour, capsize=3,
+                            capthick=0.8, elinewidth=0.8, ecolor=colour,
+                            zorder=4)
+            else:
+                ax.plot(xi, yi, marker=mk, markersize=8,
+                        markeredgecolor=colour, markerfacecolor="white",
+                        markeredgewidth=1.5, zorder=4)
+
+    ax.set_xscale("symlog", linthresh=1)
+    ax.set_xticks(KS)
+    ax.set_xticklabels([str(k) for k in KS], fontsize=18)
+    ax.set_xlim(-0.3, 60)
+    ax.set_ylim(Y_MIN - 0.15, 1.15)
+    ax.set_xlabel("predictive horizon $k$ (steps ahead)",
+                  fontsize=24, fontweight="bold")
+    ax.set_ylabel(r"future-position $R^2$",
+                  fontsize=24, fontweight="bold")
+    # Title removed; caption carries the title.
+    ax.tick_params(axis="both", labelsize=18)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
-    ax.grid(linestyle=":", alpha=0.3)
-    ax.legend(loc="upper right", fontsize=12, frameon=False, handlelength=1.5)
+    ax.grid(axis="y", linestyle=":", alpha=0.25)
+    # Legend with line+marker per condition (proxy artists so the markers
+    # show in the legend even when the underlying plot uses errorbar+plot
+    # combined).
+    from matplotlib.lines import Line2D
+    legend_handles = []
+    for key, label, colour in CONDS:
+        if key not in data:
+            continue
+        mk = MARKERS.get(key, "o")
+        legend_handles.append(
+            Line2D([0], [0], color=colour, lw=2.0, marker=mk, markersize=8,
+                   markerfacecolor=colour, markeredgecolor=colour,
+                   label=label)
+        )
+    ax.legend(handles=legend_handles, loc="lower left", fontsize=14,
+              frameon=False, handlelength=1.8)
 
 
 def panel_autocorr_compact(ax, autocorr: dict):
-    """Per-unit autocorrelation curves (Murray-style intrinsic
-    timescale): one line per condition, $1/e$-crossing annotated as
-    $\\tau$.  Discriminates blind ($\\tau{\\approx}12$) from sighted
-    ($\\tau{\\approx}7$--$8$); within sighted the four variants
-    cluster near-identically.  Saved as a standalone App-F figure
-    (corroborating timescale check, referenced from §3.3)."""
-    lags = np.arange(MAX_LAG + 1)
-    for key, _, _ in CONDS:
+    """Per-unit intrinsic-timescale distribution as violin plots, one per
+    condition. Each violin = full distribution of per-unit τ (the lag at
+    which a unit's autocorrelation crosses 1/e). Reveals what mean curves
+    hide: blind's distribution is wide and skewed long (some units very
+    slow), while sighted distributions are tight at low τ.  Within-sighted
+    differences appear as small median shifts."""
+    positions = []
+    data = []
+    colours_per_cond = []
+    labels = []
+    medians = []
+    means_inner = []
+    for i, (key, label, colour) in enumerate(CONDS):
         if key not in autocorr:
             continue
-        curve, tau, colour, label = autocorr[key]
-        ax.plot(lags, curve, color=colour, lw=2.0,
-                label=f"{label} ($\\tau{{=}}{tau:.0f}$)", zorder=4)
-        if not np.isnan(tau):
-            ax.scatter([tau], [1.0 / np.e], s=28, color=colour,
-                       edgecolor="white", linewidth=1.0, zorder=5)
-    ax.axhline(1.0 / np.e, ls="--", color="#666", lw=0.7, zorder=1)
-    ax.text(MAX_LAG - 1, 1.0 / np.e + 0.03, "$1/e$", fontsize=10,
-            color="#444", ha="right")
-    ax.axhline(0, color="#bbb", lw=0.4, zorder=0)
-    ax.set_xlim(0, MAX_LAG)
-    ax.set_ylim(-0.05, 1.05)
-    ax.set_xlabel("lag $k$ (steps)", fontsize=12, fontweight="bold")
-    ax.set_ylabel("per-unit autocorrelation",
-                  fontsize=12, fontweight="bold")
-    ax.set_title("Murray intrinsic timescale ($1/e$-crossing of per-unit autocorr)",
-                 fontsize=11, fontweight="bold", pad=4)
-    ax.tick_params(axis="both", labelsize=10)
+        entry = autocorr[key]
+        if len(entry) != 6:
+            continue
+        _mean_curve, _std_curve, tau, per_unit_taus, _, _ = entry
+        if per_unit_taus is None or len(per_unit_taus) == 0:
+            continue
+        positions.append(i)
+        data.append(per_unit_taus.astype(float))
+        colours_per_cond.append(colour)
+        labels.append(label)
+        medians.append(float(np.median(per_unit_taus)))
+        means_inner.append(float(np.mean(per_unit_taus)))
+
+    if not data:
+        ax.text(0.5, 0.5, "(no autocorr data)",
+                transform=ax.transAxes, ha="center", va="center",
+                color="grey")
+        return
+
+    parts = ax.violinplot(data, positions=positions, widths=0.78,
+                          showmeans=False, showmedians=False,
+                          showextrema=False)
+    for body, c in zip(parts["bodies"], colours_per_cond):
+        body.set_facecolor(c)
+        body.set_edgecolor(c)
+        body.set_alpha(0.45)
+        body.set_linewidth(1.2)
+
+    # Median + IQR markers per violin
+    for i, (pos, vals, c, m) in enumerate(zip(positions, data,
+                                                colours_per_cond, medians)):
+        q1, q3 = np.percentile(vals, [25, 75])
+        ax.vlines(pos, q1, q3, color=c, lw=4.0, alpha=0.95, zorder=4)
+        ax.scatter([pos], [m], s=70, color="white",
+                   edgecolor=c, linewidth=2.0, zorder=5)
+
+    ax.set_xticks(positions)
+    ax.set_xticklabels(labels, fontsize=22, fontweight="bold")
+    for tick, c in zip(ax.get_xticklabels(), colours_per_cond):
+        tick.set_color(c)
+    ax.set_ylabel("per-unit $\\tau$ (steps to $1/e$)",
+                  fontsize=24, fontweight="bold")
+    # Title removed; caption carries the title.
+    ax.tick_params(axis="y", labelsize=18)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
+    # y-axis range — pick before placing annotations so they share a y line.
+    all_taus = np.concatenate(data)
+    y_max = max(42, float(np.percentile(all_taus, 99)) + 6)
+    ax.set_ylim(0, y_max)
+    ax.grid(axis="y", linestyle=":", alpha=0.25, zorder=0)
+    # τ annotations all on the same horizontal line near the top of the panel
+    ann_y = y_max - 3.0
+    for pos, c, m in zip(positions, colours_per_cond, medians):
+        ax.text(pos, ann_y, f"$\\tau{{=}}{m:.0f}$",
+                ha="center", va="center", fontsize=15,
+                color=c, fontweight="bold")
     ax.grid(linestyle=":", alpha=0.3)
     ax.legend(loc="upper right", fontsize=10, frameon=False,
               handlelength=1.5)
@@ -711,15 +813,22 @@ def main():
     cax_top = fig.add_subplot(gs_top[0, 5])
     if last_im is not None:
         cb_top = fig.colorbar(last_im, cax=cax_top)
-        cb_top.set_label("decoder $R^2$", fontsize=13, fontweight="bold")
-        cb_top.ax.tick_params(labelsize=11)
+        cb_top.set_label("decoder $R^2$", fontsize=22, fontweight="bold")
+        cb_top.ax.tick_params(labelsize=16)
 
     # ── Row 2 (panels b, c): 2 line plots ───────────────────────────
-    ax_cum       = fig.add_subplot(gs_bot[0, 0])
-    panel_cum_h2_lines(ax_cum, cum_h2_agg)
+    # Panel (b): per-unit hidden-state autocorrelation (Murray-style
+    # intrinsic timescale) — promoted from appendix because it directly
+    # measures how long memory states persist before decorrelating, which
+    # IS the dynamical signature of "constructed (long τ) vs pre-built
+    # (short τ)" claimed in §4.2. The cumulative-displacement plot it
+    # replaces was monotone-by-construction and added little beyond
+    # what panel (a)'s diagonal pattern already showed.
+    ax_autocorr  = fig.add_subplot(gs_bot[0, 0])
+    panel_autocorr_compact(ax_autocorr, autocorr)
 
     ax_decay     = fig.add_subplot(gs_bot[0, 1])
-    panel_tgm_decay(ax_decay, tgm_data)
+    panel_predictive_horizon(ax_decay)
 
     # ── Panel labels (a)/(b)/(c) in figure-coordinates ──────────────
     # (a) above the leftmost TGM heatmap, slightly above the title.
