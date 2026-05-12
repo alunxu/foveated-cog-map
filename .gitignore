@@ -85,3 +85,15 @@ results/tsne_subsamples/
 # Trajectory NPZs (~500KB each, but 6+ accumulated; gitignore by default,
 # keep summary JSONs which are smaller and human-readable)
 results/shortcut_results/*_traj.npz
+
+# --- Private cluster (RCP) artefacts ----------------------------------------
+# We borrowed a private K8s/RunAI cluster (RCP) to run the course project.
+# Teammate + course infrastructure use Izar SLURM and don't have RCP access,
+# so we keep these scripts on disk for our own use but never push them.
+docs/
+docker/build_with_kaniko.sh
+scripts/cluster/
+scripts/probing/lagk_rcp.sh
+scripts/probing/mlp_rcp.sh
+habitat_configs/ddppo_pointnav_foveated_normaliser_gibson.yaml
+habitat_configs/ddppo_pointnav_foveated_logpolar_normaliser_gibson.yaml
