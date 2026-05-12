@@ -1,0 +1,263 @@
+{
+  "source": "/scratch/izar/wxu/probing_data_memlen/blind_k16_det.npz",
+  "n_steps": 51082,
+  "hidden_dim": 512,
+  "n_episodes": 50,
+  "n_scenes": 43,
+  "alpha": 10.0,
+  "pca_dim": 0,
+  "1b_global_gps_compass": {
+    "gps_r2": 0.614497184753418,
+    "gps_mae_m": 1.4970974922180176,
+    "gps_cv_r2_mean": 0.7925360202789307,
+    "gps_cv_r2_std": 0.13134041239219094,
+    "gps_cv_mae_mean": 0.7803694486618042,
+    "gps_cv_mae_std": 0.3633685466277382,
+    "compass_r2": 0.45231226086616516,
+    "compass_mae_deg": 39.80373764038086,
+    "compass_cv_r2_mean": 0.6794824659824371,
+    "compass_cv_r2_std": 0.13296084251743545,
+    "combined_r2": 0.5334047079086304,
+    "n_train": 42494,
+    "n_test": 8588,
+    "n_cv_folds": 5
+  },
+  "1a_per_scene_position": {
+    "n_scenes_probed": 6,
+    "median_pos_r2": -10.0,
+    "median_pos_mae": 6.274181127548218,
+    "median_head_r2": -3.710859537124634,
+    "median_head_mae": 86.44104766845703,
+    "scenes": [
+      {
+        "scene_id": 2,
+        "n_steps": 2115,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 0.5896407961845398,
+        "head_r2": -9.350627899169922,
+        "head_mae": 90.85469055175781
+      },
+      {
+        "scene_id": 8,
+        "n_steps": 4097,
+        "n_episodes": 3,
+        "n_train_eps": 2,
+        "pos_r2": -10.0,
+        "pos_mae": 12.718708992004395,
+        "head_r2": -1.0165903568267822,
+        "head_mae": 82.02740478515625
+      },
+      {
+        "scene_id": 13,
+        "n_steps": 4000,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 4.998152732849121,
+        "head_r2": -5.854981422424316,
+        "head_mae": 102.51544189453125
+      },
+      {
+        "scene_id": 14,
+        "n_steps": 4000,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 8.926209449768066,
+        "head_r2": -10.0,
+        "head_mae": 119.25537109375
+      },
+      {
+        "scene_id": 15,
+        "n_steps": 2227,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 6.933539867401123,
+        "head_r2": -0.722934901714325,
+        "head_mae": 26.843120574951172
+      },
+      {
+        "scene_id": 16,
+        "n_steps": 597,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 5.6148223876953125,
+        "head_r2": -1.5667376518249512,
+        "head_mae": 48.0585823059082
+      }
+    ]
+  },
+  "1c_distance_to_goal": {
+    "r2": 0.7011946439743042,
+    "mae_m": 1.5512524843215942,
+    "cv_r2_mean": 0.7631816744804383,
+    "cv_r2_std": 0.10312595381904875,
+    "cv_mae_mean": 1.1651634454727173,
+    "cv_mae_std": 0.40741137014381673,
+    "n_cv_folds": 5
+  },
+  "1d_multilayer": [
+    {
+      "layer": 0,
+      "state": "h",
+      "gps_r2": 0.9326035976409912,
+      "gps_mae_m": 0.5254747867584229,
+      "compass_r2": 0.8643791675567627,
+      "compass_mae_deg": 9.277181625366211
+    },
+    {
+      "layer": 0,
+      "state": "c",
+      "gps_r2": 0.5647647380828857,
+      "gps_mae_m": 1.7761759757995605,
+      "compass_r2": 0.6639594435691833,
+      "compass_mae_deg": 16.307260513305664
+    },
+    {
+      "layer": 1,
+      "state": "h",
+      "gps_r2": -1.3350085020065308,
+      "gps_mae_m": 3.83907413482666,
+      "compass_r2": -0.19844162464141846,
+      "compass_mae_deg": 60.66002655029297
+    },
+    {
+      "layer": 1,
+      "state": "c",
+      "gps_r2": 0.7658025026321411,
+      "gps_mae_m": 1.0883756875991821,
+      "compass_r2": 0.49128594994544983,
+      "compass_mae_deg": 17.309030532836914
+    },
+    {
+      "layer": 2,
+      "state": "h",
+      "gps_r2": 0.614497184753418,
+      "gps_mae_m": 1.4970974922180176,
+      "compass_r2": 0.45231226086616516,
+      "compass_mae_deg": 39.80373764038086
+    },
+    {
+      "layer": 2,
+      "state": "c",
+      "gps_r2": -0.11529317498207092,
+      "gps_mae_m": 3.011223554611206,
+      "compass_r2": 0.07951268553733826,
+      "compass_mae_deg": 44.20368194580078
+    }
+  ],
+  "1ef_control_selectivity": {
+    "gps_r2_real": 0.614497184753418,
+    "gps_r2_control": -0.7546298623085022,
+    "gps_selectivity": 0.7802939391790642,
+    "compass_r2_real": 0.45231226086616516,
+    "compass_r2_control": -0.10263721346855163,
+    "compass_selectivity": 0.5032928941233712,
+    "n_shuffles": 5
+  },
+  "2a_accuracy_vs_timestep": [
+    {
+      "timestep_bin": "t=0",
+      "n_steps": 10,
+      "gps_r2": 0.0,
+      "gps_mae_m": 0.34507593512535095
+    },
+    {
+      "timestep_bin": "t=1",
+      "n_steps": 10,
+      "gps_r2": -6835195084800.0,
+      "gps_mae_m": 0.4788472056388855
+    },
+    {
+      "timestep_bin": "t=2",
+      "n_steps": 10,
+      "gps_r2": -374.30474853515625,
+      "gps_mae_m": 0.3869819939136505
+    },
+    {
+      "timestep_bin": "t\u22653",
+      "n_steps": 4558,
+      "gps_r2": 0.6346182823181152,
+      "gps_mae_m": 1.4017653465270996
+    }
+  ],
+  "2b_cross_heading": {
+    "n_pairs": 106,
+    "median_pos_r2": -8.495791912078857
+  },
+  "2c_path_history": {
+    "lags": [
+      {
+        "lag_k": 0,
+        "r2": 0.614497184753418,
+        "mae_m": 1.4970974922180176,
+        "n_train": 42494,
+        "n_test": 8588,
+        "test_target_var": 25.139780044555664,
+        "reliable": true
+      },
+      {
+        "lag_k": 1,
+        "r2": 0.6019377708435059,
+        "mae_m": 1.5305390357971191,
+        "n_train": 42454,
+        "n_test": 8578,
+        "test_target_var": 25.147188186645508,
+        "reliable": true
+      },
+      {
+        "lag_k": 2,
+        "r2": 0.5883480310440063,
+        "mae_m": 1.5511870384216309,
+        "n_train": 42414,
+        "n_test": 8568,
+        "test_target_var": 25.154438018798828,
+        "reliable": true
+      },
+      {
+        "lag_k": 3,
+        "r2": 0.5953911542892456,
+        "mae_m": 1.5516653060913086,
+        "n_train": 42374,
+        "n_test": 8558,
+        "test_target_var": 25.161666870117188,
+        "reliable": true
+      },
+      {
+        "lag_k": 4,
+        "r2": 0.5966371297836304,
+        "mae_m": 1.5708415508270264,
+        "n_train": 42334,
+        "n_test": 8548,
+        "test_target_var": 25.1689453125,
+        "reliable": true
+      },
+      {
+        "lag_k": 5,
+        "r2": 0.593894362449646,
+        "mae_m": 1.6027005910873413,
+        "n_train": 42294,
+        "n_test": 8538,
+        "test_target_var": 25.176219940185547,
+        "reliable": true
+      }
+    ],
+    "median_episode_length": 327,
+    "effective_max_lag": 5,
+    "requested_max_lag": 5,
+    "min_train_threshold": 200,
+    "min_test_threshold": 100
+  },
+  "2d_visited_region": {
+    "r2": 0.5908297300338745,
+    "binary_accuracy": 0.9886753980183766,
+    "active_cell_accuracy": 0.8007005899705014,
+    "n_cells": 528,
+    "n_active_cells": 24,
+    "grid_res_m": 4.3076567005739905
+  }
+}

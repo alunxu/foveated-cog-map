@@ -11,7 +11,7 @@ provides DYNAMIC evidence for capacity-allocation as a training-time
 process, complementing the snapshot in fig_subspace_divergence.
 
 Reads:  /tmp/subspace_evolution.json (synced from Izar)
-Writes: docs/manuscript/fig/fig_subspace_evolution.pdf
+Writes: docs/manuscript/fig/figa7c_subspace_evolution.pdf
 """
 from __future__ import annotations
 import argparse

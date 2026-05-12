@@ -55,10 +55,10 @@ habitat_baselines:
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   eval_ckpt_path_dir: "data/checkpoints/uniform_gibson"
-  num_environments: 6              # fewer than blind (RGB needs more memory)
+  num_environments: 16             # unified across 4 retrain conditions
   checkpoint_folder: "data/checkpoints/uniform_gibson"
   num_updates: -1
-  total_num_steps: 4.0e8           # 400M steps (ResNet-18 encoder needs more frames to converge)
+  total_num_steps: 2.5e8           # 250M frames, unified across 4 retrain conditions
   log_interval: 10
   num_checkpoints: 50
   force_torch_single_threaded: True
@@ -78,12 +78,12 @@ habitat_baselines:
       lr: 2.5e-4
       eps: 1.0e-5
       max_grad_norm: 0.2
-      num_steps: 128                # shorter rollouts for memory (RGB buffers)
+      num_steps: 256                # unified across 4 retrain conditions
       use_gae: True
       gamma: 0.99
       tau: 0.95
       use_linear_clip_decay: False
-      use_linear_lr_decay: False
+      use_linear_lr_decay: False    # unified across 4 retrain conditions (no decay)
       reward_window_size: 50
       use_normalized_advantage: False
       hidden_size: 512

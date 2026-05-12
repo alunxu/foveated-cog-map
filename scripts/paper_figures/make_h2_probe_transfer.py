@@ -36,40 +36,43 @@ apply_paper_style()
 from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 
-CONDS = ["Blind", "Coarse\n(1×1)", "Uniform", "Foveated\n(fix)", "Foveated\n(learned)"]
+import json
 
-# Train (row) x Test (col) probe-transfer R²
-# (paper Table 2). Order matches transplant matrix (fig 4b) for visual
-# pairing: [Blind, Coarse, Uniform, Foveated-fix, Foveated-learned].
-M = np.array([
-    # Blind   Coarse    Uniform   Fov-fix   Fov-lrn
-    [+0.99,   -55706,   -844,     -11301,   -10731],   # Blind
-    [-10621,  +0.96,    -4832,    -4984,    -58169],   # Coarse
-    [-1383,   -110317,  +0.90,    -7046,    -3305],    # Uniform
-    [-2091,   -39100,   -2792,    +0.92,    -1263],    # Fov-fix
-    [-6722,   -38842,   -2423,    -6205,    +0.89],    # Fov-lrn
-], dtype=float)
+# Order matches transplant matrix (figa7a) for visual pairing.
+COND_KEYS = ["blind", "coarse", "foveated_logpolar", "foveated", "uniform"]
+COND_LABELS = ["Blind", "Coarse", "Log-polar", "Foveated", "Uniform"]
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", type=Path, required=True)
+    ap.add_argument("--data-json", type=Path,
+                    default=Path("/tmp/probe_transfer_5x5.json"),
+                    help="JSON written by probe_transfer_5x5.py")
     args = ap.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load 5×5 matrix; reorder to COND_KEYS.
+    raw = json.loads(args.data_json.read_text())
+    src_idx = {c: i for i, c in enumerate(raw["conds"])}
+    src_M = np.array(raw["matrix"])
+    M = np.array([[src_M[src_idx[r], src_idx[c]] for c in COND_KEYS]
+                  for r in COND_KEYS], dtype=float)
+    CONDS = COND_LABELS
 
     # Signed log10 transform for colour mapping (compress dynamic range
     # while preserving sign).
     M_log = np.sign(M) * np.log10(np.abs(M) + 1.0)
     vmax = float(np.nanmax(np.abs(M_log)))
 
-    fig, ax = plt.subplots(figsize=(6.4, 5.4))
+    fig, ax = plt.subplots(figsize=(7.2, 6.0))
     im = ax.imshow(M_log, cmap="RdBu_r", vmin=-vmax, vmax=vmax,
                    aspect="equal")
 
     n = len(CONDS)
     ax.set_xticks(np.arange(n))
     ax.set_yticks(np.arange(n))
-    ax.set_xticklabels(CONDS)
+    ax.set_xticklabels(CONDS, rotation=20, ha="right")
     ax.set_yticklabels(CONDS)
     ax.set_xlabel("Test on")
     ax.set_ylabel("Train probe on")
@@ -100,7 +103,7 @@ def main() -> None:
     ax.set_title("Cross-condition GPS probe transfer")
 
     plt.tight_layout()
-    out = args.out_dir / "fig4_h2_probe_transfer.pdf"
+    out = args.out_dir / "figa7b_h2_probe_transfer.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

@@ -38,21 +38,28 @@ apply_paper_style()
 import numpy as np
 
 CONDS = [
-    ("blind",            "Blind"),
-    ("matched",          "Coarse\n(1×1)"),
-    ("uniform",          "Uniform"),
-    ("foveated",         "Foveated\n(fix)"),
-    ("foveated_learned", "Foveated\n(learned)"),
+    ("blind",             "Blind"),
+    ("coarse",            "Coarse"),
+    ("foveated_logpolar", "Log-polar"),
+    ("foveated",          "Foveated"),
+    ("uniform",           "Uniform"),
 ]
 
 
 def load_pair(results_dir: Path, donor: str, recipient: str) -> dict | None:
-    """Read transplant JSON for donor→recipient (default mid=30)."""
-    p = results_dir / f"{donor}_to_{recipient}.json"
-    if not p.exists():
-        return None
-    with open(p) as f:
-        return json.load(f)
+    """Read transplant JSON for donor->recipient (default mid=30).
+
+    Tries both naming schemes used in the project:
+      <donor>_to_<recipient>_mid30.json   (canonical 5-cond cache)
+      <donor>_to_<recipient>.json         (legacy default-mid layout)
+    """
+    for fname in (f"{donor}_to_{recipient}_mid30.json",
+                  f"{donor}_to_{recipient}.json"):
+        p = results_dir / fname
+        if p.exists():
+            with open(p) as f:
+                return json.load(f)
+    return None
 
 
 def main() -> None:
@@ -143,7 +150,7 @@ def main() -> None:
     ax.set_title("Cross-condition memory transplants")
 
     plt.tight_layout()
-    out = args.out_dir / "fig4_transplant_5x5.pdf"
+    out = args.out_dir / "figa7a_transplant_5x5.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

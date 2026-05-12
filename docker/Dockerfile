@@ -73,12 +73,13 @@ RUN mkdir -p /usr/share/glvnd/egl_vendor.d && \
 # 3. Miniconda (Python 3.9)
 # ----------------------------------------------------------------------------
 ENV CONDA_DIR=/opt/miniconda3
-RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-py39_24.7.1-0-Linux-x86_64.sh -o /tmp/miniconda.sh && \
+RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh && \
     bash /tmp/miniconda.sh -b -p ${CONDA_DIR} && \
     rm /tmp/miniconda.sh && \
     ${CONDA_DIR}/bin/conda config --set channel_priority strict && \
-    ${CONDA_DIR}/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    ${CONDA_DIR}/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+    # Miniconda 24.x has `conda tos`; older versions don't. Tolerate both.
+    ${CONDA_DIR}/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main 2>/dev/null || true && \
+    ${CONDA_DIR}/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r 2>/dev/null || true
 
 ENV PATH=${CONDA_DIR}/bin:${PATH}
 

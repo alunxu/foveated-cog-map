@@ -36,10 +36,9 @@ import numpy as np
 
 CONDS = [
     ("blind",             "Blind",            "#444444", "o"),
-    ("matched",           "Coarse (1×1)",    "#377eb8", "s"),
+    ("matched",           "Coarse",    "#377eb8", "s"),
     ("uniform",           "Uniform",          "#4daf4a", "^"),
-    ("foveated",          "Foveated (fix)",   "#e41a1c", "D"),
-    ("foveated_learned",  "Foveated (learned)",      "#ff7f00", "v"),
+    ("foveated",          "Foveated",   "#e41a1c", "D"),
 ]
 
 # Frames-per-checkpoint mapping (must match training-pipeline value).

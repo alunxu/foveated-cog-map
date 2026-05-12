@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Alfred.glb",
+  "episode_id": "7",
+  "start_position": [
+    -18.951339721679688,
+    0.15122027695178986,
+    8.959906578063965
+  ],
+  "goal_position": [
+    -14.508443832397461,
+    0.2009263038635254,
+    3.578514575958252
+  ],
+  "topdown_height": 1043,
+  "topdown_width": 1024,
+  "world_lower_bound": [
+    -19.825897216796875,
+    -3.599073648452759,
+    -1.4985350370407104
+  ],
+  "world_upper_bound": [
+    1.509376049041748,
+    12.049369812011719,
+    20.233089447021484
+  ],
+  "map_resolution": 1024
+}

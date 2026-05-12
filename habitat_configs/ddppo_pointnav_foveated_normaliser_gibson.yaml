@@ -1,23 +1,35 @@
 # @package _global_
 #
-# Wijmans-faithful FOVEATED PointGoal navigator on Gibson.
+# Wijmans-faithful FOVEATED-with-NORMALISER PointGoal navigator on Gibson
+# (F2 / F-norm experiment — paper §"Behavioural success and SPL are unaffected"
+# claim verification; main.tex §"foveated condition disables RunningMeanAndVar").
 #
-# Same Wijmans sensor stack and reward shaping as the other configs, plus a
-# foveated visual encoder with a learned gaze head. The custom policy
-# (FoveatedPointNavResNetPolicy) applies an eccentricity-dependent Gaussian
-# blur to the RGB input before the ResNet, and decodes a 2-D gaze position
-# from the previous LSTM hidden state.
+# Identical to ddppo_pointnav_foveated_gibson EXCEPT:
+#   - policy: FoveatedNormalisedWijmansPolicy (sets _force_enable_normaliser=True)
+#     → RunningMeanAndVar input normaliser is ENABLED, matching uniform/coarse/blind
 #
-# Uses FoveatedWijmansPolicy: combines the Wijmans sensor stack (g, GPS,
-# compass, close-to-goal indicator) with the foveation transform applied
-# inside the visual encoder, plus a learned gaze head from the LSTM hidden
-# state. See src/habitat/foveated_policy.py.
+# Why this experiment exists:
+#   Default foveated condition has RunningMeanAndVar DISABLED to avoid an
+#   in-place autograd conflict with the (originally planned) gaze decoder.
+#   The gaze decoder is now permanently disabled (fixed-center gaze), so the
+#   conflict is gone — but historical foveated checkpoints were trained
+#   without the normaliser, while uniform/coarse/blind have it. This is a
+#   confound for cross-condition representational comparisons (paper §"the
+#   only varied factor is the visual transform" claim).
+#
+#   F2 trains a foveated variant with the normaliser ENABLED to test whether
+#   the H1 "rich-encoder pass-through" finding is robust to this difference.
+#
+# Expected outcomes:
+#   - F2 GPS R² ≈ 0.06 (matches default fov-fix): normaliser is not a
+#     confound; H1 / capacity-allocation framing survives.
+#   - F2 GPS R² substantially > 0: the normaliser was hiding spatial
+#     information; rich-encoder vs bottleneck cross-comparisons need redoing.
 #
 # Training set: Gibson-0+ (411 scenes) via the train_extra_large split.
-# See ddppo_pointnav_blind_gibson.yaml for the dataset rationale.
 #
-# Submit:
-#   sbatch scripts/cluster/submit_habitat.sh pointnav/ddppo_pointnav_foveated_gibson
+# Submit (RCP, 4-GPU):
+#   bash scripts/cluster/submit_F2_normaliser.sh
 
 defaults:
   - /benchmark/nav/pointnav: pointnav_gibson
@@ -49,9 +61,6 @@ habitat:
             height: 256
             width: 256
   dataset:
-    # Wijmans 2023 A.1: train on 411 Gibson + 72 MP3D scenes. We use the
-    # pre-built Gibson-0+ (411) and MP3D train (61 available) merged via
-    # symlinks at data/datasets/pointnav/mp3d_gibson/v1/train/. 472 total.
     data_path: data/datasets/pointnav/mp3d_gibson/v1/{split}/{split}.json.gz
     split: train
 
@@ -62,10 +71,10 @@ habitat_baselines:
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   eval_ckpt_path_dir: "data/checkpoints/foveated_normaliser_gibson"
-  num_environments: 6
+  num_environments: 16             # unified across retrain conditions (incl. F2)
   checkpoint_folder: "data/checkpoints/foveated_normaliser_gibson"
   num_updates: -1
-  total_num_steps: 2.5e8
+  total_num_steps: 2.5e8           # 250M frames, unified
   log_interval: 10
   num_checkpoints: 50
   force_torch_single_threaded: True
@@ -76,10 +85,8 @@ habitat_baselines:
       main_agent:
         name: "FoveatedNormalisedWijmansPolicy"
         action_distribution_type: "categorical"
-        # Foveation hyperparameters are hardcoded in src/habitat/foveated_policy.py
-        # per the PoC decisions in docs/foveation_design.md §2.1:
+        # Foveation hyperparameters hardcoded in foveated_policy.py defaults:
         #   fovea_radius=16, blur_sigma_max=8.0, falloff=quadratic
-        # Hydra's structured config validation rejects unknown fields here.
 
     ppo:
       clip_param: 0.2
@@ -90,12 +97,12 @@ habitat_baselines:
       lr: 2.5e-4
       eps: 1.0e-5
       max_grad_norm: 0.2
-      num_steps: 128
+      num_steps: 256                # unified
       use_gae: True
       gamma: 0.99
       tau: 0.95
       use_linear_clip_decay: False
-      use_linear_lr_decay: True
+      use_linear_lr_decay: False    # unified (no decay)
       reward_window_size: 50
       use_normalized_advantage: False
       hidden_size: 512

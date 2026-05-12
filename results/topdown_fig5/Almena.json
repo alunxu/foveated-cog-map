@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Almena.glb",
+  "episode_id": "4",
+  "start_position": [
+    1.4990859031677246,
+    0.05097503960132599,
+    -8.093833923339844
+  ],
+  "goal_position": [
+    -1.8137174844741821,
+    0.05097503960132599,
+    -11.894980430603027
+  ],
+  "topdown_height": 1484,
+  "topdown_width": 1024,
+  "world_lower_bound": [
+    -4.561868190765381,
+    -0.14902496337890625,
+    -12.840788841247559
+  ],
+  "world_upper_bound": [
+    6.838930130004883,
+    6.15131139755249,
+    3.689879894256592
+  ],
+  "map_resolution": 1024
+}

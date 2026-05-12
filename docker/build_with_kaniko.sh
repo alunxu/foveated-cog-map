@@ -38,7 +38,7 @@ tar czf $TARBALL --exclude='.git' --exclude='node_modules' docker/
 # Simplest path: copy tarball to /scratch/wxu/dh-spatial/docker-context.tar.gz, then kaniko reads from there
 
 echo "[1/3] Copying build context to scratch (via setup pod)..."
-POD=$(kubectl get pod -n runai-dhlab-wxu -l runai/job-name=dh-spatial-setup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+POD=$(kubectl get pod -n runai-dhlab-wxu -l release=dh-spatial-setup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 if [ -z "$POD" ]; then
     echo "ERROR: dh-spatial-setup pod not running on RCP. Submit it first."
     exit 1
@@ -55,6 +55,7 @@ RUNAI_CURRENT_CTX=rcp /usr/local/bin/runai-rcp-prod submit dh-spatial-kaniko \
     --image=gcr.io/kaniko-project/executor:latest \
     --gpu=0 --cpu=4 --memory=16G \
     --pvc=dhlab-scratch:/scratch \
+    --environment DOCKER_CONFIG=/scratch/wxu/.docker \
     --command -- /kaniko/executor \
         --dockerfile=/scratch/wxu/dh-spatial-docker-context/docker/Dockerfile \
         --context=dir:///scratch/wxu/dh-spatial-docker-context/docker \

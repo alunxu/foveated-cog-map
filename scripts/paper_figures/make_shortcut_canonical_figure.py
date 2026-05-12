@@ -17,7 +17,7 @@ Reads:
     --traj-dir <dir>/{cond}_gibson_traj.npz
     --topdown-dir <dir>/{scene}.{png,json}
 
-Writes: <out-dir>/fig5_shortcut_canonical.pdf
+Writes: <out-dir>/figa16_shortcut_canonical.pdf
 """
 from __future__ import annotations
 
@@ -48,10 +48,12 @@ CANONICAL = [
      "tries new, can't reach"),
     ("matched", "Coarse (1$\\times$1)", "Ackermanville", 9, "#377eb8",
      "tries new, can't reach"),
+    ("foveated_logpolar", "Log-polar", "1pXnuDYAj8r", 5, "#984ea3",
+     "robust to memory carryover"),
+    ("foveated", "Foveated", "1pXnuDYAj8r", 8, "#e41a1c",
+     "wanders"),
     ("uniform", "Uniform",        "8WUmhLawc2A", 8, "#4daf4a",
      "locks onto old goal"),
-    ("foveated","Foveated", "1pXnuDYAj8r", 8, "#e41a1c",
-     "wanders"),
 ]
 
 
@@ -125,15 +127,24 @@ def main() -> None:
                       origin="lower", alpha=0.55, zorder=0,
                       interpolation="bilinear")
 
-        # Reset trajectory (solid, full colour).
+        # Reset trajectory: light reference baseline (the "good behaviour"
+        # context).  Plotted thin and translucent so it doesn't compete
+        # with the focal trace.
         rp = data["reset"]["positions"][:, [0, 2]]
-        ax.plot(rp[:, 0], rp[:, 1], "-", color=colour, lw=2.2,
-                alpha=0.95, zorder=4)
-
-        # Persistent trajectory (dashed, faded).
-        pp = data["persistent"]["positions"][:, [0, 2]]
-        ax.plot(pp[:, 0], pp[:, 1], "--", color=colour, lw=1.4,
+        ax.plot(rp[:, 0], rp[:, 1], "-", color=colour, lw=1.6,
                 alpha=0.55, zorder=3)
+
+        # Persistent trajectory: focal trace --- the ANSWER to "where does
+        # persistent memory take the agent?".  Plotted thicker and fully
+        # opaque, dashed to distinguish line style at a glance.
+        pp = data["persistent"]["positions"][:, [0, 2]]
+        ax.plot(pp[:, 0], pp[:, 1], "--", color=colour, lw=2.8,
+                alpha=1.0, zorder=4)
+        # End-point marker so "where did the persistent agent stop?" reads
+        # at a glance even when the trajectory winds many steps.
+        ax.scatter(pp[-1, 0], pp[-1, 1], s=120, marker="X",
+                   color=colour, edgecolor="black",
+                   linewidths=1.4, zorder=5)
 
         # Markers: start, new goal, old goal.
         s = data["reset"]["start"][[0, 2]]
@@ -189,9 +200,13 @@ def main() -> None:
 
     # Single shared legend at the bottom.
     legend_handles = [
-        Line2D([0], [0], color="black", lw=2.2, label="Reset memory"),
-        Line2D([0], [0], color="black", lw=1.4, ls="--", alpha=0.55,
-               label="Persistent memory"),
+        Line2D([0], [0], color="black", lw=1.6, alpha=0.55,
+               label="Reset memory (baseline)"),
+        Line2D([0], [0], color="black", lw=2.8, ls="--",
+               label="Persistent memory (focal)"),
+        Line2D([0], [0], marker="X", color="w", markerfacecolor="black",
+               markeredgecolor="black", markersize=10,
+               label="Persistent end"),
         Line2D([0], [0], marker="o", color="w", markerfacecolor="white",
                markeredgecolor="black", markersize=10, label="Start"),
         Line2D([0], [0], marker="*", color="w", markerfacecolor="gold",
@@ -203,7 +218,7 @@ def main() -> None:
                ncol=5, frameon=False, bbox_to_anchor=(0.5, -0.02))
 
     plt.subplots_adjust(left=0.02, right=0.99, top=0.92, bottom=0.18)
-    out = args.out_dir / "fig5_shortcut_canonical.pdf"
+    out = args.out_dir / "figa16_shortcut_canonical.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

@@ -1,0 +1,120 @@
+# @package _global_
+#
+# Wijmans-faithful LOG-POLAR-with-NORMALISER PointGoal navigator on Gibson
+# (F-LP2 / F-norm-LP experiment — paper §"Behavioural success and SPL are unaffected"
+# claim verification; main.tex §"foveated condition disables RunningMeanAndVar").
+#
+# Identical to ddppo_pointnav_foveated_logpolar_gibson EXCEPT:
+#   - policy: FoveatedLogPolarNormalisedWijmansPolicy (sets _force_enable_normaliser=True)
+#     → RunningMeanAndVar input normaliser is ENABLED, matching uniform/coarse/blind
+#
+# Why this experiment exists:
+#   Default foveated condition has RunningMeanAndVar DISABLED to avoid an
+#   in-place autograd conflict with the (originally planned) gaze decoder.
+#   The gaze decoder is now permanently disabled (fixed-center gaze), so the
+#   conflict is gone — but historical foveated checkpoints were trained
+#   without the normaliser, while uniform/coarse/blind have it. This is a
+#   confound for cross-condition representational comparisons (paper §"the
+#   only varied factor is the visual transform" claim).
+#
+#   F-LP2 trains a log-polar variant with the normaliser ENABLED to test whether
+#   the H1 "rich-encoder pass-through" finding is robust to this difference.
+#
+# Expected outcomes:
+#   - F2 GPS R² ≈ 0.06 (matches default fov-fix): normaliser is not a
+#     confound; H1 / capacity-allocation framing survives.
+#   - F2 GPS R² substantially > 0: the normaliser was hiding spatial
+#     information; rich-encoder vs bottleneck cross-comparisons need redoing.
+#
+# Training set: Gibson-0+ (411 scenes) via the train_extra_large split.
+#
+# Submit (RCP, 4-GPU):
+#   bash scripts/cluster/submit_F_LP2.sh
+
+defaults:
+  - /benchmark/nav/pointnav: pointnav_gibson
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - override /habitat/task/lab_sensors:
+      - gps_sensor
+      - compass_sensor
+      - goal_in_start_frame_sensor
+      - close_to_goal_indicator_sensor
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 2000
+  task:
+    success_reward: 2.5
+    slack_reward: -0.001
+    measurements:
+      success:
+        success_distance: 0.2
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            height: 256
+            width: 256
+          depth_sensor:
+            height: 256
+            width: 256
+  dataset:
+    data_path: data/datasets/pointnav/mp3d_gibson/v1/{split}/{split}.json.gz
+    split: train
+
+habitat_baselines:
+  verbose: False
+  trainer_name: "ddppo"
+  torch_gpu_id: 0
+  tensorboard_dir: "tb"
+  video_dir: "video_dir"
+  eval_ckpt_path_dir: "data/checkpoints/foveated_logpolar_normaliser_gibson"
+  num_environments: 16             # unified across retrain conditions (incl. F2)
+  checkpoint_folder: "data/checkpoints/foveated_logpolar_normaliser_gibson"
+  num_updates: -1
+  total_num_steps: 2.5e8           # 250M frames, unified
+  log_interval: 10
+  num_checkpoints: 50
+  force_torch_single_threaded: True
+  force_blind_policy: False
+
+  rl:
+    policy:
+      main_agent:
+        name: "FoveatedLogPolarNormalisedWijmansPolicy"
+        action_distribution_type: "categorical"
+        # Foveation hyperparameters hardcoded in foveated_policy.py defaults:
+        #   fovea_radius=16, blur_sigma_max=8.0, falloff=quadratic
+
+    ppo:
+      clip_param: 0.2
+      ppo_epoch: 2
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.01
+      lr: 2.5e-4
+      eps: 1.0e-5
+      max_grad_norm: 0.2
+      num_steps: 256                # unified
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+      use_linear_clip_decay: False
+      use_linear_lr_decay: False    # unified (no decay)
+      reward_window_size: 50
+      use_normalized_advantage: False
+      hidden_size: 512
+      use_double_buffered_sampler: False
+
+    ddppo:
+      sync_frac: 0.6
+      distrib_backend: NCCL
+      pretrained: False
+      pretrained_encoder: False
+      train_encoder: True
+      reset_critic: True
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 3

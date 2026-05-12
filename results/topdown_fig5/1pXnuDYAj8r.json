@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/1pXnuDYAj8r/1pXnuDYAj8r.glb",
+  "episode_id": "8",
+  "start_position": [
+    13.412040710449219,
+    0.11414599418640137,
+    -9.052072525024414
+  ],
+  "goal_position": [
+    7.3082966804504395,
+    0.11414599418640137,
+    7.251091957092285
+  ],
+  "topdown_height": 1325,
+  "topdown_width": 1024,
+  "world_lower_bound": [
+    -0.39951300621032715,
+    -0.2858540117740631,
+    -12.485780715942383
+  ],
+  "world_upper_bound": [
+    19.287181854248047,
+    7.9352827072143555,
+    12.988896369934082
+  ],
+  "map_resolution": 1024
+}

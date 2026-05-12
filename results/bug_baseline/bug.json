@@ -1,0 +1,1010 @@
+{
+  "n_episodes": 100,
+  "success_rate": 0.13,
+  "mean_spl": 0.07077687121716504,
+  "mean_steps": 1759.69,
+  "mean_path_length": 141.1503006194,
+  "mean_dist_to_goal": 6.55407028791191,
+  "per_episode": [
+    {
+      "episode_id": "55240",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/ZMojNkEp431/ZMojNkEp431.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 120.18010225403123,
+      "geodesic": 9.146256446838379,
+      "steps": 2000,
+      "dist_to_goal": 2.8743520528772706
+    },
+    {
+      "episode_id": "8937",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Mobridge.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 145.63671192899346,
+      "geodesic": 7.346953392028809,
+      "steps": 2000,
+      "dist_to_goal": 6.78436984701709
+    },
+    {
+      "episode_id": "3907",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Blackstone.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 155.185561332386,
+      "geodesic": 3.115499973297119,
+      "steps": 2000,
+      "dist_to_goal": 1.9128617560952215
+    },
+    {
+      "episode_id": "67039",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/uNb9QFRL6hY/uNb9QFRL6hY.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 181.4240170107363,
+      "geodesic": 8.04486083984375,
+      "steps": 2000,
+      "dist_to_goal": 6.9984259843618215
+    },
+    {
+      "episode_id": "705",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Annawan.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 193.62519016535953,
+      "geodesic": 6.7168145179748535,
+      "steps": 2000,
+      "dist_to_goal": 9.222979699449583
+    },
+    {
+      "episode_id": "33428",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/5q7pvUzZiYa/5q7pvUzZiYa.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 140.54754441604018,
+      "geodesic": 19.41834259033203,
+      "steps": 2000,
+      "dist_to_goal": 17.105528870179153
+    },
+    {
+      "episode_id": "3990",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Hallettsville.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 167.21020570397377,
+      "geodesic": 6.614181995391846,
+      "steps": 2000,
+      "dist_to_goal": 7.369638471379169
+    },
+    {
+      "episode_id": "3116",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Chesaning.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 152.7012753197779,
+      "geodesic": 12.637803077697754,
+      "steps": 2000,
+      "dist_to_goal": 10.960130701969529
+    },
+    {
+      "episode_id": "24235",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/vyrNrziPKCB/vyrNrziPKCB.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 203.36645968587754,
+      "geodesic": 25.37269401550293,
+      "steps": 2000,
+      "dist_to_goal": 3.984278937461918
+    },
+    {
+      "episode_id": "8610",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Shellsburg.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 193.91301409434527,
+      "geodesic": 4.431793212890625,
+      "steps": 2000,
+      "dist_to_goal": 4.744734845310845
+    },
+    {
+      "episode_id": "81753",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/ur6pFq6Qu1A/ur6pFq6Qu1A.glb",
+      "success": true,
+      "spl": 0.8070325314611717,
+      "path_length": 13.83566595427692,
+      "geodesic": 11.16583251953125,
+      "steps": 94,
+      "dist_to_goal": 0.09463831866531754
+    },
+    {
+      "episode_id": "45374",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/sKLMLpTHeUy/sKLMLpTHeUy.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 187.75676747318357,
+      "geodesic": 24.43604278564453,
+      "steps": 2000,
+      "dist_to_goal": 13.524497084615398
+    },
+    {
+      "episode_id": "688",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Marland.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 112.96785526443273,
+      "geodesic": 6.752337455749512,
+      "steps": 2000,
+      "dist_to_goal": 4.7874203920316765
+    },
+    {
+      "episode_id": "2190",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Irvine.glb",
+      "success": true,
+      "spl": 0.4273933243410991,
+      "path_length": 13.162162930471823,
+      "geodesic": 5.625420570373535,
+      "steps": 111,
+      "dist_to_goal": 0.035552448245303785
+    },
+    {
+      "episode_id": "5699",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/PuKPg4mmafe/PuKPg4mmafe.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 238.4860915876925,
+      "geodesic": 26.637378692626953,
+      "steps": 2000,
+      "dist_to_goal": 19.083022526986987
+    },
+    {
+      "episode_id": "14511",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/pRbA3pwrgk9/pRbA3pwrgk9.glb",
+      "success": true,
+      "spl": 0.9586404602515554,
+      "path_length": 1.6134757697582245,
+      "geodesic": 1.5467431545257568,
+      "steps": 26,
+      "dist_to_goal": 0.040999340229590404
+    },
+    {
+      "episode_id": "78770",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/PuKPg4mmafe/PuKPg4mmafe.glb",
+      "success": true,
+      "spl": 0.7353882046838416,
+      "path_length": 40.33558503165841,
+      "geodesic": 29.66231346130371,
+      "steps": 326,
+      "dist_to_goal": 0.11345875757599716
+    },
+    {
+      "episode_id": "39574",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/1pXnuDYAj8r/1pXnuDYAj8r.glb",
+      "success": true,
+      "spl": 0.5786143695617278,
+      "path_length": 8.963938506320119,
+      "geodesic": 5.186663627624512,
+      "steps": 116,
+      "dist_to_goal": 0.19526801582074255
+    },
+    {
+      "episode_id": "14109",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/82sE5b5pLXE/82sE5b5pLXE.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 122.06254922039807,
+      "geodesic": 13.545812606811523,
+      "steps": 2000,
+      "dist_to_goal": 10.161080966824478
+    },
+    {
+      "episode_id": "11812",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/vyrNrziPKCB/vyrNrziPKCB.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 199.80003167316318,
+      "geodesic": 17.116943359375,
+      "steps": 2000,
+      "dist_to_goal": 13.230396433848545
+    },
+    {
+      "episode_id": "4218",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Okabena.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 212.3446284001693,
+      "geodesic": 11.715797424316406,
+      "steps": 2000,
+      "dist_to_goal": 5.7171033826960835
+    },
+    {
+      "episode_id": "7188",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Cullison.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 139.54955930262804,
+      "geodesic": 12.816947937011719,
+      "steps": 2000,
+      "dist_to_goal": 9.239973344485584
+    },
+    {
+      "episode_id": "9173",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Funkstown.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 165.89349177246913,
+      "geodesic": 5.6048808097839355,
+      "steps": 2000,
+      "dist_to_goal": 5.776125729238473
+    },
+    {
+      "episode_id": "2951",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Terrell.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 143.90741849131882,
+      "geodesic": 21.293954849243164,
+      "steps": 2000,
+      "dist_to_goal": 18.191469701563687
+    },
+    {
+      "episode_id": "8696",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Wyatt.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 239.6986636085203,
+      "geodesic": 3.7678115367889404,
+      "steps": 2000,
+      "dist_to_goal": 3.716899690593503
+    },
+    {
+      "episode_id": "8774",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Woodbine.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 167.468837287261,
+      "geodesic": 11.345890045166016,
+      "steps": 2000,
+      "dist_to_goal": 5.274133333552737
+    },
+    {
+      "episode_id": "1295",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Lynchburg.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 155.0844500279054,
+      "geodesic": 6.255124092102051,
+      "steps": 2000,
+      "dist_to_goal": 2.6480930315760927
+    },
+    {
+      "episode_id": "4090",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Melstone.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 157.02844996144995,
+      "geodesic": 15.905675888061523,
+      "steps": 2000,
+      "dist_to_goal": 12.291538554616075
+    },
+    {
+      "episode_id": "1101",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Germfask.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 220.94612015783787,
+      "geodesic": 6.090204238891602,
+      "steps": 2000,
+      "dist_to_goal": 6.48330617665418
+    },
+    {
+      "episode_id": "8409",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Blackstone.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 178.11507690697908,
+      "geodesic": 14.686304092407227,
+      "steps": 2000,
+      "dist_to_goal": 11.52568639163749
+    },
+    {
+      "episode_id": "3876",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Oyens.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 141.973102943124,
+      "geodesic": 5.670921802520752,
+      "steps": 2000,
+      "dist_to_goal": 6.68324280114697
+    },
+    {
+      "episode_id": "5515",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Funkstown.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 163.2178857922554,
+      "geodesic": 10.262405395507812,
+      "steps": 2000,
+      "dist_to_goal": 4.938020230325739
+    },
+    {
+      "episode_id": "71756",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/EDJbREhghzL/EDJbREhghzL.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 135.6829024713952,
+      "geodesic": 21.320947647094727,
+      "steps": 2000,
+      "dist_to_goal": 16.063523579855527
+    },
+    {
+      "episode_id": "5888",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/82sE5b5pLXE/82sE5b5pLXE.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 174.87328770011663,
+      "geodesic": 25.484596252441406,
+      "steps": 2000,
+      "dist_to_goal": 5.386123757509731
+    },
+    {
+      "episode_id": "8998",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Monticello.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 157.06924568954855,
+      "geodesic": 11.517329216003418,
+      "steps": 2000,
+      "dist_to_goal": 4.241140265574614
+    },
+    {
+      "episode_id": "3726",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Maryhill.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 157.72706316167023,
+      "geodesic": 1.5604560375213623,
+      "steps": 2000,
+      "dist_to_goal": 1.0197359909196144
+    },
+    {
+      "episode_id": "9430",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/2n8kARJN3HM/2n8kARJN3HM.glb",
+      "success": true,
+      "spl": 0.511317218207837,
+      "path_length": 35.49964338541031,
+      "geodesic": 18.151578903198242,
+      "steps": 305,
+      "dist_to_goal": 0.015895303539684602
+    },
+    {
+      "episode_id": "49768",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/Vvot9Ly1tCj/Vvot9Ly1tCj.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 227.98987311683595,
+      "geodesic": 17.67827606201172,
+      "steps": 2000,
+      "dist_to_goal": 3.7170218769566756
+    },
+    {
+      "episode_id": "8740",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Rutherford.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 4.2499991953372955,
+      "geodesic": 13.798760414123535,
+      "steps": 2000,
+      "dist_to_goal": 3.744513416130807
+    },
+    {
+      "episode_id": "18364",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/D7G3Y4RVNrH/D7G3Y4RVNrH.glb",
+      "success": true,
+      "spl": 0.546291782907535,
+      "path_length": 13.281328757464479,
+      "geodesic": 7.255480766296387,
+      "steps": 115,
+      "dist_to_goal": 0.05564167957455092
+    },
+    {
+      "episode_id": "56512",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/uNb9QFRL6hY/uNb9QFRL6hY.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 188.6259817769751,
+      "geodesic": 7.538013458251953,
+      "steps": 2000,
+      "dist_to_goal": 4.564297396792613
+    },
+    {
+      "episode_id": "4527",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/ur6pFq6Qu1A/ur6pFq6Qu1A.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 196.18202588241547,
+      "geodesic": 8.865487098693848,
+      "steps": 2000,
+      "dist_to_goal": 2.3724992706001196
+    },
+    {
+      "episode_id": "19087",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/jh4fc5c5qoQ/jh4fc5c5qoQ.glb",
+      "success": true,
+      "spl": 0.3855184567342475,
+      "path_length": 14.370717592537403,
+      "geodesic": 5.540176868438721,
+      "steps": 149,
+      "dist_to_goal": 0.15025067706316636
+    },
+    {
+      "episode_id": "4091",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Maryhill.glb",
+      "success": true,
+      "spl": 0.9934700040875194,
+      "path_length": 6.250000461935997,
+      "geodesic": 6.209187984466553,
+      "steps": 47,
+      "dist_to_goal": 0.03408434836825439
+    },
+    {
+      "episode_id": "73711",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/EDJbREhghzL/EDJbREhghzL.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 134.4914313396439,
+      "geodesic": 5.074463844299316,
+      "steps": 2000,
+      "dist_to_goal": 3.699191430120375
+    },
+    {
+      "episode_id": "1394",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Placida.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 2.4999998211860657,
+      "geodesic": 8.261164665222168,
+      "steps": 2000,
+      "dist_to_goal": 4.769137640040807
+    },
+    {
+      "episode_id": "1948",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Anaheim.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 166.26317774121515,
+      "geodesic": 9.04564380645752,
+      "steps": 2000,
+      "dist_to_goal": 8.331807962943838
+    },
+    {
+      "episode_id": "8808",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Tariffville.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 107.53419430231419,
+      "geodesic": 13.992734909057617,
+      "steps": 2000,
+      "dist_to_goal": 9.945660299224647
+    },
+    {
+      "episode_id": "754",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/ur6pFq6Qu1A/ur6pFq6Qu1A.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 178.89506572262815,
+      "geodesic": 26.699790954589844,
+      "steps": 2000,
+      "dist_to_goal": 22.7459343055636
+    },
+    {
+      "episode_id": "7742",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Martinville.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 230.84577672193603,
+      "geodesic": 13.71229076385498,
+      "steps": 2000,
+      "dist_to_goal": 9.58867543016549
+    },
+    {
+      "episode_id": "7249",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Burien.glb",
+      "success": true,
+      "spl": 0.2525546882717206,
+      "path_length": 20.382120835594833,
+      "geodesic": 5.147600173950195,
+      "steps": 217,
+      "dist_to_goal": 0.030910436208773415
+    },
+    {
+      "episode_id": "9748",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Cason.glb",
+      "success": true,
+      "spl": 0.38894122061141717,
+      "path_length": 14.987719427794218,
+      "geodesic": 5.829341888427734,
+      "steps": 186,
+      "dist_to_goal": 0.08997008664392028
+    },
+    {
+      "episode_id": "6959",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Onaga.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 172.01516094850376,
+      "geodesic": 5.197643756866455,
+      "steps": 2000,
+      "dist_to_goal": 5.58897549788867
+    },
+    {
+      "episode_id": "79372",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/82sE5b5pLXE/82sE5b5pLXE.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 139.34835278103128,
+      "geodesic": 15.232549667358398,
+      "steps": 2000,
+      "dist_to_goal": 2.190386676282672
+    },
+    {
+      "episode_id": "6432",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Schiller.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 174.87511678785086,
+      "geodesic": 10.134505271911621,
+      "steps": 2000,
+      "dist_to_goal": 8.982373923338121
+    },
+    {
+      "episode_id": "3395",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Neshkoro.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 182.02511466643773,
+      "geodesic": 6.921552658081055,
+      "steps": 2000,
+      "dist_to_goal": 5.286782410620462
+    },
+    {
+      "episode_id": "7253",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/SN83YJsR3w2/SN83YJsR3w2.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 54.317129034549,
+      "geodesic": 9.095882415771484,
+      "steps": 2000,
+      "dist_to_goal": 7.019969899382074
+    },
+    {
+      "episode_id": "53728",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/S9hNv5qa7GM/S9hNv5qa7GM.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 212.61580987693742,
+      "geodesic": 10.859481811523438,
+      "steps": 2000,
+      "dist_to_goal": 4.6217397182488735
+    },
+    {
+      "episode_id": "69674",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/Pm6F8kyY3z2/Pm6F8kyY3z2.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 186.06735334401017,
+      "geodesic": 11.521809577941895,
+      "steps": 2000,
+      "dist_to_goal": 6.693223950220571
+    },
+    {
+      "episode_id": "1935",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Castroville.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 219.17215272784233,
+      "geodesic": 8.837682723999023,
+      "steps": 2000,
+      "dist_to_goal": 7.144517723059815
+    },
+    {
+      "episode_id": "57327",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/r47D5H71a5s/r47D5H71a5s.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 168.99269299441949,
+      "geodesic": 4.54563045501709,
+      "steps": 2000,
+      "dist_to_goal": 1.8540096072317815
+    },
+    {
+      "episode_id": "27015",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/kEZ7cmS4wCh/kEZ7cmS4wCh.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 178.54661902599037,
+      "geodesic": 23.654312133789062,
+      "steps": 2000,
+      "dist_to_goal": 18.49623119037396
+    },
+    {
+      "episode_id": "2598",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Haaswood.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 171.1388156171888,
+      "geodesic": 11.908584594726562,
+      "steps": 2000,
+      "dist_to_goal": 9.800387249267837
+    },
+    {
+      "episode_id": "72520",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/PuKPg4mmafe/PuKPg4mmafe.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 169.8031160570681,
+      "geodesic": 18.755523681640625,
+      "steps": 2000,
+      "dist_to_goal": 17.19348811970626
+    },
+    {
+      "episode_id": "2606",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Placida.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 170.623595780693,
+      "geodesic": 13.918290138244629,
+      "steps": 2000,
+      "dist_to_goal": 4.86694954085704
+    },
+    {
+      "episode_id": "46148",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/vyrNrziPKCB/vyrNrziPKCB.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 0.2504340708255768,
+      "geodesic": 18.61919403076172,
+      "steps": 2000,
+      "dist_to_goal": 8.953418666542298
+    },
+    {
+      "episode_id": "7328",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Montreal.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 144.18499777372926,
+      "geodesic": 6.1912736892700195,
+      "steps": 2000,
+      "dist_to_goal": 4.092063431602201
+    },
+    {
+      "episode_id": "41859",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/VFuaQ6m2Qom/VFuaQ6m2Qom.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 178.60141899506561,
+      "geodesic": 6.994040489196777,
+      "steps": 2000,
+      "dist_to_goal": 8.877794318200099
+    },
+    {
+      "episode_id": "4220",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Beechwood.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 198.26798756048083,
+      "geodesic": 5.00460958480835,
+      "steps": 2000,
+      "dist_to_goal": 1.871367376719159
+    },
+    {
+      "episode_id": "8777",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Wattsville.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 172.6652798205614,
+      "geodesic": 4.660076141357422,
+      "steps": 2000,
+      "dist_to_goal": 5.620429122512212
+    },
+    {
+      "episode_id": "25581",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/B6ByNegPMKs/B6ByNegPMKs.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 217.23964832397178,
+      "geodesic": 6.166348457336426,
+      "steps": 2000,
+      "dist_to_goal": 3.9381960021642883
+    },
+    {
+      "episode_id": "1991",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Clarkridge.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 152.20119830034673,
+      "geodesic": 7.789408206939697,
+      "steps": 2000,
+      "dist_to_goal": 7.253912855699958
+    },
+    {
+      "episode_id": "7772",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Maugansville.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 233.4442680599168,
+      "geodesic": 13.880578994750977,
+      "steps": 2000,
+      "dist_to_goal": 8.110412589596725
+    },
+    {
+      "episode_id": "6694",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Ballou.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 178.98778083035722,
+      "geodesic": 8.169746398925781,
+      "steps": 2000,
+      "dist_to_goal": 5.045845397534807
+    },
+    {
+      "episode_id": "8419",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/VVfe2KiqLaN/VVfe2KiqLaN.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 179.0050837462768,
+      "geodesic": 7.5136003494262695,
+      "steps": 2000,
+      "dist_to_goal": 9.282034072269765
+    },
+    {
+      "episode_id": "34323",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/ZMojNkEp431/ZMojNkEp431.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 189.6182311065495,
+      "geodesic": 7.576562404632568,
+      "steps": 2000,
+      "dist_to_goal": 5.142487403596014
+    },
+    {
+      "episode_id": "76921",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/7y3sRwLe3Va/7y3sRwLe3Va.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 144.0123487720266,
+      "geodesic": 16.77043914794922,
+      "steps": 2000,
+      "dist_to_goal": 12.142985834341836
+    },
+    {
+      "episode_id": "71714",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/759xd9YjKW5/759xd9YjKW5.glb",
+      "success": true,
+      "spl": 0.27320705439768117,
+      "path_length": 7.546070837415755,
+      "geodesic": 2.0616397857666016,
+      "steps": 94,
+      "dist_to_goal": 0.09745436352162205
+    },
+    {
+      "episode_id": "1207",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Spread.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 94.35524919629097,
+      "geodesic": 9.045931816101074,
+      "steps": 2000,
+      "dist_to_goal": 8.857011730379915
+    },
+    {
+      "episode_id": "74152",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/E9uDoFAP3SH/E9uDoFAP3SH.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 4.904258891940117,
+      "geodesic": 21.826995849609375,
+      "steps": 2000,
+      "dist_to_goal": 16.29238732317551
+    },
+    {
+      "episode_id": "37464",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/YmJkqBEsHnH/YmJkqBEsHnH.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 154.17499486356974,
+      "geodesic": 1.8509562015533447,
+      "steps": 2000,
+      "dist_to_goal": 1.8093150678652343
+    },
+    {
+      "episode_id": "3589",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Almena.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 187.89865082124015,
+      "geodesic": 11.785720825195312,
+      "steps": 2000,
+      "dist_to_goal": 8.573031847620294
+    },
+    {
+      "episode_id": "36958",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/gTV8FGcVJC9/gTV8FGcVJC9.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 157.38823773665354,
+      "geodesic": 22.95094108581543,
+      "steps": 2000,
+      "dist_to_goal": 8.566878242699692
+    },
+    {
+      "episode_id": "25466",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/pRbA3pwrgk9/pRbA3pwrgk9.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 138.89072295231745,
+      "geodesic": 6.541562080383301,
+      "steps": 2000,
+      "dist_to_goal": 1.5212379487052003
+    },
+    {
+      "episode_id": "2408",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Aldrich.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 155.02749086217955,
+      "geodesic": 8.313529968261719,
+      "steps": 2000,
+      "dist_to_goal": 6.390477227308271
+    },
+    {
+      "episode_id": "80921",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/i5noydFURQK/i5noydFURQK.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 109.5246068648994,
+      "geodesic": 8.747366905212402,
+      "steps": 2000,
+      "dist_to_goal": 7.820273663069292
+    },
+    {
+      "episode_id": "61680",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/YmJkqBEsHnH/YmJkqBEsHnH.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 166.0859385356307,
+      "geodesic": 1.6187927722930908,
+      "steps": 2000,
+      "dist_to_goal": 1.5492238267109155
+    },
+    {
+      "episode_id": "8575",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Hindsboro.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 109.01345132198185,
+      "geodesic": 16.346569061279297,
+      "steps": 2000,
+      "dist_to_goal": 4.60143945416477
+    },
+    {
+      "episode_id": "339",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Benevolence.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 119.45141125004739,
+      "geodesic": 8.66821002960205,
+      "steps": 2000,
+      "dist_to_goal": 7.297350791744219
+    },
+    {
+      "episode_id": "1601",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Ludlowville.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 191.9582367297262,
+      "geodesic": 7.622723579406738,
+      "steps": 2000,
+      "dist_to_goal": 3.2262707335441485
+    },
+    {
+      "episode_id": "52708",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/qoiz87JEwZ2/qoiz87JEwZ2.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 188.7143198773265,
+      "geodesic": 10.136096954345703,
+      "steps": 2000,
+      "dist_to_goal": 6.287854762170019
+    },
+    {
+      "episode_id": "41373",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 164.78746889717877,
+      "geodesic": 13.216476440429688,
+      "steps": 2000,
+      "dist_to_goal": 11.335939688215301
+    },
+    {
+      "episode_id": "20017",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/EDJbREhghzL/EDJbREhghzL.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 173.1936642769724,
+      "geodesic": 9.78640365600586,
+      "steps": 2000,
+      "dist_to_goal": 7.488404538069841
+    },
+    {
+      "episode_id": "23162",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/dhjEzFoUFzH/dhjEzFoUFzH.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 216.45749201211703,
+      "geodesic": 14.751021385192871,
+      "steps": 2000,
+      "dist_to_goal": 13.04216307104339
+    },
+    {
+      "episode_id": "37285",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/1pXnuDYAj8r/1pXnuDYAj8r.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 180.9821163287852,
+      "geodesic": 18.124469757080078,
+      "steps": 2000,
+      "dist_to_goal": 7.133422883674415
+    },
+    {
+      "episode_id": "19744",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/b8cTxDM8gDG/b8cTxDM8gDG.glb",
+      "success": true,
+      "spl": 0.21931780619915114,
+      "path_length": 14.793446829542518,
+      "geodesic": 3.2444663047790527,
+      "steps": 183,
+      "dist_to_goal": 0.05732528090959449
+    },
+    {
+      "episode_id": "4607",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/PX4nDJXEHrG/PX4nDJXEHrG.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 96.78733711317182,
+      "geodesic": 8.659467697143555,
+      "steps": 2000,
+      "dist_to_goal": 4.615130605357278
+    },
+    {
+      "episode_id": "57285",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/82sE5b5pLXE/82sE5b5pLXE.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 120.05224113506847,
+      "geodesic": 18.337209701538086,
+      "steps": 2000,
+      "dist_to_goal": 7.65644022047576
+    },
+    {
+      "episode_id": "17103",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/82sE5b5pLXE/82sE5b5pLXE.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 136.4854973317124,
+      "geodesic": 14.288752555847168,
+      "steps": 2000,
+      "dist_to_goal": 11.671075510549397
+    },
+    {
+      "episode_id": "950",
+      "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Seward.glb",
+      "success": false,
+      "spl": 0.0,
+      "path_length": 192.8340051928535,
+      "geodesic": 7.7727203369140625,
+      "steps": 2000,
+      "dist_to_goal": 3.1716944601303476
+    }
+  ]
+}

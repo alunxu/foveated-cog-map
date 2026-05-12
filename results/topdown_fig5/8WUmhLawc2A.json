@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/8WUmhLawc2A/8WUmhLawc2A.glb",
+  "episode_id": "6",
+  "start_position": [
+    -6.464841842651367,
+    0.10065700113773346,
+    -6.278566837310791
+  ],
+  "goal_position": [
+    -11.451136589050293,
+    0.10065700113773346,
+    -2.879497766494751
+  ],
+  "topdown_height": 1024,
+  "topdown_width": 1288,
+  "world_lower_bound": [
+    -20.99431610107422,
+    -0.09934300184249878,
+    -13.998106956481934
+  ],
+  "world_upper_bound": [
+    4.536180019378662,
+    5.251488208770752,
+    6.298536777496338
+  ],
+  "map_resolution": 1024
+}

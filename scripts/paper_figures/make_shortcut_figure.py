@@ -24,11 +24,9 @@ import numpy as np
 COND_DISPLAY = {
     "blind":            ("Blind",              "#444444"),
     "uniform":          ("Uniform",            "#4daf4a"),
-    "foveated":         ("Foveated (fix)",   "#e41a1c"),
-    "foveated_learned": ("Foveated (learned)", "#ff7f00"),
+    "foveated":         ("Foveated",   "#e41a1c"),
     "matched":          ("Coarse",    "#377eb8"),
 }
-COND_ORDER = ["blind", "uniform", "foveated", "foveated_learned", "matched"]
 
 
 def _load(in_dir: Path, cond: str) -> dict | None:

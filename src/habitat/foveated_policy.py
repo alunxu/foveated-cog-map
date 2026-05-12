@@ -6,8 +6,8 @@ indicator) with foveated visual perception at a FIXED CENTER GAZE.
 
 Key design:
   - The agent receives the same Wijmans sensors as the blind / uniform /
-    matched conditions, so the only varied factor across the four conditions
-    is the structure of the visual input.
+    coarse (matched-compute) conditions, so the only varied factor across
+    the four conditions is the structure of the visual input.
   - Foveation is applied to RGB observations BEFORE the ResNet encoder.
   - Gaze is HARDCODED to image centre (0.5, 0.5). A learned-gaze variant
     was originally planned (a small MLP from the previous LSTM hidden state

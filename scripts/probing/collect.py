@@ -149,6 +149,15 @@ def parse_args():
                         "heading; if not, it was passing the compass input through.")
     p.add_argument("--mask-gps", action="store_true",
                    help="Zero the GPS sensor (same rationale as --mask-compass).")
+    p.add_argument("--zero-encoder-output", action="store_true",
+                   help="Zero the visual encoder's output tensor at every forward "
+                        "pass (post-ResNet, pre-LSTM). Tests the §4.2 substitution "
+                        "mechanism causally: if rich-encoder LSTMs latently carry "
+                        "an integrated GPS code, severing the visual route at the "
+                        "encoder output (in-manifold for the LSTM, unlike zeroing "
+                        "raw RGB which pushes off training-distribution) should "
+                        "let the integrated code re-emerge in the top-layer probe. "
+                        "Has no effect on blind (no visual_encoder).")
     p.add_argument("--deterministic", type=lambda x: x.lower() in ("1", "true", "yes"),
                    default=True,
                    help="Use deterministic (argmax) action selection (default: True). "
@@ -243,6 +252,17 @@ def main():
         print("Gaze recording enabled (learned-gaze policy detected).")
     else:
         _gaze_hook_handle = None
+
+    # ---- Optional encoder-output ablation (§4.2 substitution causal test) ----
+    _enc_zero_handle = None
+    _visual_encoder = getattr(getattr(policy, "net", None), "visual_encoder", None)
+    if args.zero_encoder_output and _visual_encoder is not None:
+        def _zero_encoder_output(_mod, _inputs, output):
+            return torch.zeros_like(output)
+        _enc_zero_handle = _visual_encoder.register_forward_hook(_zero_encoder_output)
+        print("Encoder output zeroing ENABLED — visual route severed at policy.net.visual_encoder forward.")
+    elif args.zero_encoder_output:
+        print("--zero-encoder-output requested but policy.net has no visual_encoder; no-op.")
 
     for ep in range(args.episodes):
         obs = env.reset()

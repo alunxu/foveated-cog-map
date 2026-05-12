@@ -26,7 +26,7 @@ References:
 
 Reads:  /tmp/cond_npzs/{cond}_gibson_det.npz
 Writes: /tmp/extra_analyses/skaggs_proper_v3.json
-        docs/manuscript/fig/fig_place_cells.pdf  (replaces v2 figure)
+        docs/manuscript/fig/figa2b_place_cells.pdf  (replaces v2 figure)
 """
 from __future__ import annotations
 import json
@@ -239,7 +239,7 @@ def main():
     fig.suptitle("Skaggs spatial information per LSTM unit (canonical Skaggs 1996, rectified ReLU($\\mathbf{h}_2$))",
                  fontsize=11, fontweight="bold", y=1.0)
     plt.tight_layout()
-    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/fig_place_cells.pdf")
+    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/figa2b_place_cells.pdf")
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"\nwrote {out}")
 

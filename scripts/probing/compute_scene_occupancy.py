@@ -96,17 +96,22 @@ def main() -> None:
     scenes = [s.strip() for s in args.scene_ids_file.read_text().splitlines() if s.strip()]
     print(f"Will process {len(scenes)} scenes")
 
-    # Load dataset once.
-    cfg_for_lookup = load_habitat_config(args.config_name, "", overrides=[
+    # Load config + dataset once. Mutating config.habitat.simulator.scene per
+    # iteration (vs. re-running load_habitat_config) saves ~10 min / scene
+    # of Hydra compose + dataset re-parse cost.
+    base_config = load_habitat_config(args.config_name, "", overrides=[
         f"habitat.dataset.split={args.split}",
         "habitat.environment.iterator_options.shuffle=False",
     ])
     from habitat.datasets import make_dataset
+    from omegaconf import OmegaConf
     full_ds = make_dataset(
-        id_dataset=cfg_for_lookup.habitat.dataset.type,
-        config=cfg_for_lookup.habitat.dataset,
+        id_dataset=base_config.habitat.dataset.type,
+        config=base_config.habitat.dataset,
     )
     print(f"Dataset: {len(full_ds.episodes)} episodes total")
+
+    OmegaConf.set_readonly(base_config, False)
 
     for si, scene in enumerate(scenes):
         out_npz = args.out_dir / f"{scene}.npz"
@@ -118,21 +123,15 @@ def main() -> None:
         if ep is None:
             print(f"  [{si+1}/{len(scenes)}] WARN: no episode for {scene}; skip")
             continue
-        target_scene_id = ep.scene_id
 
-        # Build env with this scene pinned.
-        config = load_habitat_config(args.config_name, "", overrides=[
-            f"habitat.dataset.split={args.split}",
-            "habitat.environment.iterator_options.shuffle=False",
-            f"habitat.simulator.scene={target_scene_id}",
-        ])
-        # Pass single-episode dataset so habitat.Env doesn't iterate.
+        # Mutate scene_id in-place; build a 1-episode dataset wrapping `ep`.
+        base_config.habitat.simulator.scene = ep.scene_id
         ds = make_dataset(
-            id_dataset=cfg_for_lookup.habitat.dataset.type,
-            config=cfg_for_lookup.habitat.dataset,
+            id_dataset=base_config.habitat.dataset.type,
+            config=base_config.habitat.dataset,
         )
         ds.episodes = [ep]
-        env = habitat.Env(config=config.habitat, dataset=ds)
+        env = habitat.Env(config=base_config.habitat, dataset=ds)
         _ = env.reset()
 
         result = query_scene_occupancy(env, grid_res=args.grid_res)

@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Aldrich.glb",
+  "episode_id": "6",
+  "start_position": [
+    -1.972663164138794,
+    0.20194458961486816,
+    -3.3568828105926514
+  ],
+  "goal_position": [
+    -0.7049694061279297,
+    0.07452994585037231,
+    -1.7916103601455688
+  ],
+  "topdown_height": 1024,
+  "topdown_width": 1069,
+  "world_lower_bound": [
+    -13.8837890625,
+    -0.7254700660705566,
+    -12.404092788696289
+  ],
+  "world_upper_bound": [
+    6.286623954772949,
+    10.511805534362793,
+    6.908852577209473
+  ],
+  "map_resolution": 1024
+}

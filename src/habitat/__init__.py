@@ -10,7 +10,8 @@ the global Habitat / habitat-baselines registries:
 
   - Policies:
       * WijmansPointNavPolicy       — Wijmans-faithful PointNav policy
-                                       (blind / uniform / matched agents)
+                                       (blind / uniform / coarse [aka matched-
+                                        compute] agents)
       * FoveatedWijmansPolicy       — foveated, fixed-center gaze
                                        (the "fixed-center" leg of our
                                         gaze ablation)
@@ -57,6 +58,9 @@ from src.habitat.foveated_sigma12_policy import (  # noqa: F401
 )
 from src.habitat.foveated_logpolar_policy import (  # noqa: F401
     FoveatedLogPolarWijmansPolicy,
+)
+from src.habitat.foveated_logpolar_normalised_policy import (  # noqa: F401
+    FoveatedLogPolarNormalisedWijmansPolicy,
 )
 
 # Auxiliary losses (ablation experiments):

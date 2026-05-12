@@ -125,7 +125,13 @@ class TorchFoveationTransform(nn.Module):
         # Distance from each pixel to gaze center
         dx = self._x_grid.unsqueeze(0) - gaze_x.view(B, 1, 1)  # (B, H, W)
         dy = self._y_grid.unsqueeze(0) - gaze_y.view(B, 1, 1)  # (B, H, W)
-        dist = torch.sqrt(dx ** 2 + dy ** 2)
+        # +1e-8 epsilon: prevents sqrt(0) which has infinite gradient
+        # (∂sqrt/∂x = 1/(2sqrt(x)) → inf at x=0). For deterministic gaze
+        # this never matters (no backward through gaze). For stochastic
+        # gaze (FoveatedStochasticGazePolicy, gradient flows through
+        # gaze sample), gaze can hit exact pixel coords during training,
+        # causing inf grad → NaN reward propagation.
+        dist = torch.sqrt(dx ** 2 + dy ** 2 + 1e-8)
 
         # Per-sample max eccentricity: farthest image corner from
         # this gaze position. Replaces the previous static image-centre

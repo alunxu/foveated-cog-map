@@ -17,7 +17,7 @@ mean-centred h_2 is sufficient — no cvPCA needed.
 
 Reads:  /tmp/cond_npzs/{cond}_gibson_det.npz
 Writes: /tmp/extra_analyses/eigenspectrum_powerlaw.json
-        docs/manuscript/fig/fig_eigenspectrum.pdf
+        docs/manuscript/fig/figa15_eigenspectrum.pdf
 """
 from __future__ import annotations
 import json
@@ -162,7 +162,7 @@ def main():
     fig.suptitle("Eigenspectrum power-law of $\\mathbf{h}_2$: smoothness/efficiency border per cond (Stringer et al. 2019 framework)",
                  fontsize=11, fontweight="bold", y=1.0)
     plt.tight_layout()
-    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/fig_eigenspectrum.pdf")
+    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/figa15_eigenspectrum.pdf")
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"\nwrote {out}")
 

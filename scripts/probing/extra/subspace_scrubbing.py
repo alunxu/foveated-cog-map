@@ -25,7 +25,7 @@ effective tomorrow).
 
 Reads:  /tmp/cond_npzs/{blind,matched,uniform}_gibson_det.npz
 Writes: /tmp/extra_analyses/subspace_scrubbing.json
-        docs/manuscript/fig/fig_subspace_scrubbing.pdf
+        docs/manuscript/fig/figa14_subspace_scrubbing.pdf
 """
 from __future__ import annotations
 import json
@@ -42,15 +42,27 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 warnings.filterwarnings("ignore")
-sys.path.insert(0, "/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/scripts/paper_figures")
-from _style import apply_paper_style
-apply_paper_style()
+# Optional paper-style import (skip if not available, e.g. on RCP).
+try:
+    from pathlib import Path as _Pth
+    _local_style = _Pth("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/scripts/paper_figures")
+    if _local_style.exists():
+        sys.path.insert(0, str(_local_style))
+        from _style import apply_paper_style
+        apply_paper_style()
+except Exception:
+    pass
 
 
+import os
+NPZ_DIR = os.environ.get("SCRUB_NPZ_DIR", "/tmp/cond_npzs")
+RESULTS_OUT = os.environ.get("SCRUB_RESULTS_OUT", "/tmp/extra_analyses")
 CONDS = [
-    ("blind",    "/tmp/cond_npzs/blind_gibson_det.npz",     "Blind",    "#444444"),
-    ("coarse",   "/tmp/cond_npzs/matched_gibson_det.npz",   "Coarse",   "#377eb8"),
-    ("uniform",  "/tmp/cond_npzs/uniform_gibson_det.npz",   "Uniform",  "#4daf4a"),
+    ("blind",             f"{NPZ_DIR}/blind_izar_det.npz",        "Blind",    "#444444"),
+    ("coarse",            f"{NPZ_DIR}/coarse_det.npz",            "Coarse",   "#377eb8"),
+    ("foveated_logpolar", f"{NPZ_DIR}/foveated_logpolar_det.npz", "Fov-LP",   "#984ea3"),
+    ("foveated",          f"{NPZ_DIR}/foveated_det.npz",          "Foveated", "#e41a1c"),
+    ("uniform",           f"{NPZ_DIR}/uniform_det.npz",           "Uniform",  "#4daf4a"),
 ]
 
 
@@ -65,26 +77,29 @@ class MLP(nn.Module):
     def forward(self, x): return self.net(x)
 
 
-def fit_mlp(X_tr, y_tr, X_te, y_te, hidden=256, l2=1e-4, epochs=50, bs=512, lr=1e-3):
-    m = MLP(X_tr.shape[1], y_tr.shape[1], hidden)
+_DEV = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def fit_mlp(X_tr, y_tr, X_te, y_te, hidden=256, l2=1e-4, epochs=40, bs=512, lr=1e-3):
+    m = MLP(X_tr.shape[1], y_tr.shape[1], hidden).to(_DEV)
     opt = torch.optim.Adam(m.parameters(), lr=lr, weight_decay=l2)
-    Xt = torch.tensor(X_tr, dtype=torch.float32); yt = torch.tensor(y_tr, dtype=torch.float32)
-    Xv = torch.tensor(X_te, dtype=torch.float32)
+    Xt = torch.tensor(X_tr, dtype=torch.float32, device=_DEV)
+    yt = torch.tensor(y_tr, dtype=torch.float32, device=_DEV)
+    Xv = torch.tensor(X_te, dtype=torch.float32, device=_DEV)
     n = len(Xt)
     for _ in range(epochs):
-        idx = torch.randperm(n)
+        idx = torch.randperm(n, device=_DEV)
         for i in range(0, n, bs):
             b = idx[i:i+bs]
             yhat = m(Xt[b])
             loss = nn.MSELoss()(yhat, yt[b])
             opt.zero_grad(); loss.backward(); opt.step()
     m.eval()
-    with torch.no_grad(): yhp = m(Xv).numpy()
+    with torch.no_grad(): yhp = m(Xv).cpu().numpy()
     return r2_score(y_te, yhp, multioutput='uniform_average')
 
 
 def main():
-    Path("/tmp/extra_analyses").mkdir(exist_ok=True)
+    Path(RESULTS_OUT).mkdir(exist_ok=True, parents=True)
     results = {}
 
     for cond, path, label, color in CONDS:
@@ -144,9 +159,18 @@ def main():
         print(f"  Linear: orig={np.mean(lin_orig_r2):+.3f}, scrub={np.mean(lin_scrub_r2):+.3f}, drop={np.mean(lin_orig_r2)-np.mean(lin_scrub_r2):+.3f}")
         print(f"  MLP:    orig={np.mean(mlp_orig_r2):+.3f}, scrub={np.mean(mlp_scrub_r2):+.3f}, drop={np.mean(mlp_orig_r2)-np.mean(mlp_scrub_r2):+.3f}")
 
-    # Plot
-    fig, ax = plt.subplots(1, 1, figsize=(6.5, 4.4))
-    cond_order = ["blind", "coarse", "uniform"]
+    # Save JSON results so we can replot anywhere later.
+    Path(f"{RESULTS_OUT}/subspace_scrubbing.json").write_text(
+        json.dumps(results, indent=2))
+    print(f"wrote {RESULTS_OUT}/subspace_scrubbing.json")
+
+    # Plot only if a figure path is set (skipped on RCP runs that just
+    # produce the JSON).
+    fig_out = os.environ.get("SCRUB_FIG_OUT")
+    if not fig_out:
+        return
+    fig, ax = plt.subplots(1, 1, figsize=(7.5, 4.4))
+    cond_order = [c[0] for c in CONDS if c[0] in results]
     cols = [next(c[3] for c in CONDS if c[0] == k) for k in cond_order]
     labs = [next(c[2] for c in CONDS if c[0] == k) for k in cond_order]
     orig = [results[k]["mlp_r2_orig"] for k in cond_order]
@@ -170,19 +194,14 @@ def main():
     ax.axhline(0, ls="-", color="grey", alpha=0.5, lw=0.7)
     ax.set_ylabel("MLP probe GPS $R^2$\n(5-fold episode-level CV)",
                   fontsize=11.5, fontweight="bold")
-    ax.set_title("F3: GPS-subspace scrubbing — does removing the linear $\\beta$ direction kill MLP-recoverable position?\n(foveated deferred to 250M re-probe)",
-                 fontsize=10.5, fontweight="bold", loc="left", pad=8)
+    ax.set_title("$\\beta$-subspace scrubbing: does removing the linear $\\beta$ direction kill MLP-recoverable position?",
+                 fontsize=11, fontweight="bold", loc="left", pad=8)
     ax.legend(loc="lower left", frameon=False, fontsize=9.5)
-    for s in ("top", "right"): ax.spines[s].set_visible(False)
+    for s_ in ("top", "right"): ax.spines[s_].set_visible(False)
     ax.grid(axis="y", linestyle=":", alpha=0.3)
-
     plt.tight_layout()
-    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/fig_subspace_scrubbing.pdf")
-    fig.savefig(out, dpi=200, bbox_inches="tight")
-    print(f"\nwrote {out}")
-
-    Path("/tmp/extra_analyses/subspace_scrubbing.json").write_text(json.dumps(results, indent=2))
-    print("wrote /tmp/extra_analyses/subspace_scrubbing.json")
+    fig.savefig(fig_out, dpi=200, bbox_inches="tight")
+    print(f"wrote {fig_out}")
 
 
 if __name__ == "__main__":

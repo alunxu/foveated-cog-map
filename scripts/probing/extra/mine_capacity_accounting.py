@@ -20,7 +20,7 @@ qualitatively (R^2 = 0.95, 0.81, 0.62, 0.48, range ~0.5 vs linear's
 
 Reads:  /tmp/cond_npzs/{cond}_gibson_det.npz
 Writes: /tmp/extra_analyses/mine_h_pos.json
-        docs/manuscript/fig/fig_mine_capacity.pdf
+        docs/manuscript/fig/figa6_mine_capacity.pdf
 """
 from __future__ import annotations
 import json
@@ -202,7 +202,7 @@ def main():
     fig.suptitle("MI capacity accounting: I(h$_2$; pos) per condition (MINE; Belghazi et al.\\ 2018)",
                  fontsize=11, fontweight="bold", y=1.0)
     plt.tight_layout()
-    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/fig_mine_capacity.pdf")
+    out = Path("/Users/alunx/Desktop/Aluniverse/Courses/2026-Spring-CS503-Visual-Intelligence-Homework/Project/docs/manuscript/fig/figa6_mine_capacity.pdf")
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"\nwrote {out}")
 

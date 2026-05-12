@@ -6,7 +6,7 @@
 # the standard probing pipeline (deterministic-rollout collect + Ridge
 # probe analyze) on the latest checkpoint and on a handful of
 # intermediate ones to populate the across-training plot
-# (fig3_substitution_dynamics.pdf).
+# (figa5_substitution_dynamics.pdf).
 #
 # This script:
 #   1. For each known hc-target run (defined in HC_RUNS below),

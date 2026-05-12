@@ -16,8 +16,8 @@ This policy uses ``LogPolarFoveationTransform`` instead of
 ``(B, C, n_rho, n_theta)``, with default 64×64 (foveation samples reduced
 from 128×128 by 4× total).  The ResNet-18 encoder then operates on this
 smaller, gaze-centred grid.  Whether GPS now decodes from the LSTM
-hidden state — closer to matched-compute (R²≈0.78) than to fov-fix
-(R²≈0.06) — is the empirical question this experiment answers.
+hidden state — closer to coarse (matched-compute, R²≈0.78) than to
+fov-fix (R²≈0.06) — is the empirical question this experiment answers.
 
 Same training pipeline (DD-PPO, 250M frames target).
 Same downstream LSTM + sensor stack.
@@ -258,8 +258,8 @@ class FoveatedLogPolarWijmansPolicy(FoveatedWijmansPolicy):
     Tests whether stronger foveation (variable spatial sampling, not just
     blur) creates a real encoder-input bottleneck — and whether that
     moves LSTM GPS encoding closer to the bottleneck conditions
-    (blind, matched-compute) or leaves it at the rich-encoder pass-through
-    level (current fov-fix).
+    (blind, coarse [aka matched-compute]) or leaves it at the
+    rich-encoder pass-through level (current fov-fix).
     """
 
     _net_cls = FoveatedLogPolarWijmansNet

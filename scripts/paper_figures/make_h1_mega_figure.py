@@ -17,7 +17,7 @@ Reads:
   - <results-dir>/{cond}_gibson_det_analysis.json               (c, LSTM layers)
   - <results-dir>/{cond}_encoder_features_det.json              (c, encoder)
 
-Writes: <out-dir>/fig2_h1_mega.pdf
+Writes: <out-dir>/figa2a_h1_mega.pdf
 
 Usage:
     python scripts/paper_figures/make_h1_mega_figure.py \\
@@ -46,10 +46,9 @@ apply_paper_style()
 CONDS = [
     # (json_key,           short_label,         colour,    marker)
     ("blind",              "Blind",             "#444444", "o"),
-    ("matched",            "Coarse (1×1)",     "#377eb8", "s"),
+    ("matched",            "Coarse",     "#377eb8", "s"),
     ("uniform",            "Uniform",           "#4daf4a", "^"),
-    ("foveated",           "Foveated (fix)",    "#e41a1c", "D"),
-    ("foveated_learned",   "Foveated (learned)",       "#ff7f00", "v"),
+    ("foveated",           "Foveated",    "#e41a1c", "D"),
 ]
 CLIP_MIN = -1.5
 
@@ -126,10 +125,9 @@ def panel_a(ax, results_dir: Path) -> None:
     # Use abbreviated labels for tighter layout (no rotation needed at 9pt)
     abbrev_labels = {
         "Blind": "Blind",
-        "Coarse (1×1)": "Coarse",
+        "Coarse": "Coarse",
         "Uniform": "Uniform",
-        "Foveated (fix)": "Fov-fix",
-        "Foveated (learned)": "Fov-learn",
+        "Foveated": "Fov-fix",
     }
     ax.set_xticklabels([abbrev_labels.get(r["label"], r["label"]) for r in rows],
                        rotation=0, ha="center", fontsize=11)
@@ -202,7 +200,6 @@ def panel_c(ax, results_dir: Path) -> None:
     feature-map probe (post ResNet-18, pre-LSTM) into a single line plot
     showing where in the agent's information pipeline a linear probe
     finds GPS. Sighted conditions span all 4 x-positions; blind has no
-    encoder; foveated_learned does not have encoder-probe data.
 
     The plot makes three readings simultaneously:
     - Encoder → L0 jump: how much GPS the LSTM input concat (with the
@@ -327,7 +324,7 @@ def main() -> None:
     # Fix F: panel labels are now baked into each panel's title via
     # set_title("(a) ...", loc="left"). No separate transAxes labels.
 
-    out = args.out_dir / "fig2_h1_mega.pdf"
+    out = args.out_dir / "figa2a_h1_mega.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

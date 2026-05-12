@@ -17,7 +17,7 @@ Two views:
   miss.
 
 Reads:  --subsample-dir <dir>/{cond}_subsample.npz
-Writes: <out-dir>/appfig_tsne.pdf
+Writes: <out-dir>/figa11_tsne.pdf
 """
 from __future__ import annotations
 
@@ -41,8 +41,7 @@ CONDS = [
     ("blind",            "Blind",          "#444444"),
     ("matched",          "Coarse (1$\\times$1)", "#377eb8"),
     ("uniform",          "Uniform",        "#4daf4a"),
-    ("foveated",         "Foveated (fix)", "#e41a1c"),
-    ("foveated_learned", "Foveated (learned)", "#ff7f00"),
+    ("foveated",         "Foveated", "#e41a1c"),
 ]
 
 
@@ -159,7 +158,7 @@ def main() -> None:
                  color="#444")
 
     plt.subplots_adjust(left=0.03, right=0.99, top=0.93, bottom=0.05)
-    out = args.out_dir / "appfig_tsne.pdf"
+    out = args.out_dir / "figa11_tsne.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"\nwrote {out}")
 

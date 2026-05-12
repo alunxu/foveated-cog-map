@@ -17,7 +17,7 @@ Expected outcomes:
   robust to blur strength within the Gaussian-blur model class — and a
   stronger foveation model (e.g., ``LogPolarFoveationTransform``) is
   needed to test the foveation-as-bottleneck hypothesis.
-- F4 GPS R² closer to matched-compute (≈ 0.7): foveation strength
+- F4 GPS R² closer to coarse (matched-compute, ≈ 0.7): foveation strength
   matters, and our paper's "fov-fix ≈ uniform pass-through" finding is
   a Gaussian-blur-strength artefact rather than a true property of
   foveation.

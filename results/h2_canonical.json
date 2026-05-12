@@ -1,0 +1,47 @@
+{
+  "blind": {
+    "n": 208987,
+    "d": 512,
+    "pr": 4.098090625667554,
+    "twonn_id_mean": -1.9782237551701123,
+    "twonn_id_std": 0.033775001473565915,
+    "n_bootstrap": 20,
+    "sample_size": 5000
+  },
+  "matched": {
+    "n": 202417,
+    "d": 512,
+    "pr": 3.1006242851215573,
+    "twonn_id_mean": -1.7602953574872546,
+    "twonn_id_std": 0.04088179115035506,
+    "n_bootstrap": 20,
+    "sample_size": 5000
+  },
+  "uniform": {
+    "n": 98445,
+    "d": 512,
+    "pr": 4.010519975237678,
+    "twonn_id_mean": -1.8782095221212054,
+    "twonn_id_std": 0.026733754129397234,
+    "n_bootstrap": 20,
+    "sample_size": 5000
+  },
+  "foveated": {
+    "n": 108066,
+    "d": 512,
+    "pr": 4.3431283245773,
+    "twonn_id_mean": -1.8952305305107024,
+    "twonn_id_std": 0.03633295211961344,
+    "n_bootstrap": 20,
+    "sample_size": 5000
+  },
+  "foveated_learned": {
+    "n": 95640,
+    "d": 512,
+    "pr": 3.731893639625169,
+    "twonn_id_mean": -1.9566381066185472,
+    "twonn_id_std": 0.037487657268982864,
+    "n_bootstrap": 20,
+    "sample_size": 5000
+  }
+}

@@ -41,7 +41,7 @@ SIGMAS = [2, 4, 8, 12, 20]
 # Reference anchors from Table 1
 REF = {
     "blind":   {"gps_r2": 0.95, "compass_r2": 0.81, "label": "Blind"},
-    "matched": {"gps_r2": 0.78, "compass_r2": 0.64, "label": "Coarse (1×1)"},
+    "matched": {"gps_r2": 0.78, "compass_r2": 0.64, "label": "Coarse"},
     "uniform": {"gps_r2": -0.31, "compass_r2": 0.36, "label": "Uniform"},
 }
 

@@ -23,11 +23,11 @@
 defaults:
   - /benchmark/nav/pointnav: pointnav_gibson
   - /habitat_baselines: habitat_baselines_rl_config_base
-  # top_down_map is needed for video rendering during eval. It's cheap
-  # (grid bookkeeping) so leaving it on for training is fine.
-  - /habitat/task/measurements@habitat.task.measurements.top_down_map: top_down_map
   # Override the default lab sensor stack: drop pointgoal_with_gps_compass,
   # add gps + compass + the two Wijmans-specific sensors.
+  # NOTE: removed /habitat/task/measurements@... top_down_map override (was
+  # in earlier blind config); the other 4 retrain conditions don't include
+  # it, so dropping for cross-condition measurement consistency.
   - override /habitat/task/lab_sensors:
       - gps_sensor
       - compass_sensor
@@ -58,7 +58,7 @@ habitat_baselines:
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   eval_ckpt_path_dir: "data/checkpoints/blind_gibson"
-  num_environments: 8              # 8 per worker × 2 workers = 16 total
+  num_environments: 16             # unified across 5 retrain conditions (4 sighted + blind)
   checkpoint_folder: "data/checkpoints/blind_gibson"
   num_updates: -1
   total_num_steps: 2.5e8           # 250M steps (consistent across all conditions)

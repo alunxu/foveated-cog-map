@@ -68,11 +68,58 @@ def _init_rnn_state(num_recurrent_layers, hidden_size, device):
     return rnn_hidden, prev_action, not_done_mask
 
 
-def _step_policy(env, obs, policy, rnn_hidden, prev_action, not_done_mask, device):
+_VISUAL_KEYS = ("rgb", "depth", "semantic")
+
+def _maybe_resize_visual(obs_dict, target_shape):
+    """Resize ALL visual sensors (rgb, depth, semantic if present) to
+    target_shape using bilinear interpolation.  Used when the run-env
+    produces visuals at one resolution and the policy was constructed
+    (and its weights loaded) for a different resolution
+    (e.g.\ donor=coarse 48×48, env=foveated 256×256).
+
+    Resizing only RGB is not enough — visual encoders concat features
+    from multiple sensors and require matching spatial dims."""
+    if target_shape is None:
+        return obs_dict
+    import torch.nn.functional as F
+    out = dict(obs_dict)
+    for k in _VISUAL_KEYS:
+        if k not in obs_dict:
+            continue
+        v = obs_dict[k]
+        if v.ndim < 2 or v.shape[:2] == target_shape:
+            continue
+        # v shape: (H, W) or (H, W, C). Move to (1, C, H, W) for interp.
+        if v.ndim == 2:
+            t = torch.from_numpy(v).unsqueeze(0).unsqueeze(0).float()
+            mode = "nearest" if v.dtype.kind in ("u", "i") else "bilinear"
+            t = F.interpolate(t, size=target_shape,
+                              mode=mode,
+                              align_corners=False if mode == "bilinear" else None)
+            out[k] = t.squeeze(0).squeeze(0).numpy().astype(v.dtype)
+        else:
+            t = torch.from_numpy(v).permute(2, 0, 1).unsqueeze(0).float()
+            mode = "nearest" if v.dtype.kind in ("u", "i") and k == "semantic" \
+                   else "bilinear"
+            kw = {"size": target_shape, "mode": mode}
+            if mode == "bilinear":
+                kw["align_corners"] = False
+            t = F.interpolate(t, **kw)
+            out[k] = t.squeeze(0).permute(1, 2, 0).numpy().astype(v.dtype)
+    return out
+
+
+# Backwards-compat alias used by callers below.
+_maybe_resize_rgb = _maybe_resize_visual
+
+
+def _step_policy(env, obs, policy, rnn_hidden, prev_action, not_done_mask, device,
+                 policy_rgb_shape=None):
     """Run one policy step. Returns (next_obs, done, rnn_hidden, prev_action, not_done_mask, action_int)."""
+    obs_for_policy = _maybe_resize_rgb(obs, policy_rgb_shape)
     batch = {
         k: torch.from_numpy(np.expand_dims(v, 0)).to(device)
-        for k, v in obs.items()
+        for k, v in obs_for_policy.items()
     }
 
     with torch.no_grad():
@@ -93,7 +140,7 @@ def _step_policy(env, obs, policy, rnn_hidden, prev_action, not_done_mask, devic
 
 
 def _run_full_episode(env, obs, policy, rnn_hidden, prev_action, not_done_mask,
-                      device, max_steps=500):
+                      device, max_steps=500, policy_rgb_shape=None):
     """Run a complete episode from current state. Returns metrics dict."""
     episode = env.current_episode
     start_pos = np.array(episode.start_position)
@@ -131,12 +178,8 @@ def _run_full_episode(env, obs, policy, rnn_hidden, prev_action, not_done_mask,
 
 
 def _run_first_half(env, obs, policy, rnn_hidden, prev_action, not_done_mask,
-                    device, n_steps):
-    """Run the first *n_steps* of an episode (or until done).
-
-    Returns (obs, done, rnn_hidden, prev_action, not_done_mask, path_length,
-             steps_taken, last_action_int).
-    """
+                    device, n_steps, policy_rgb_shape=None):
+    """Run the first *n_steps* of an episode (or until done)."""
     prev_pos = env.sim.get_agent_state().position.copy()
     path_length = 0.0
     action_int = -1
@@ -146,6 +189,7 @@ def _run_first_half(env, obs, policy, rnn_hidden, prev_action, not_done_mask,
             break
         obs, done, rnn_hidden, prev_action, not_done_mask, action_int = _step_policy(
             env, obs, policy, rnn_hidden, prev_action, not_done_mask, device,
+            policy_rgb_shape=policy_rgb_shape,
         )
         cur_pos = env.sim.get_agent_state().position
         path_length += np.linalg.norm(cur_pos - prev_pos)
@@ -155,12 +199,9 @@ def _run_first_half(env, obs, policy, rnn_hidden, prev_action, not_done_mask,
 
 
 def _run_second_half(env, obs, policy, rnn_hidden, prev_action, not_done_mask,
-                     device, path_length_so_far, max_steps=500):
-    """Continue running from current state to episode end.
-
-    Returns metrics dict for the FULL episode (including the first-half
-    path length).
-    """
+                     device, path_length_so_far, max_steps=500,
+                     policy_rgb_shape=None):
+    """Continue running from current state to episode end."""
     episode = env.current_episode
     start_pos = np.array(episode.start_position)
     goal_pos = np.array(episode.goals[0].position)
@@ -175,6 +216,7 @@ def _run_second_half(env, obs, policy, rnn_hidden, prev_action, not_done_mask,
     while not done and steps < max_steps:
         obs, done, rnn_hidden, prev_action, not_done_mask, action_int = _step_policy(
             env, obs, policy, rnn_hidden, prev_action, not_done_mask, device,
+            policy_rgb_shape=policy_rgb_shape,
         )
         cur_pos = env.sim.get_agent_state().position
         path_length += np.linalg.norm(cur_pos - prev_pos)
@@ -277,26 +319,73 @@ def main():
         "habitat.dataset.split=train",
     ])
 
-    print("\n=== Building shared env (from donor config) ===")
-    env = habitat.Env(config=donor_config.habitat)
+    # ---- Cross-config policy loading ----
+    # Each policy must be constructed with its OWN obs_space so that the
+    # checkpoint's conv-layer shapes match (the alternative — building both
+    # policies against the run-env's obs_space — fails when donor and
+    # recipient have different RGB resolutions, e.g.\ coarse 48×48 vs
+    # foveated 256×256).
+    #
+    # Approach: build a temporary env from each side's config sequentially,
+    # extract its obs/action spaces, close it, then build the actual run env.
+    # Two simultaneous habitat.Env instances cause sim-init segfaults, but
+    # sequential build-extract-close is safe.  At inference, RGB is resized
+    # to the donor's expected shape via bilinear interpolation when shapes
+    # differ (recipient runs the run env so its shape always matches).
+    donor_blind = "blind" in args.donor_config.lower()
+    recip_blind = "blind" in args.recipient_config.lower()
+
+    def _extract_spaces(cfg):
+        e = habitat.Env(config=cfg.habitat)
+        _ = e.reset()
+        obs_sp, act_sp = e.observation_space, e.action_space
+        e.close()
+        return obs_sp, act_sp
+
+    print("\n=== Extracting recipient obs/action space (temporary env) ===")
+    recip_obs_space, recip_action_space = _extract_spaces(recip_config)
+    print("\n=== Extracting donor obs/action space (temporary env) ===")
+    donor_obs_space, donor_action_space = _extract_spaces(donor_config)
+
+    # Run-env: use recipient config (recipient runs full episode in
+    # baseline / first-half-then-transplant, so its obs shape directly
+    # feeds the recipient policy without resampling).  Donor policy
+    # receives RGB resized to its own expected shape at inference.
+    print(f"\n=== Building run env (from recipient config; donor_blind={donor_blind} recip_blind={recip_blind}) ===")
+    env = habitat.Env(config=recip_config.habitat)
     _ = env.reset()
 
     print("\n=== Loading recipient policy ===")
     recip_policy, recip_hidden, recip_layers, recip_lstm = load_policy(
-        recip_config, env, args.recipient_ckpt, device,
+        recip_config, env=None, ckpt_path=args.recipient_ckpt, device=device,
+        observation_space=recip_obs_space, action_space=recip_action_space,
     )
     print(f"  config:  {args.recipient_config}")
     print(f"  hidden:  {recip_hidden}, layers: {recip_layers}, LSTM: {recip_lstm}")
 
     print("\n=== Loading donor policy ===")
     donor_policy, donor_hidden, donor_layers, donor_lstm = load_policy(
-        donor_config, env, args.donor_ckpt, device,
+        donor_config, env=None, ckpt_path=args.donor_ckpt, device=device,
+        observation_space=donor_obs_space, action_space=donor_action_space,
     )
-    # No second env created. Cross-sensor transplant: donor consumes full
-    # observations (RGB + non-visual); blind recipient simply ignores RGB
-    # when its policy forward-passes through obs_transforms_batch.
     print(f"  config:  {args.donor_config}")
     print(f"  hidden:  {donor_hidden}, layers: {donor_layers}, LSTM: {donor_lstm}")
+
+    # Compute per-policy expected RGB shape for inference-time resampling.
+    # Recipient's RGB shape matches the run env (we built env from
+    # recipient config) so no resize needed; donor may differ.
+    def _rgb_shape(obs_space):
+        if "rgb" in obs_space.spaces:
+            sh = obs_space.spaces["rgb"].shape
+            return tuple(sh[:2])  # (H, W)
+        return None
+    recip_rgb_shape = None  # env shape == recipient policy shape by construction
+    donor_rgb_shape = _rgb_shape(donor_obs_space)
+    env_rgb_shape = _rgb_shape(env.observation_space)
+    if donor_rgb_shape is not None and donor_rgb_shape != env_rgb_shape:
+        print(f"  donor RGB resize at inference: env {env_rgb_shape} → policy {donor_rgb_shape}")
+    else:
+        donor_rgb_shape = None  # no-op
 
     # ---- Compatibility check ----
     if recip_hidden != donor_hidden or recip_layers != donor_layers:
@@ -347,6 +436,7 @@ def main():
         rnn_h, prev_a, mask = _init_rnn_state(num_recurrent_layers, hidden_size, device)
         metrics_baseline = _run_full_episode(
             env, obs, recip_policy, rnn_h, prev_a, mask, device, args.max_steps,
+            policy_rgb_shape=recip_rgb_shape,
         )
         results_baseline.append(metrics_baseline)
 
@@ -361,6 +451,7 @@ def main():
         # Run recipient for the first half
         obs, done_early, rnn_h, prev_a, mask, path_len, _ = _run_first_half(
             env, obs, recip_policy, rnn_h, prev_a, mask, device, midpoint,
+            policy_rgb_shape=recip_rgb_shape,
         )
 
         if done_early:
@@ -383,6 +474,7 @@ def main():
             metrics_self = _run_second_half(
                 env, obs, recip_policy, self_rnn_h, prev_a, mask,
                 device, path_len, args.max_steps - midpoint,
+                policy_rgb_shape=recip_rgb_shape,
             )
         results_self.append(metrics_self)
 
@@ -413,6 +505,7 @@ def main():
                         env, recip_obs, donor_policy,
                         donor_rnn_h, donor_prev_a, donor_mask,
                         device, 1,
+                        policy_rgb_shape=donor_rgb_shape,
                     )
                 )
                 recip_path_len += step_path
@@ -445,6 +538,7 @@ def main():
                 env, recip_obs, recip_policy,
                 transplanted_rnn_h, donor_prev_a, donor_mask,
                 device, recip_path_len, args.max_steps - midpoint,
+                policy_rgb_shape=recip_rgb_shape,
             )
         results_cross.append(metrics_cross)
 

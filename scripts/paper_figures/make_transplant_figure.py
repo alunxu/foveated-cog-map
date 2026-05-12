@@ -25,9 +25,6 @@ PAIRS = [
     ("foveated_to_uniform.json",
      "Foveated$\\rightarrow$Uniform",
      "#e41a1c", "#4daf4a"),
-    ("foveated_learned_to_foveated.json",
-     "Foveated (learned)$\\rightarrow$Foveated (fix)",
-     "#ff7f00", "#e41a1c"),
 ]
 
 COLS = {

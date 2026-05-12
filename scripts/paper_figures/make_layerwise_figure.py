@@ -29,12 +29,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+# cond_key, label, colour, marker, json_stem (matches RCP analysis_results)
 CONDS = [
-    ("blind", "Blind", "#444444", "o"),
-    ("matched", "Coarse (1×1)", "#377eb8", "s"),
-    ("uniform", "Uniform", "#4daf4a", "^"),
-    ("foveated", "Foveated (fix)", "#e41a1c", "D"),
-    ("foveated_learned", "Foveated (learned)", "#ff7f00", "v"),
+    ("blind",             "Blind",    "#444444", "o", "blind_izar_det"),
+    ("coarse",            "Coarse",   "#377eb8", "s", "coarse_det"),
+    ("foveated_logpolar", "Log-polar",   "#984ea3", "v", "foveated_logpolar_det"),
+    ("foveated",          "Foveated", "#e41a1c", "D", "foveated_det"),
+    ("uniform",           "Uniform",  "#4daf4a", "^", "uniform_det"),
 ]
 
 
@@ -62,11 +63,16 @@ def main() -> None:
 
     # Load all conditions
     data = {}
-    for cond_key, _, _, _ in CONDS:
-        p = args.in_dir / f"{cond_key}_gibson_det_analysis.json"
+    for cond_key, _, _, _, stem in CONDS:
+        p = args.in_dir / f"{stem}_analysis.json"
         if not p.exists():
-            print(f"[skip] {p}")
-            continue
+            # Backwards-compat: also try the older _gibson_det_analysis.json
+            alt = args.in_dir / f"{cond_key}_gibson_det_analysis.json"
+            if alt.exists():
+                p = alt
+            else:
+                print(f"[skip] {p}")
+                continue
         data[cond_key] = load_layers(p)
 
     if not data:
@@ -80,7 +86,7 @@ def main() -> None:
         (axes[0], "gps_r2", "GPS $R^2$"),
         (axes[1], "compass_r2", "Compass $R^2$"),
     ]:
-        for cond_key, label, color, marker in CONDS:
+        for cond_key, label, color, marker, _stem in CONDS:
             if cond_key not in data:
                 continue
             ys = [data[cond_key][layer][target] for layer in layers]
@@ -99,7 +105,7 @@ def main() -> None:
     axes[1].legend(loc="lower left", fontsize=7, frameon=False, ncol=1)
     fig.tight_layout()
 
-    out = args.out_dir / "appfig13_layerwise_decay.pdf"
+    out = args.out_dir / "figa4a_layerwise_decay.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

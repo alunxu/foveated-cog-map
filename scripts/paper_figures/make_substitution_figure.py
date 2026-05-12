@@ -12,7 +12,7 @@ readability over training. Showing both GPS and compass demonstrates
 the substitution applies to spatial codes broadly (not just position).
 
 Reads:  /tmp/ckpt_sweep_data/<cond>_ckpt<N>.json  (analyze.py output)
-Writes: docs/manuscript/fig/fig3_substitution_dynamics.pdf
+Writes: docs/manuscript/fig/figa5_substitution_dynamics.pdf
 
 Each JSON corresponds to a probing run on a *single training
 checkpoint* of one condition; we extract {gps,compass}_cv_r2_mean and
@@ -43,11 +43,11 @@ CONDS = [
     ("matched",          "Coarse (bottleneck)", "#377eb8", "s", 5.10),   # 250M / 49
     ("uniform",          "Uniform (rich-enc.)", "#4daf4a", "^", 5.10),   # 250M / 49
     ("foveated",         "Foveated (rich-enc.)", "#e41a1c", "D", 4.83),   # 174M / 36
-    ("foveated_learned", "Foveated (learned)",  "#ff7f00", "v", 5.10),
 ]
 
 
 CLIP_MIN = -2.0  # Anything below this gets clipped (uniform ckpt40 = -6.9)
+X_MAX_M = 250.0  # Truncate all curves at common 250M frames; per-cond convergence within this window.
 
 
 def _plot_panel(ax, args_data_dir, target_key_mean, target_key_std,
@@ -66,7 +66,7 @@ def _plot_panel(ax, args_data_dir, target_key_mean, target_key_std,
         xs_partial, ys_partial = [], []
         clipped_at = []
         for ck in range(0, 60):
-            p = args_data_dir / f"{cond_key}_ckpt{ck}.json"
+            p = args_data_dir / f"{cond_key}_gibson_ckpt{ck}_det_analysis.json"
             if not p.exists():
                 continue
             try:
@@ -79,6 +79,8 @@ def _plot_panel(ax, args_data_dir, target_key_mean, target_key_std,
             if r2 is None:
                 continue
             x = ck * frames_per_ckpt
+            if x > X_MAX_M:
+                continue  # truncate beyond common 250M window
             y = float(np.clip(r2, CLIP_MIN, 1.05))
             if n_ep >= 500:
                 xs_full.append(x); ys_full.append(y); errs_full.append(std)
@@ -112,6 +114,7 @@ def _plot_panel(ax, args_data_dir, target_key_mean, target_key_std,
                 ha="center", va="center", transform=ax.transAxes, color="grey")
 
     ax.set_ylim(CLIP_MIN - 0.10, 1.10)
+    ax.set_xlim(0, X_MAX_M + 5)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
     ax.tick_params(axis="both", labelsize=11)
@@ -159,7 +162,7 @@ def main() -> None:
                  fontsize=13, fontweight="bold", y=1.04)
 
     fig.tight_layout()
-    out = args.out_dir / "fig3_substitution_dynamics.pdf"
+    out = args.out_dir / "figa5_substitution_dynamics.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

@@ -29,7 +29,7 @@ Update this file when state changes — do NOT rely on memory.
 | Page count | **41 pages** (was 31 in v2); compiles with pdflatex (no errors/warnings) |
 | Submission deadline | **2026-05-06** (6 days out) |
 | Cluster: Izar jobs | 1 PENDING: uniform_gibson_ckpt38 probe (job 2867550, blocked by INJ_MAINTENANCE 08:00–12:00 today) |
-| Cluster: RCP jobs RUNNING | 4: foveated-seed0pre (4-GPU torchrun, ~2090 fps actual, ETA ~5h to 70M+180M=250M-eff), matched-s1 num_env=8 (~5070 fps, ETA ~12h), logpolar resumed (~1349 fps, ETA ~30h, monitoring SIGSEGV recurrence), uniform-s1 (4-GPU, just resubmitted, may go Pending) |
+| Cluster: RCP jobs RUNNING | 4: foveated-seed0pre (4-GPU torchrun, ~2090 fps actual, ETA ~5h to 70M+180M=250M-eff), coarse-s1 num_env=8 (~5070 fps, ETA ~12h), logpolar resumed (~1349 fps, ETA ~30h, monitoring SIGSEGV recurrence), uniform-s1 (4-GPU, just resubmitted, may go Pending) |
 | Most recent landed | **§5.2 NEW**: Place-cell signature paragraph + Fig fig_place_cells.pdf (Skaggs MI per LSTM unit; blind 0.20 vs rich-encoder 0.10–0.12; broader spatial-coding population in blind: 504/512 vs ~422–434). **§5.2 NEW**: Sensory-niche framing across taxa (mole-rat / coarse-scalar / primate / insect-eye). **§5.4 NEW**: Achille-Soatto IB-invariance reading. **§4.2 NEW**: LOSO scene-invariance paragraph + fig_loso_cv.pdf as primary CAP mechanism. **§3 NEW**: systematic convergence criterion (max success/SPL/DtG plateau). **Table 2 NEW**: multi-seed (seed-0 + seed-2 × 4 conds). |
 | Most recent paper change | Place-cell signature analysis (Skaggs adapted to LSTM hidden states): Blind has highest per-unit spatial MI and largest spatial-coding population, consistent with capacity-allocation under encoder bottleneck. |
 | Critical blocker resolved | NaN bug surfaced on seed-0 foveated at ckpt.36 ($> 174$M frames cause silent weight corruption); fine-tune resume from ckpt.36 with `pretrained=True` + `lr=5e-5` + `total_num_steps=70M` (effective 250M total) running on RCP 4-GPU. |
@@ -64,7 +64,7 @@ After EGL/fork blocker resolved via custom Docker image (`registry.rcp.epfl.ch/d
 | `dh-probe-17` | T6 K=96 | Scaling sweep mid-high | ~7h |
 | `dh-probe-18` | T7 K=192 | Scaling sweep high | ~7h |
 | `dh-probe-19` | T4 blind seed=2 | Multi-seed, 342M frames | ~10h |
-| `dh-probe-20` | T5 matched seed=2 | Multi-seed | ~7h |
+| `dh-probe-20` | T5 coarse seed=2 | Multi-seed | ~7h |
 | `dh-probe-21` | T8 fov-learned seed=2 | Multi-seed (biggest paper-impact risk) | ~7h |
 
 **`H100-*` no longer relevant**: friend's H100 was previously critical-path for H3 fov-shifted (T14) and scaling sweep (T2/T3/T6/T7). Now all running on RCP. Friend can pick up Tier 2 (T6/T7 already covered) or Tier 3 (σ-strength sweep T11/T12/T13, foveation completeness).
@@ -142,7 +142,7 @@ Figures pass-2 redesigned 2026-04-27 (Times font via `_style.py`; Makefile build
 | `fig1_setup.pdf` (with topdown floor plan) | Fig 1 (§1, §3) | ✅ |
 | `fig2_h1_mega.pdf` (3-panel: bars / temporal / per-layer + MLP zone) | Fig 2 (§4.2 H1) | ✅ |
 | `fig3_substitution_dynamics.pdf` (2-panel GPS/Compass training-dyn) | Fig 3 (§4.2 H1) | ✅ |
-| `fig4_h2_probe_transfer.pdf` + `fig4_transplant_5x5.pdf` (uniform aspect) | Fig 4 (§4.3 H2) | ✅ matched col/row 6/8 cells, last 2 in flight |
+| `fig4_h2_probe_transfer.pdf` + `fig4_transplant_5x5.pdf` (uniform aspect) | Fig 4 (§4.3 H2) | ✅ coarse col/row 6/8 cells, last 2 in flight |
 | `fig5_shortcut_canonical.pdf` (1×4 with map backgrounds) | Fig 5 (§4.4 behaviour) | ✅ |
 | `fig6_synthesis_2axes.pdf` (3-axis quadrant scatter) | Fig 6 (§4.6 synthesis) | ✅ |
 | `appfig_shortcut_catalog.pdf` (4×4 paired-traj catalog with maps) | App (§4.4 extended) | ✅ |
@@ -164,8 +164,8 @@ Figures pass-2 redesigned 2026-04-27 (Times font via `_style.py`; Makefile build
 | Code | Experiment | What it answers | Paper § |
 |---|---|---|---|
 | F1-F4 | Foveation σ-sweep $\{2, 4, 12, 20\}$ + F3 log-polar + F-norm normaliser | Encoder-memory race as continuous lever; F3 log-polar prediction $R^2 \geq 0.3$ | §4.4 (App D placeholder) |
-| Multi-seed | uniform_seed2 / foveated_seed2 (running) + blind/matched/foveated_learned seed=2 (queued) | All single-seed claims gated on N=2 replication | All §4 numbers |
-| Transplant tail | Last 2 matched-recipient cells (blind→matched, uniform→matched) | Final 2 cells of Coarse column in Fig 4b | Fig 4b |
+| Multi-seed | uniform_seed2 / foveated_seed2 (running) + blind/coarse/foveated_learned seed=2 (queued) | All single-seed claims gated on N=2 replication | All §4 numbers |
+| Transplant tail | Last 2 coarse-recipient cells (blind→coarse, uniform→coarse) | Final 2 cells of Coarse column in Fig 4b | Fig 4b |
 
 ### 5.2 ⚠️ Friend's H100 — REQUIRED experiments (block paper, see §1.2 above)
 
@@ -183,8 +183,8 @@ For each: which paper claim is currently held by hedging that this experiment wo
 | Code | Experiment | What it tightens | Effort estimate |
 |---|---|---|---|
 | H1-causal | Train rich-encoder agent with GPS perturbed mid-rollout; or train bottleneck agent with GPS sensor removed | "Encoder–memory race" from candidate unifying account → mechanism (currently softened in §5.1) | 2-3 retrains; ~4 days V100 each |
-| Pol-rely | Ablate GPS sensor mid-rollout at eval and measure SPL drop | Distinguishes "policy reads GPS code" from "policy reads non-GPS memory" — directly tests the matched-vs-uniform 2×2 anomaly | Eval-only; ~2 hours per cond |
-| Multi-seed-shortcut | Re-run shortcut eval on multi-seed checkpoints | Promote 2×2 dissociation (matched + uniform anomalies) from candidate to robust finding | Depends on F5a/F7 |
+| Pol-rely | Ablate GPS sensor mid-rollout at eval and measure SPL drop | Distinguishes "policy reads GPS code" from "policy reads non-GPS memory" — directly tests the coarse-vs-uniform 2×2 anomaly | Eval-only; ~2 hours per cond |
+| Multi-seed-shortcut | Re-run shortcut eval on multi-seed checkpoints | Promote 2×2 dissociation (coarse + uniform anomalies) from candidate to robust finding | Depends on F5a/F7 |
 | Length-match | Truncate every condition's probing data to common length, re-run probes | Eliminates "long blind episodes give artificially high R²" hypothetical confound | Eval-only; ~1 hour |
 | 1-NN-large-N | 1-NN purity at $\sim 50$k pooled samples (currently 7500) | Bounds the "1-NN purity = 1.000" finding's sample-size effect | Analysis-only; few minutes |
 | 1-NN-MP3D | 1-NN purity on MP3D-pooled hidden states | H2 robustness to dataset shift | Analysis-only; needs MP3D NPZs |
@@ -394,8 +394,8 @@ After re-reading Wijmans et al. 2023 ("Emergence of Maps in the Memories of Blin
 Rationale: B + A directly strengthen the §4.5 dissociation and H1 (the story's weakest pillar); C is the highest-impact figure (occupancy maps as direct mechanism evidence); E/D are quick wins; F is the most exploratory.
 
 ### 5.6 Mined-from-existing-data side observations (single-seed; verify with multi-seed)
-- **Persistent-failure terminal locations** (Table 4 in §4.5, commit `fab08b3`): only uniform's persistent-memory failures cluster around the previous-episode goal location (margin +1.83m); blind/matched/foveated terminal positions are closer to the new goal but not at it (n=27/35/16 same-floor failures). This refines the "having-vs-using" 2×2 dissociation: uniform's memory anchors on visual landmarks; blind's memory interferes through position-mis-reporting rather than location-anchor.
-- **LSTM gain** (mentioned in §4.4, commit `2a4b9fe`): LSTM top-layer GPS R² minus encoder feature-map GPS R² is +3.9 for matched, +0.0 for uniform, +0.7 for foveated. Mid-magnitude foveated gain is consistent with foveation supplying less navigation-useful visual structure than uniform.
+- **Persistent-failure terminal locations** (Table 4 in §4.5, commit `fab08b3`): only uniform's persistent-memory failures cluster around the previous-episode goal location (margin +1.83m); blind/coarse/foveated terminal positions are closer to the new goal but not at it (n=27/35/16 same-floor failures). This refines the "having-vs-using" 2×2 dissociation: uniform's memory anchors on visual landmarks; blind's memory interferes through position-mis-reporting rather than location-anchor.
+- **LSTM gain** (mentioned in §4.4, commit `2a4b9fe`): LSTM top-layer GPS R² minus encoder feature-map GPS R² is +3.9 for coarse, +0.0 for uniform, +0.7 for foveated. Mid-magnitude foveated gain is consistent with foveation supplying less navigation-useful visual structure than uniform.
 - **Failure-episode asymmetry** (NOT YET in paper, low confidence at n=12, single seed): 98 episodes uniquely fail in bottleneck conditions (rich-encoder succeeds), but only 12 episodes uniquely fail in rich-encoder conditions (bottleneck succeeds). Of the 12, scene 91 contributes 3, suggesting at least one "rich-encoder-unfriendly" scene. 6 of the 12 are short-geodesic ($<7$m), so failure isn't path-length-driven. Worth re-checking post multi-seed; if pattern holds, indicates rich-encoder agents have a small but non-zero failure mode that bottleneck doesn't share — visual landmark misreading on specific scene types.
 
 ---
@@ -511,14 +511,14 @@ nesting on figure floats). `xelatex` builds cleanly. Makefile updated.
 Big batch of cluster results landed late afternoon / evening:
 
 **Encoder feature-map probe — 3/3 conditions** (commit `409e6bd`):
-- matched encoder→GPS R² = -3.14 ± 5.91
+- coarse encoder→GPS R² = -3.14 ± 5.91
 - uniform encoder→GPS R² = -0.32 ± 0.08
 - foveated encoder→GPS R² = -0.65 ± 0.28
 
 NONE of the 3 sighted encoders linearly decode GPS. This was a more interesting outcome than the original 3 hypothesised possibilities. Sharpened H1 mechanism wording across abstract / §4.2 / §5.4 (commit `cc1b7e7`):
 
 OLD framing: "rich encoder can re-derive position from current frame; bottleneck encoder cannot → LSTM compensates"
-NEW framing: "no encoder linearly preserves GPS; what determines whether LSTM compensates is the encoder's spatial-feature variety per step (matched 1×1 vs uniform 8×8). LSTM Layer 0 reads GPS sensor directly; bottleneck conditions integrate it across time because they have minimal visual feature variety to substitute"
+NEW framing: "no encoder linearly preserves GPS; what determines whether LSTM compensates is the encoder's spatial-feature variety per step (coarse 1×1 vs uniform 8×8). LSTM Layer 0 reads GPS sensor directly; bottleneck conditions integrate it across time because they have minimal visual feature variety to substitute"
 
 **Phase B paired-trajectory figure — 5/5 conditions** (commit `d97eda9`):
 - New eval script `scripts/eval/shortcut_with_trajectories.py` saves per-episode positions
@@ -527,7 +527,7 @@ NEW framing: "no encoder linearly preserves GPS; what determines whether LSTM co
 
 **5×5 transplant matrix — 33 cells** (commit `6ecc508`):
 - Replaces the 3-pair midpoint sweep as Fig 3 right panel
-- 13/16 cross-pairs at midpoint=30 visible; 4 matched-recipient cells pending
+- 13/16 cross-pairs at midpoint=30 visible; 4 coarse-recipient cells pending
 - New findings: asymmetry (blind→uniform -0.38 vs uniform→blind +0.02), recipient ranking (uniform suffers most from foreign donors, blind least)
 - Old transplant_sweep moved to App A as midpoint-stability evidence
 
@@ -536,7 +536,7 @@ NEW framing: "no encoder linearly preserves GPS; what determines whether LSTM co
 - Required 3 attempts: env._episode_iterator hack didn't work; env._dataset.episodes hack didn't work; finally fixed by setting config.habitat.simulator.scene + passing filtered dataset explicitly to habitat.Env
 
 **F3 log-polar prediction** (commit `70bd1fd`):
-- Wrote falsifiable prediction in §4.4.3: log-polar should give LSTM GPS R² ≥ 0.3 (because encoder 2×2 spatial output, between matched 1×1 and uniform 8×8). If mechanism is encoder spatial-output dimensionality, this should manifest in the LSTM
+- Wrote falsifiable prediction in §4.4.3: log-polar should give LSTM GPS R² ≥ 0.3 (because encoder 2×2 spatial output, between coarse 1×1 and uniform 8×8). If mechanism is encoder spatial-output dimensionality, this should manifest in the LSTM
 - F3 still training (~5% done at log time), ETA 2-3 days
 
 **Cluster QOS workaround for short jobs** (decision):
@@ -564,7 +564,7 @@ NEW framing: "no encoder linearly preserves GPS; what determines whether LSTM co
 - `scripts/probing/collect.py` hardcoded `deterministic=False` while every other
   eval script in the codebase uses `deterministic=True` with explicit
   "deterministic for eval" comments.  Under stochastic sampling, conditions
-  with higher action entropy (fov-fix, uniform, matched, blind under their
+  with higher action entropy (fov-fix, uniform, coarse, blind under their
   trained stochastic policies) sampled the STOP action with probability
   $\sim 0.25$/step → mean episode length $\sim 4$ steps → target variance two
   orders of magnitude below the episodic range → trivially high probe $R^2$
@@ -577,16 +577,16 @@ NEW framing: "no encoder linearly preserves GPS; what determines whether LSTM co
 | Original claim | Status | Evidence under det |
 |---|---|---|
 | H1: foveated > uniform compensatory memory | ❌ REVERSED | Both ~0 GPS R² |
-| "More pixels ≠ better decoding" | ✅ Stronger | Matched 1×1 R²=0.78 vs uniform R²≈0 |
+| "More pixels ≠ better decoding" | ✅ Stronger | Coarse 1×1 R²=0.78 vs uniform R²≈0 |
 | H2: representational format divergence | ✅ Survives | CKA / transplant / transfer all behavioural-grade |
 | H3: fov-learned compass 0.94 | ❌ Bug artefact | Det CV R² = -1.34 ± 3.14 |
-| "LSTM learns cognitive map" | ✅ Strengthened | Blind 0.95, matched 0.78 |
+| "LSTM learns cognitive map" | ✅ Strengthened | Blind 0.95, coarse 0.78 |
 
 **The TRUE finding** (replacing the original claim):
 "Visual encoder capacity inversely determines linear top-layer LSTM spatial
-encoding."  Decoupled cleanly via the matched-compute condition (visual
-input present, but encoder feature map is 1×1 — bottleneck without "no
-vision").
+encoding."  Decoupled cleanly via the coarse (matched-compute) condition
+(visual input present, but encoder feature map is 1×1 — bottleneck
+without "no vision").
 
 **Other audit-found bugs (categorised in former AUDIT_FINDINGS.md, all
 fixed in commits 79c2db1, b7513d9, etc.)**
@@ -604,14 +604,14 @@ fixed in commits 79c2db1, b7513d9, etc.)**
 - **E2 (foveation `_max_dist` static instead of per-sample)**: affects
   shifted-gaze conditions, off-centre gaze over-saturates peripheral
   eccentricity.  Fix: per-sample dynamic max_dist.  **Centred-gaze
-  conditions (fov-fix, blind, matched, uniform) unaffected; fov-learned
+  conditions (fov-fix, blind, coarse, uniform) unaffected; fov-learned
   and fov-shifted require retrain (delegated to friend's H100,
   `foveation_transform_fix_retrain.md`)**.
 - **G3, B2, B3, B5, C3, C4, D5, etc.**: minor / documentation-only fixes,
   no claim impact, all addressed in commits.
 
 ### 2026-04-24: Paper reframe
-- Original H1 ("foveated > uniform compensatory memory") busted under deterministic data. Reframed to encoder–memory race using matched-compute as decoupling condition.
+- Original H1 ("foveated > uniform compensatory memory") busted under deterministic data. Reframed to encoder–memory race using coarse (matched-compute) as decoupling condition.
 - Friend takes over fov-shifted training; we keep doing analysis on Izar.
 
 ### 2026-04-25: V1 polish + new findings

@@ -58,6 +58,12 @@ ROWS = [
         ("Ackermanville", 9), # margin +3.26
         ("8WUmhLawc2A",  3),  # margin +9.74
     ]),
+    ("foveated_logpolar", "Fov-LP", "#984ea3", [
+        ("8WUmhLawc2A",  9),  # margin -22.50: reaches new directly
+        ("Almena",       9),  # margin -9.49: reaches new
+        ("Ackermanville",8),  # margin -5.71: reaches new
+        ("Allensville",  2),  # margin -1.50: ambiguous
+    ]),
     ("uniform", "Uniform",        "#4daf4a", [
         ("8WUmhLawc2A",  8),  # margin -16.27
         ("Almena",       4),  # margin -3.12
@@ -116,8 +122,8 @@ def main() -> None:
     args = ap.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
-    n_rows, n_cols = 4, 4
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15.0, 14.0),
+    n_rows, n_cols = len(ROWS), 4
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15.0, 3.4 * n_rows),
                              gridspec_kw={"wspace": 0.18, "hspace": 0.20})
 
     for r, (cond_key, cond_label, cond_colour, picks) in enumerate(ROWS):
@@ -236,7 +242,7 @@ def main() -> None:
                bbox_to_anchor=(0.5, 0.01))
 
     plt.subplots_adjust(left=0.05, right=0.99, top=0.98, bottom=0.05)
-    out = args.out_dir / "appfig_shortcut_catalog.pdf"
+    out = args.out_dir / "figa17_shortcut_catalog.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 

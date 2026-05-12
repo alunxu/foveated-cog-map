@@ -7,7 +7,7 @@ in main results).
 
 Reads:  data/extra_states/<cond>_extra_states.json (from
         scripts/probing/analyze_extra_states.py)
-Writes: docs/manuscript/fig/appfig10_extra_states.pdf
+Writes: docs/manuscript/fig/figa3_extra_states.pdf
 """
 from __future__ import annotations
 
@@ -29,11 +29,11 @@ import numpy as np
 
 
 CONDS = [
-    ("blind",            "Blind",             "#444444", "o"),
-    ("matched",          "Coarse (1×1)",      "#377eb8", "s"),
-    ("uniform",          "Uniform",           "#4daf4a", "^"),
-    ("foveated",         "Foveated (fix)",    "#e41a1c", "D"),
-    ("foveated_learned", "Foveated (learned)", "#ff7f00", "v"),
+    ("blind",             "Blind",    "#444444", "o"),
+    ("coarse",            "Coarse",   "#377eb8", "s"),
+    ("foveated_logpolar", "Log-polar", "#984ea3", "v"),
+    ("foveated",          "Foveated", "#e41a1c", "D"),
+    ("uniform",           "Uniform",  "#4daf4a", "^"),
 ]
 CLIP_MIN = -1.5
 
@@ -96,7 +96,7 @@ def main() -> None:
     axes[0].legend(loc="lower right", fontsize=8, frameon=False, ncol=1)
 
     plt.tight_layout()
-    out = args.out_dir / "appfig10_extra_states.pdf"
+    out = args.out_dir / "figa3_extra_states.pdf"
     fig.savefig(out, dpi=200, bbox_inches="tight")
     print(f"wrote {out}")
 
