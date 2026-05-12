@@ -1,15 +1,18 @@
 TEX = main
+# Use xelatex: pdflatex segfaults on TeXLive 2026/Homebrew during 3rd pass
+# (hyperref + figure-float \pdfendlink nesting issue).
+ENGINE = xelatex
 
 all: $(TEX).pdf
 
 $(TEX).pdf: $(TEX).tex literature.bib
-	pdflatex -interaction=nonstopmode $(TEX).tex
+	$(ENGINE) -interaction=nonstopmode $(TEX).tex
 	bibtex $(TEX)
-	pdflatex -interaction=nonstopmode $(TEX).tex
-	pdflatex -interaction=nonstopmode $(TEX).tex
+	$(ENGINE) -interaction=nonstopmode $(TEX).tex
+	$(ENGINE) -interaction=nonstopmode $(TEX).tex
 
 quick:
-	pdflatex -interaction=nonstopmode $(TEX).tex
+	$(ENGINE) -interaction=nonstopmode $(TEX).tex
 
 clean:
 	rm -f *.aux *.bbl *.blg *.log *.out

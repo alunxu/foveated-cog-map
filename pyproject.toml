@@ -5,32 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentic-cognitive-map"
 version = "0.1.0"
-description = "How Foveation Shapes Memory Content in Navigation Agents"
-requires-python = ">=3.10"
+description = "Sensor structure shapes cognitive maps in navigation agents"
+# Habitat-sim 0.3.3 requires Python 3.9-3.11; Dockerfile pins 3.9.
+requires-python = ">=3.9,<3.12"
 readme = {file = "README.md", content-type = "text/markdown"}
+# Full dep list lives in requirements.txt (pinned to match docker/Dockerfile).
+# Listed here only the editable-install minimal subset so `pip install -e .`
+# works even without the heavier deps for analysis-only usage.
 dependencies = [
-    # RL & environments
-    "gymnasium>=0.29",
-    "stable-baselines3>=2.2",
-    # Deep learning
-    "torch>=2.1",
-    "torchvision>=0.16",
-    "einops",
-    # Config & logging
-    "omegaconf",
-    "hydra-core",
-    "loguru",
-    "wandb",
-    # Probing & analysis
-    "scikit-learn",
-    "scipy",
-    # Visualization
-    "matplotlib",
-    "seaborn",
-    "mediapy",
-    # Utilities
-    "tqdm",
-    "ipykernel",
+    "numpy<2",
+    "scipy>=1.10",
+    "scikit-learn>=1.3",
+    "einops>=0.7",
+    "matplotlib>=3.7",
+    "omegaconf>=2.3",
+    "hydra-core>=1.3",
+    "tqdm>=4.66",
+    "loguru>=0.7",
 ]
 
 [project.urls]
