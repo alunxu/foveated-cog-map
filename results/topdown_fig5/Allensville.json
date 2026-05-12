@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Allensville.glb",
+  "episode_id": "5",
+  "start_position": [
+    0.7421308159828186,
+    0.17848272621631622,
+    -1.9516537189483643
+  ],
+  "goal_position": [
+    5.9769182205200195,
+    0.17848272621631622,
+    -3.8142261505126953
+  ],
+  "topdown_height": 1024,
+  "topdown_width": 1126,
+  "world_lower_bound": [
+    -1.001613974571228,
+    -0.021517276763916016,
+    -7.846486568450928
+  ],
+  "world_upper_bound": [
+    8.737579345703125,
+    4.081374645233154,
+    1.0040159225463867
+  ],
+  "map_resolution": 1024
+}

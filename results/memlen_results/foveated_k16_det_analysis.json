@@ -1,0 +1,383 @@
+{
+  "source": "/scratch/izar/wxu/probing_data_memlen/foveated_k16_det.npz",
+  "n_steps": 57516,
+  "hidden_dim": 512,
+  "n_episodes": 100,
+  "n_scenes": 76,
+  "alpha": 10.0,
+  "pca_dim": 0,
+  "1b_global_gps_compass": {
+    "gps_r2": 0.2875981032848358,
+    "gps_mae_m": 2.0297203063964844,
+    "gps_cv_r2_mean": 0.12717493176460265,
+    "gps_cv_r2_std": 0.7346232458367509,
+    "gps_cv_mae_mean": 2.4851356029510496,
+    "gps_cv_mae_std": 0.6726164301844744,
+    "compass_r2": 0.5846589803695679,
+    "compass_mae_deg": 24.529863357543945,
+    "compass_cv_r2_mean": 0.542829167842865,
+    "compass_cv_r2_std": 0.20026401819985906,
+    "combined_r2": 0.43612855672836304,
+    "n_train": 44096,
+    "n_test": 13420,
+    "n_cv_folds": 5
+  },
+  "1a_per_scene_position": {
+    "n_scenes_probed": 18,
+    "median_pos_r2": -7.928277969360352,
+    "median_pos_mae": 4.5623157024383545,
+    "median_head_r2": -1.9611393809318542,
+    "median_head_mae": 70.55147171020508,
+    "scenes": [
+      {
+        "scene_id": 2,
+        "n_steps": 2223,
+        "n_episodes": 3,
+        "n_train_eps": 2,
+        "pos_r2": -10.0,
+        "pos_mae": 0.7280365228652954,
+        "head_r2": -3.675663948059082,
+        "head_mae": 57.36916732788086
+      },
+      {
+        "scene_id": 5,
+        "n_steps": 2172,
+        "n_episodes": 3,
+        "n_train_eps": 2,
+        "pos_r2": -5.856555938720703,
+        "pos_mae": 1.641512393951416,
+        "head_r2": -9.327241897583008,
+        "head_mae": 84.74185180664062
+      },
+      {
+        "scene_id": 8,
+        "n_steps": 2240,
+        "n_episodes": 4,
+        "n_train_eps": 3,
+        "pos_r2": -10.0,
+        "pos_mae": 6.822264194488525,
+        "head_r2": -1.9912164211273193,
+        "head_mae": 97.10359954833984
+      },
+      {
+        "scene_id": 9,
+        "n_steps": 2124,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -4.6980977058410645,
+        "pos_mae": 5.700884819030762,
+        "head_r2": -1.9310623407363892,
+        "head_mae": 95.10164642333984
+      },
+      {
+        "scene_id": 11,
+        "n_steps": 2044,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 4.596770286560059,
+        "head_r2": -3.6563100814819336,
+        "head_mae": 124.58824157714844
+      },
+      {
+        "scene_id": 13,
+        "n_steps": 134,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 3.4570062160491943,
+        "head_r2": -2.484564781188965,
+        "head_mae": 92.3683090209961
+      },
+      {
+        "scene_id": 14,
+        "n_steps": 1851,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -3.686117649078369,
+        "pos_mae": 6.407122611999512,
+        "head_r2": -0.9249311685562134,
+        "head_mae": 59.51420211791992
+      },
+      {
+        "scene_id": 15,
+        "n_steps": 247,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -3.7163169384002686,
+        "pos_mae": 5.813051223754883,
+        "head_r2": 0.01918622851371765,
+        "head_mae": 56.77370834350586
+      },
+      {
+        "scene_id": 16,
+        "n_steps": 596,
+        "n_episodes": 3,
+        "n_train_eps": 2,
+        "pos_r2": -2.6244425773620605,
+        "pos_mae": 5.246679782867432,
+        "head_r2": -0.6263977885246277,
+        "head_mae": 65.882080078125
+      },
+      {
+        "scene_id": 23,
+        "n_steps": 185,
+        "n_episodes": 3,
+        "n_train_eps": 2,
+        "pos_r2": -5.356800556182861,
+        "pos_mae": 4.52786111831665,
+        "head_r2": -0.2680581212043762,
+        "head_mae": 38.05829620361328
+      },
+      {
+        "scene_id": 25,
+        "n_steps": 186,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -1.1417710781097412,
+        "pos_mae": 1.141503930091858,
+        "head_r2": -0.19384455680847168,
+        "head_mae": 65.33154296875
+      },
+      {
+        "scene_id": 34,
+        "n_steps": 181,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 2.8304362297058105,
+        "head_r2": -2.219482183456421,
+        "head_mae": 89.58531951904297
+      },
+      {
+        "scene_id": 37,
+        "n_steps": 2286,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 15.623119354248047,
+        "head_r2": -1.1089856624603271,
+        "head_mae": 75.22086334228516
+      },
+      {
+        "scene_id": 44,
+        "n_steps": 2046,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 3.430828332901001,
+        "head_r2": -4.674711227416992,
+        "head_mae": 28.638843536376953
+      },
+      {
+        "scene_id": 48,
+        "n_steps": 2130,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 4.596783638000488,
+        "head_r2": -10.0,
+        "head_mae": 132.63803100585938
+      },
+      {
+        "scene_id": 49,
+        "n_steps": 166,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": -10.0,
+        "pos_mae": 17.507343292236328,
+        "head_r2": -5.846436023712158,
+        "head_mae": 136.08255004882812
+      },
+      {
+        "scene_id": 58,
+        "n_steps": 412,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": 0.1551893949508667,
+        "pos_mae": 2.87572979927063,
+        "head_r2": -0.673111081123352,
+        "head_mae": 61.704978942871094
+      },
+      {
+        "scene_id": 68,
+        "n_steps": 142,
+        "n_episodes": 2,
+        "n_train_eps": 1,
+        "pos_r2": 0.4779835045337677,
+        "pos_mae": 0.7074893116950989,
+        "head_r2": -0.7831408381462097,
+        "head_mae": 23.273040771484375
+      }
+    ]
+  },
+  "1c_distance_to_goal": {
+    "r2": 0.8579714298248291,
+    "mae_m": 0.9588101506233215,
+    "cv_r2_mean": 0.8299196839332581,
+    "cv_r2_std": 0.03803667971725988,
+    "cv_mae_mean": 0.9962597608566284,
+    "cv_mae_std": 0.26278150058831035,
+    "n_cv_folds": 5
+  },
+  "1d_multilayer": [
+    {
+      "layer": 0,
+      "state": "h",
+      "gps_r2": 0.7821786999702454,
+      "gps_mae_m": 0.8630616664886475,
+      "compass_r2": 0.9228959083557129,
+      "compass_mae_deg": 7.42614221572876
+    },
+    {
+      "layer": 0,
+      "state": "c",
+      "gps_r2": 0.06995129585266113,
+      "gps_mae_m": 2.2128028869628906,
+      "compass_r2": 0.46548667550086975,
+      "compass_mae_deg": 31.477081298828125
+    },
+    {
+      "layer": 1,
+      "state": "h",
+      "gps_r2": -0.9039170742034912,
+      "gps_mae_m": 3.6293344497680664,
+      "compass_r2": -0.03125357627868652,
+      "compass_mae_deg": 55.682373046875
+    },
+    {
+      "layer": 1,
+      "state": "c",
+      "gps_r2": 0.17504501342773438,
+      "gps_mae_m": 1.312942385673523,
+      "compass_r2": 0.7358408570289612,
+      "compass_mae_deg": 12.762421607971191
+    },
+    {
+      "layer": 2,
+      "state": "h",
+      "gps_r2": 0.2875981032848358,
+      "gps_mae_m": 2.0297203063964844,
+      "compass_r2": 0.5846589803695679,
+      "compass_mae_deg": 24.529863357543945
+    },
+    {
+      "layer": 2,
+      "state": "c",
+      "gps_r2": -0.5136061906814575,
+      "gps_mae_m": 3.585099458694458,
+      "compass_r2": 0.23421898484230042,
+      "compass_mae_deg": 44.501441955566406
+    }
+  ],
+  "1ef_control_selectivity": {
+    "gps_r2_real": 0.2875981032848358,
+    "gps_r2_control": -0.4899391829967499,
+    "gps_selectivity": 0.5218584054670652,
+    "compass_r2_real": 0.5846589803695679,
+    "compass_r2_control": -0.2697666764259338,
+    "compass_selectivity": 0.672899732414218,
+    "n_shuffles": 5
+  },
+  "2a_accuracy_vs_timestep": [
+    {
+      "timestep_bin": "t=0",
+      "n_steps": 20,
+      "gps_r2": 0.0,
+      "gps_mae_m": 1.6034600734710693
+    },
+    {
+      "timestep_bin": "t=1",
+      "n_steps": 20,
+      "gps_r2": -397174416343040.0,
+      "gps_mae_m": 1.7681350708007812
+    },
+    {
+      "timestep_bin": "t=2",
+      "n_steps": 20,
+      "gps_r2": -18622.9921875,
+      "gps_mae_m": 1.6991074085235596
+    },
+    {
+      "timestep_bin": "t\u22653",
+      "n_steps": 7360,
+      "gps_r2": 0.39598923921585083,
+      "gps_mae_m": 2.0047736167907715
+    }
+  ],
+  "2b_cross_heading": {
+    "n_pairs": 200,
+    "median_pos_r2": -3.8911783695220947
+  },
+  "2c_path_history": {
+    "lags": [
+      {
+        "lag_k": 0,
+        "r2": 0.2875981032848358,
+        "mae_m": 2.0297203063964844,
+        "n_train": 44096,
+        "n_test": 13420,
+        "test_target_var": 30.465682983398438,
+        "reliable": true
+      },
+      {
+        "lag_k": 1,
+        "r2": 0.27585315704345703,
+        "mae_m": 2.039796829223633,
+        "n_train": 44016,
+        "n_test": 13400,
+        "test_target_var": 30.46798324584961,
+        "reliable": true
+      },
+      {
+        "lag_k": 2,
+        "r2": 0.264202356338501,
+        "mae_m": 2.0531394481658936,
+        "n_train": 43936,
+        "n_test": 13380,
+        "test_target_var": 30.470048904418945,
+        "reliable": true
+      },
+      {
+        "lag_k": 3,
+        "r2": 0.24148404598236084,
+        "mae_m": 2.0650439262390137,
+        "n_train": 43856,
+        "n_test": 13360,
+        "test_target_var": 30.472198486328125,
+        "reliable": true
+      },
+      {
+        "lag_k": 4,
+        "r2": 0.21823760867118835,
+        "mae_m": 2.070749282836914,
+        "n_train": 43776,
+        "n_test": 13340,
+        "test_target_var": 30.47426414489746,
+        "reliable": true
+      },
+      {
+        "lag_k": 5,
+        "r2": 0.1927054226398468,
+        "mae_m": 2.078580856323242,
+        "n_train": 43696,
+        "n_test": 13320,
+        "test_target_var": 30.47627067565918,
+        "reliable": true
+      }
+    ],
+    "median_episode_length": 144,
+    "effective_max_lag": 5,
+    "requested_max_lag": 5,
+    "min_train_threshold": 200,
+    "min_test_threshold": 100
+  },
+  "2d_visited_region": {
+    "r2": 0.2771534025669098,
+    "binary_accuracy": 0.9902122808885104,
+    "active_cell_accuracy": 0.9035469448584202,
+    "n_cells": 504,
+    "n_active_cells": 45,
+    "grid_res_m": 4.494208078182407
+  }
+}

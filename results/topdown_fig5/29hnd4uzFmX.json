@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/29hnd4uzFmX/29hnd4uzFmX.glb",
+  "episode_id": "1",
+  "start_position": [
+    0.21972599625587463,
+    2.7910420894622803,
+    -2.479159116744995
+  ],
+  "goal_position": [
+    -3.121239423751831,
+    2.7910420894622803,
+    -3.7942583560943604
+  ],
+  "topdown_height": 1032,
+  "topdown_width": 1024,
+  "world_lower_bound": [
+    -8.662233352661133,
+    -0.40895798802375793,
+    -9.087093353271484
+  ],
+  "world_upper_bound": [
+    3.1846749782562256,
+    8.285197257995605,
+    2.853996992111206
+  ],
+  "map_resolution": 1024
+}

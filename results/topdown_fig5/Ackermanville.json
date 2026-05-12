@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/gibson/Ackermanville.glb",
+  "episode_id": "9",
+  "start_position": [
+    0.044787511229515076,
+    0.13664932548999786,
+    9.712133407592773
+  ],
+  "goal_position": [
+    -4.986008644104004,
+    0.13664932548999786,
+    6.559226036071777
+  ],
+  "topdown_height": 1283,
+  "topdown_width": 1024,
+  "world_lower_bound": [
+    -14.834503173828125,
+    -0.06335067749023438,
+    -12.36113452911377
+  ],
+  "world_upper_bound": [
+    11.366119384765625,
+    5.967857360839844,
+    20.479555130004883
+  ],
+  "map_resolution": 1024
+}

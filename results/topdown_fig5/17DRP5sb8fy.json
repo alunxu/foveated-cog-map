@@ -1,0 +1,27 @@
+{
+  "scene_id": "/scratch/izar/wxu/habitat_data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb",
+  "episode_id": "2",
+  "start_position": [
+    -10.537962913513184,
+    0.07244700193405151,
+    -3.879345178604126
+  ],
+  "goal_position": [
+    -3.1712028980255127,
+    0.07244700193405151,
+    -1.3203016519546509
+  ],
+  "topdown_height": 1024,
+  "topdown_width": 2022,
+  "world_lower_bound": [
+    -11.593440055847168,
+    -0.12755300104618073,
+    -5.392021179199219
+  ],
+  "world_upper_bound": [
+    4.757026195526123,
+    4.278782844543457,
+    2.886620044708252
+  ],
+  "map_resolution": 1024
+}
