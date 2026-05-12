@@ -71,11 +71,7 @@ distributed separately.
 
 ---
 
-## Setup
-
-Two paths depending on what you want to do.
-
-### Path 1 — Izar cluster (SLURM, conda-based)
+## Setup (Izar, SLURM + conda)
 
 ```bash
 # 1. Load CUDA module
@@ -107,24 +103,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### Path 2 — local analysis-only (no GPU, no Habitat sim)
-
-If you only want to re-analyse existing NPZ files (probing, plotting,
-paper figure regen) without running new rollouts:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .
-```
-
-You will **not** be able to run `scripts/eval/eval_paper_5cond.py`,
-`scripts/probing/collect.py`, `scripts/eval/shortcut.py`, or anything that
-spins up `habitat.Env(...)`. Probing/figure scripts that load existing
-NPZs work fine.
-
-### Habitat data setup (Izar)
+### Habitat data setup
 
 Configs reference paths relative to a fixed Habitat data root. On Izar:
 
@@ -152,7 +131,7 @@ meshes (~6 GB) under `HABITAT_DATA_DIR/scene_datasets/mp3d/`.
 ## Common workflows
 
 All scripts below assume `conda activate habitat` + the Habitat data root
-exported as in **Setup → Path 1**. On Izar wrap each invocation in an
+exported as in **Setup → Habitat data setup**. On Izar wrap each invocation in an
 `sbatch` job (1 GPU, `--time=24:00:00` for training, `--time=04:00:00`
 for eval / probing).
 
