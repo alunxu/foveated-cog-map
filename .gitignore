@@ -58,3 +58,20 @@ Thumbs.db
 
 # Reference papers (not redistributable)
 docs/EMERGENCE*OF*MAPS*.pdf
+
+# Claude Code session config / worktrees
+.claude/
+
+# Backup files
+*.bak
+*.before_claude_sync.bak
+
+# Local research outputs / audit artifacts (downloaded papers, etc.)
+literature/audit/
+literature/_research_output.md
+literature/*/*.pdf
+docs/An active foveated gaze prediction*.pdf
+docs/MERGENCE OF MAPS*.pdf
+
+# Large release checkpoints (790 MB — distributed via Hugging Face, not git)
+release_ckpts/
