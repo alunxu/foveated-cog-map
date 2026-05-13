@@ -514,6 +514,29 @@ td.cross {
     font-weight: 600;
 }
 
+/* ── PAPER FIGURES ── */
+.paper-figure {
+    margin-bottom: 28px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.paper-figure img {
+    width: 100%;
+    display: block;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.paper-figure figcaption {
+    padding: 12px 16px;
+    font-size: 0.83rem;
+    color: #374151;
+    line-height: 1.55;
+    background: #f8f9fa;
+}
+
 /* ── FOOTER ── */
 footer {
     text-align: center;

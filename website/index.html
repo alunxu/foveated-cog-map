@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sensor Structure Shapes Cognitive Maps in Navigation Agents</title>
+    <title>Sensor Structure Shapes the Format of Cognitive Maps in Navigation Agents</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -13,7 +13,7 @@
     <!-- ══════════════════════════════════════════════════════════ HERO -->
     <div class="hero">
         <div class="container">
-            <h1>Sensor Structure Shapes Cognitive Maps in Navigation Agents</h1>
+            <h1>Sensor Structure Shapes the Format of<br>Cognitive Maps in Navigation Agents</h1>
             <p class="authors">Alun Xu &nbsp;·&nbsp; Léo Bruneau &nbsp;·&nbsp; Rim Abkari &nbsp;·&nbsp; Zyad Aoutir
                 &nbsp;—&nbsp; EPFL</p>
             <span class="venue">CS503 Visual Intelligence &nbsp;·&nbsp; Spring 2026</span>
@@ -29,39 +29,45 @@
     <!-- ══════════════════════════════════════════════════════ ABSTRACT -->
     <section>
         <div class="container">
-            <h2>Abstract &amp; Motivation</h2>
+            <h2>Abstract</h2>
             <p class="abstract-text">
-                Holding task and architecture fixed, does the structure of the visual sensor reshape what a navigation
-                agent's memory encodes? We treat this as a controlled silicon case study using a recurrent
-                (LSTM, 3-layer-512) PointNav agent trained with DD-PPO in Habitat on Gibson+MP3D scenes. Only the
-                visual sensor varies across five conditions — from fully blind to uniform high-resolution to foveated
-                with a learned gaze. Linear probing of the LSTM hidden state reveals an <em>encoder–memory race</em>:
-                bottleneck sensors force the recurrent state to carry a strong world-frame GPS code; rich encoders let
-                memory offload spatial integration to the visual route. Representations across conditions occupy
-                linearly disjoint subspaces, and memory transplants are asymmetric — bottleneck-donor states are
-                toxic to rich-encoder recipients. The pattern converges with independent biological evidence across
-                primate, rodent, bat, and blind-human navigation.
+                Visual perception and spatial memory in embodied AI are typically treated as independent modules, but
+                scaling visual encoders often fails to yield robust spatial representations. We investigate whether
+                sensor structure inherently shapes the <em>format</em> of spatial memory. We train a group of RL
+                navigation agents where architecture, task, and training are held strictly fixed, varying only the
+                spatial bandwidth of the visual encoder. We demonstrate that while all agents reach behavioral
+                convergence, their hidden-state position codes fundamentally diverge. Under a vision-limited
+                (bottleneck) encoder, position condenses into a scene-invariant, linearly-readable axis. Under a rich
+                encoder, position information scatters into non-linear, scene-conditional directions. We frame this
+                format shift as an emergent <em>capacity allocation</em> tradeoff between pre-formatted visual features
+                and recurrent temporal integration. Furthermore, causal interventions reveal a strict dissociation
+                between probe-readability and policy reliance, exposing a critical blind spot in correlational
+                interpretability methods. Our findings position sensor visual structure as a fundamental lever on
+                cognitive-map format, generating architecture-agnostic predictions for transformer-based navigators,
+                and suggesting that bandwidth-restricting perception (such as foveation) is actively
+                <em>cognition-enabling</em> rather than merely compute-saving.
             </p>
 
             <div class="hyp-cards">
                 <div class="hyp-card">
-                    <div class="hyp-label">H1 &nbsp;·&nbsp; Encoder–Memory Race</div>
-                    <p>When the visual encoder supplies little spatial-feature variety, the recurrent state compensates
-                        by carrying a world-frame spatial code. Richer encoder output lets memory rely on visual
-                        features
-                        instead, progressively dissipating its GPS readability.</p>
+                    <div class="hyp-label">Magnitude</div>
+                    <p>Linear GPS readability declines monotonically from R²&nbsp;=&nbsp;+0.93 (blind) to −1.79
+                        (uniform) while every agent still reliably reaches the goal. The encoder and LSTM memory compete
+                        for a finite capacity budget: richer encoders pre-format position visually, freeing memory from
+                        the integration route.</p>
                 </div>
                 <div class="hyp-card">
-                    <div class="hyp-label">H2 &nbsp;·&nbsp; Format Divergence</div>
-                    <p>Different sensor conditions produce hidden-state representations in <em>distinct linear
-                            subspaces</em>, not scaled versions of a common code. Cross-condition memory transplants are
-                        asymmetric and direction-dependent.</p>
+                    <div class="hyp-label">Format</div>
+                    <p>The magnitude collapse is a <em>format shift</em>, not an information loss. MLP probes recover
+                        position even where linear probes fail. Conditions develop nearly orthogonal position subspaces
+                        (9/10 pairs &gt;75°), and scene-invariance flips binary at the vision-on/off boundary.</p>
                 </div>
                 <div class="hyp-card">
-                    <div class="hyp-label">H3 &nbsp;·&nbsp; Gaze &amp; Memory Coupling</div>
-                    <p>Within the rich-encoder regime, <em>where</em> a foveated sensor is centered acts as a
-                        second content axis independent of the sensor transform. Learned gaze yields the best overall
-                        navigation performance (SPL = 0.82).</p>
+                    <div class="hyp-label">Consumption</div>
+                    <p>Probe-readability dissociates from policy reliance: Coarse has a readable code but barely uses
+                        it; Uniform has no readable code yet suffers the largest persistent-memory penalty. A causal
+                        β-subspace ablation shows the readable axis is one window into a distributed population
+                        code, not its substrate.</p>
                 </div>
             </div>
         </div>
@@ -80,74 +86,127 @@
                 <span class="cond-badge" style="color:#7c3aed;border-color:#7c3aed;background:#f5f3ff">
                     <span class="cond-dot" style="background:#7c3aed"></span>Coarse 48×48 → 1×1
                 </span>
+                <span class="cond-badge" style="color:#dc2626;border-color:#dc2626;background:#fef2f2">
+                    <span class="cond-dot" style="background:#dc2626"></span>Foveated 256×256 + blur
+                </span>
+                <span class="cond-badge" style="color:#ea580c;border-color:#ea580c;background:#fff7ed">
+                    <span class="cond-dot" style="background:#ea580c"></span>Log-polar 128×128 → 2×2
+                </span>
                 <span class="cond-badge" style="color:#16a34a;border-color:#16a34a;background:#f0fdf4">
                     <span class="cond-dot" style="background:#16a34a"></span>Uniform 256×256 → 8×8
                 </span>
-                <span class="cond-badge" style="color:#dc2626;border-color:#dc2626;background:#fef2f2">
-                    <span class="cond-dot" style="background:#dc2626"></span>Foveated (fix) 256×256 + blur
-                </span>
-                <span class="cond-badge" style="color:#ea580c;border-color:#ea580c;background:#fff7ed">
-                    <span class="cond-dot" style="background:#ea580c"></span>Foveated (learned) + gaze MLP
-                </span>
             </div>
             <p style="font-size:0.88rem;color:#6b7280;margin-bottom:28px;">
-                All five conditions share an identical 3-layer LSTM-512 backbone, DD-PPO training algorithm,
-                PointGoal reward, and Gibson+MP3D dataset. Only the visual encoder varies.
+                All five conditions share an identical 3-layer LSTM-512 backbone, DD-PPO training on Gibson+MP3D
+                (472 scenes, 250M frames), PointGoal task, and sensor stack. Only the visual front-end varies.
+                Log-polar applies cortical-magnification resampling (mimicking primate V1) before the ResNet-18
+                backbone, letting us disentangle encoder spatial-output size from per-step feature variety.
             </p>
+
+            <h3>Sensor Condition Visuals</h3>
+            <div class="scene-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:28px;">
+                <figure class="paper-figure" style="margin:0">
+                    <img src="assets/fig_blind.png" alt="Blind condition: no visual input" style="aspect-ratio:auto">
+                    <figcaption>Blind — no camera</figcaption>
+                </figure>
+                <figure class="paper-figure" style="margin:0">
+                    <img src="assets/fig_coarse.png" alt="Coarse condition: 48×48 pixelated input"
+                        style="aspect-ratio:auto">
+                    <figcaption>Coarse — 48×48 downsampled</figcaption>
+                </figure>
+                <figure class="paper-figure" style="margin:0">
+                    <img src="assets/fig_foveated.png" alt="Foveated condition: center-sharp, blurred periphery"
+                        style="aspect-ratio:auto">
+                    <figcaption>Foveated — eccentricity blur</figcaption>
+                </figure>
+                <figure class="paper-figure" style="margin:0">
+                    <img src="assets/fig_logpolar.png" alt="Log-polar condition: retinal log-polar resampling"
+                        style="aspect-ratio:auto">
+                    <figcaption>Log-polar — cortical sampling</figcaption>
+                </figure>
+                <figure class="paper-figure" style="margin:0">
+                    <img src="assets/fig_uniform.png" alt="Uniform condition: full-resolution RGB"
+                        style="aspect-ratio:auto">
+                    <figcaption>Uniform — full-resolution RGB</figcaption>
+                </figure>
+            </div>
 
             <h3>Architecture</h3>
-            <div class="arch-diagram">
-                <div class="arch-box">Obs</div>
-                <div class="arch-arrow">→</div>
-                <div class="arch-box">Encoder<br><span
-                        style="font-size:0.72rem;font-weight:400;color:#6b7280">ResNet-18</span></div>
-                <div class="arch-arrow">→</div>
-                <div class="arch-box">[concat<br>sensor stack]</div>
-                <div class="arch-arrow">→</div>
-                <div class="arch-box lstm" style="position:relative;padding-bottom:40px;">
-                    LSTM 3×512
-                    <span class="arch-probe">probe ↑ hidden state</span>
-                </div>
-                <div class="arch-arrow">→</div>
-                <div class="arch-box">Policy</div>
-            </div>
-            <p style="font-size:0.85rem;color:#6b7280;margin-bottom:28px;">
-                The non-visual sensor stack (goal-in-start-frame, GPS, compass, close-to-goal, previous action)
-                is identical across all five conditions. Only the visual encoder branch varies.
-            </p>
+            <figure class="paper-figure">
+                <img src="assets/architecture_setup.png" alt="Architecture and experimental setup diagram">
+                <figcaption>Non-visual sensors (goal-in-start-frame, GPS, compass, close-to-goal, previous action)
+                    each project to 32-d and are concatenated with the visual encoder output before the LSTM. The
+                    top-layer hidden state <strong>h</strong><sub>2</sub> ∈ ℝ<sup>512</sup> drives the linear
+                    policy head and is the target of all probes.</figcaption>
+            </figure>
 
-            <h3>Foveation Transform</h3>
+            <h3>Visual Transforms</h3>
             <div class="fov-row">
                 <div class="fov-text">
-                    <p style="margin-bottom:10px;">
-                        Our foveation simulates biological vision with eccentricity-dependent blur. Given gaze
+                    <p style="margin-bottom:6px;font-weight:600;color:#111827;">Foveated — eccentricity-dependent
+                        Gaussian blur</p>
+                    <p style="margin-bottom:10px;font-size:0.88rem;color:#374151;">
+                        Differentiable blur with quadratic eccentricity falloff. Given gaze
                         position <code>(gx, gy)</code>:
                     </p>
                     <ol style="padding-left:20px;font-size:0.88rem;color:#374151;line-height:1.8;">
                         <li>Compute per-pixel distance from gaze center.</li>
                         <li>Map distance → eccentricity ∈ [0, 1].</li>
                         <li>Apply quadratic falloff: <code>σ = eccentricity² × σ_max</code>.</li>
-                        <li>Multi-scale Gaussian blur interpolated from 5 pre-computed levels.</li>
+                        <li>Multi-scale Gaussian blur interpolated across 5 pre-computed levels.</li>
                     </ol>
-                    <p style="margin-top:10px;font-size:0.85rem;color:#6b7280;">
-                        Parameters: <code>fovea_radius=16 px</code>, <code>σ_max=8.0</code>, quadratic falloff.
-                        In the <em>learned</em> condition, gaze <code>(x,y)</code> is decoded from the previous
-                        LSTM hidden state via MLP(512→64→2)→Sigmoid, training end-to-end.
+                    <p style="margin-top:8px;font-size:0.85rem;color:#6b7280;">
+                        Parameters: <code>fovea_radius=16 px</code>, <code>σ_max=8.0</code>. Preserves the
+                        full 256×256 pixel grid — only spatial frequency is degraded peripherally.
                     </p>
                 </div>
                 <div class="fov-visual" title="Schematic: sharp center, blurred periphery"></div>
             </div>
+            <div class="fov-row" style="margin-top:20px;">
+                <div class="fov-text">
+                    <p style="margin-bottom:6px;font-weight:600;color:#111827;">Log-polar — variable spatial sampling
+                    </p>
+                    <p style="margin-bottom:10px;font-size:0.88rem;color:#374151;">
+                        Mimics primate V1 cortical magnification: the 128×128 avg-pooled frame is
+                        resampled onto a 64×64 log-polar grid centred at gaze (fixed centre at 0.5, 0.5):
+                    </p>
+                    <ol style="padding-left:20px;font-size:0.88rem;color:#374151;line-height:1.8;">
+                        <li><code>n_ρ = 64</code> rings, log-spaced from <code>ρ_min = 4 px</code> to
+                            <code>ρ_max ≈ 90 px</code>.</li>
+                        <li><code>n_θ = 64</code> angular bins uniformly spaced 0 → 2π.</li>
+                        <li>Bilinear interpolation from the source frame at each (ρ, θ) sample point.</li>
+                        <li>Encoder sees a 64×64 tensor where rows = eccentricity, columns = angle.</li>
+                    </ol>
+                    <p style="margin-top:8px;font-size:0.85rem;color:#6b7280;">
+                        Unlike the foveated blur, log-polar <em>removes</em> peripheral spatial samples
+                        entirely, creating a true encoder-input bottleneck. Yet it lands in the rich-encoder
+                        regime (GPS R² ≈ −0.03), showing that per-step feature <em>variety</em>, not raw
+                        encoder output size, drives the capacity-allocation tradeoff.
+                    </p>
+                </div>
+                <div class="fov-visual" style="background: conic-gradient(
+                    from 0deg,
+                    #1e293b 0deg, #334155 45deg, #475569 90deg, #64748b 135deg,
+                    #94a3b8 180deg, #64748b 225deg, #475569 270deg, #334155 315deg,
+                    #1e293b 360deg);
+                    border-radius: 50%;"
+                    title="Schematic: log-polar resampling — rows = eccentricity, columns = angle"></div>
+            </div>
 
-            <h3>Probing Setup</h3>
+            <h3>Probing &amp; Analysis Setup</h3>
             <ul class="probe-list">
-                <li>Freeze agent weights after training; collect LSTM hidden states across episodes.</li>
-                <li>Ridge regression (α = 10) predicting GPS displacement, compass, and absolute position.</li>
-                <li>5-fold episode-level cross-validation; deterministic rollout.</li>
-                <li>Hewitt–Liang permutation control: shuffled-label R² used as expressivity baseline.</li>
-                <li>Cross-condition probe transfer and linear CKA measure representational geometry divergence.</li>
+                <li>Freeze agent weights; collect <strong>h</strong><sub>2</sub> from 500 deterministic-rollout episodes
+                    per condition.</li>
+                <li>Default decoder: Ridge regression (α = 10), GPS position as target.</li>
+                <li>5-fold episode-level cross-validation; Hewitt–Liang permutation control.</li>
+                <li>Non-linear depth sweep: linear → MLP-1 → MLP-2 → MLP-4 to separate linear from non-linear coding.
+                </li>
+                <li>Mutual-information estimates (MINE) verify total position content across conditions.</li>
+                <li>Causal interventions: β-subspace scrubbing; persistent vs. reset memory; cross-condition
+                    transplants.</li>
             </ul>
 
-            <h3>Example MP3D Evaluation Scenes</h3>
+            <h3>Example MP3D Evaluation Scenes (top-down views)</h3>
             <div class="scene-grid">
                 <img src="assets/scene_ep414.png" alt="MP3D scene ep414">
                 <img src="assets/17DRP5sb8fy.png" alt="MP3D scene 17DRP5sb8fy">
@@ -157,146 +216,27 @@
         </div>
     </section>
 
-    <!-- ════════════════════════════════════════════════ H1 RESULTS -->
+    <!-- ════════════════════════════════════════════ NAVIGATION RESULTS -->
     <section>
         <div class="container">
-            <h2>Results — H1: Encoder–Memory Substitution</h2>
+            <h2>Navigation Performance &amp; Spatial Probes</h2>
 
             <div class="callout">
-                <strong>Key finding:</strong> Visual-encoder capacity tracks top-layer LSTM spatial encoding
-                <em>inversely</em>. Bottleneck conditions (Blind, Coarse) carry a strong linear GPS code
-                (R² 0.78–0.95); rich-encoder conditions (Uniform, Foveated) do not. Cross-training probes confirm
-                the substitution mechanism: rich-encoder agents learn an integrated GPS code transiently
-                (~R² 0.7–0.8 at 50M frames) then progressively dissipate it as the visual route consolidates.
+                <strong>Memory diverges under convergent task performance.</strong> All five agents reach the goal
+                reliably (76–99% success, SPL 0.43–0.88), yet their hidden-state position codes span from
+                R²&nbsp;=&nbsp;+0.93 (blind) to R²&nbsp;=&nbsp;−1.79 (uniform) — a representational dissociation,
+                not a skill gap.
             </div>
 
-            <h3>GPS R² at End of Training</h3>
-            <div class="bar-chart">
-                <div class="bar-row">
-                    <span class="bar-label">Blind</span>
-                    <div class="bar-track">
-                        <div class="bar-fill" style="width:95%;background:#1d4ed8"></div>
-                    </div>
-                    <span class="bar-value">0.95</span>
-                </div>
-                <div class="bar-row">
-                    <span class="bar-label">Coarse</span>
-                    <div class="bar-track">
-                        <div class="bar-fill" style="width:78%;background:#7c3aed"></div>
-                    </div>
-                    <span class="bar-value">0.78</span>
-                </div>
-                <div class="bar-row">
-                    <span class="bar-label">Foveated (fix)</span>
-                    <div class="bar-track">
-                        <div class="bar-fill" style="width:6%;background:#dc2626"></div>
-                    </div>
-                    <span class="bar-value">0.06</span>
-                </div>
-                <div class="bar-row">
-                    <span class="bar-label">Foveated (learned)</span>
-                    <div class="bar-track">
-                        <div class="bar-fill" style="width:1%;background:#ea580c"></div>
-                    </div>
-                    <span class="bar-value">~0</span>
-                </div>
-                <div class="bar-row">
-                    <span class="bar-label">Uniform</span>
-                    <div class="bar-track">
-                        <div class="bar-fill" style="width:1%;background:#16a34a"></div>
-                    </div>
-                    <span class="bar-value">~0</span>
-                </div>
-            </div>
-
-            <h3>GPS R² vs. Context Length (Memory-Length Probe)</h3>
-            <p style="font-size:0.85rem;color:#6b7280;margin-bottom:12px;">
-                Probe trained on the last <em>k</em> hidden states; higher k = more memory history available.
-                Blind rises with history (memory integrates); bottleneck Coarse collapses; Foveated retains partial
-                code; Uniform collapses like Coarse.
-            </p>
-            <div class="line-chart-wrap">
-                <!-- SVG: 580×240 viewBox; Y: R²=0→190, R²=1→20; X: k=1→80, k=64→280, k=256→480 -->
-                <svg viewBox="0 0 580 240" xmlns="http://www.w3.org/2000/svg"
-                    style="width:100%;max-width:580px;font-family:system-ui,sans-serif">
-
-                    <!-- grid lines -->
-                    <line x1="70" y1="190" x2="500" y2="190" stroke="#e5e7eb" stroke-width="1" />
-                    <line x1="70" y1="148" x2="500" y2="148" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3" />
-                    <line x1="70" y1="105" x2="500" y2="105" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3" />
-                    <line x1="70" y1="63" x2="500" y2="63" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,3" />
-                    <line x1="70" y1="20" x2="500" y2="20" stroke="#e5e7eb" stroke-width="1" />
-
-                    <!-- y-axis labels -->
-                    <text x="62" y="194" font-size="11" fill="#9ca3af" text-anchor="end">0</text>
-                    <text x="62" y="152" font-size="11" fill="#9ca3af" text-anchor="end">0.25</text>
-                    <text x="62" y="109" font-size="11" fill="#9ca3af" text-anchor="end">0.50</text>
-                    <text x="62" y="67" font-size="11" fill="#9ca3af" text-anchor="end">0.75</text>
-                    <text x="62" y="24" font-size="11" fill="#9ca3af" text-anchor="end">1.00</text>
-                    <text x="10" y="110" font-size="11" fill="#6b7280" transform="rotate(-90,10,110)"
-                        text-anchor="middle">GPS R²</text>
-
-                    <!-- x-axis labels -->
-                    <text x="80" y="210" font-size="11" fill="#9ca3af" text-anchor="middle">k = 1</text>
-                    <text x="280" y="210" font-size="11" fill="#9ca3af" text-anchor="middle">k = 64</text>
-                    <text x="480" y="210" font-size="11" fill="#9ca3af" text-anchor="middle">k = 256</text>
-                    <text x="280" y="228" font-size="11" fill="#6b7280" text-anchor="middle">context steps</text>
-
-                    <!-- Blind: 0.89→0.90→0.93 ; y = 190 - R²×170 -->
-                    <polyline points="80,38 280,37 480,32" fill="none" stroke="#1d4ed8" stroke-width="2.5"
-                        stroke-linejoin="round" />
-                    <circle cx="80" cy="38" r="5" fill="#1d4ed8" />
-                    <circle cx="280" cy="37" r="5" fill="#1d4ed8" />
-                    <circle cx="480" cy="32" r="5" fill="#1d4ed8" />
-
-                    <!-- Coarse: 0.80→0.71→0 -->
-                    <polyline points="80,54 280,69 480,190" fill="none" stroke="#7c3aed" stroke-width="2.5"
-                        stroke-linejoin="round" />
-                    <circle cx="80" cy="54" r="5" fill="#7c3aed" />
-                    <circle cx="280" cy="69" r="5" fill="#7c3aed" />
-                    <circle cx="480" cy="190" r="5" fill="#7c3aed" />
-
-                    <!-- Foveated fix: 0.78→0.60→0.46 -->
-                    <polyline points="80,57 280,88 480,112" fill="none" stroke="#dc2626" stroke-width="2.5"
-                        stroke-linejoin="round" />
-                    <circle cx="80" cy="57" r="5" fill="#dc2626" />
-                    <circle cx="280" cy="88" r="5" fill="#dc2626" />
-                    <circle cx="480" cy="112" r="5" fill="#dc2626" />
-
-                    <!-- Uniform: 0.52→0.43→0 -->
-                    <polyline points="80,97 280,117 480,190" fill="none" stroke="#16a34a" stroke-width="2.5"
-                        stroke-linejoin="round" />
-                    <circle cx="80" cy="97" r="5" fill="#16a34a" />
-                    <circle cx="280" cy="117" r="5" fill="#16a34a" />
-                    <circle cx="480" cy="190" r="5" fill="#16a34a" />
-
-                    <!-- Legend -->
-                    <rect x="340" y="30" width="150" height="90" rx="5" fill="#fff" stroke="#e5e7eb" stroke-width="1" />
-                    <line x1="350" y1="47" x2="370" y2="47" stroke="#1d4ed8" stroke-width="2.5" />
-                    <circle cx="360" cy="47" r="4" fill="#1d4ed8" />
-                    <text x="375" y="51" font-size="11" fill="#374151">Blind</text>
-
-                    <line x1="350" y1="65" x2="370" y2="65" stroke="#7c3aed" stroke-width="2.5" />
-                    <circle cx="360" cy="65" r="4" fill="#7c3aed" />
-                    <text x="375" y="69" font-size="11" fill="#374151">Coarse</text>
-
-                    <line x1="350" y1="83" x2="370" y2="83" stroke="#dc2626" stroke-width="2.5" />
-                    <circle cx="360" cy="83" r="4" fill="#dc2626" />
-                    <text x="375" y="87" font-size="11" fill="#374151">Foveated (fix)</text>
-
-                    <line x1="350" y1="101" x2="370" y2="101" stroke="#16a34a" stroke-width="2.5" />
-                    <circle cx="360" cy="101" r="4" fill="#16a34a" />
-                    <text x="375" y="105" font-size="11" fill="#374151">Uniform</text>
-                </svg>
-            </div>
-
-            <h3>Navigation Performance (Shortcut-Reset Evaluation)</h3>
             <table>
                 <thead>
                     <tr>
                         <th>Condition</th>
                         <th>SPL</th>
                         <th>Success</th>
+                        <th>Steps</th>
+                        <th>GPS R² linear</th>
+                        <th>GPS R² MLP-2</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -304,61 +244,143 @@
                         <td><span
                                 style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1d4ed8;margin-right:6px;vertical-align:middle"></span>Blind
                         </td>
-                        <td>0.43</td>
-                        <td>79%</td>
+                        <td>0.43 ± 0.02</td>
+                        <td>76%</td>
+                        <td>416 ± 34</td>
+                        <td class="best">+0.93 ± 0.04</td>
+                        <td class="best">+0.98 ± 0.00</td>
                     </tr>
                     <tr>
                         <td><span
                                 style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-right:6px;vertical-align:middle"></span>Coarse
                         </td>
-                        <td>0.51</td>
-                        <td>86%</td>
+                        <td>0.81 ± 0.02</td>
+                        <td>97%</td>
+                        <td>154 ± 19</td>
+                        <td>+0.58 ± 0.10</td>
+                        <td>+0.75 ± 0.09</td>
                     </tr>
                     <tr>
                         <td><span
                                 style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:6px;vertical-align:middle"></span>Foveated
-                            (fix)</td>
-                        <td>0.76</td>
-                        <td>95%</td>
+                        </td>
+                        <td class="best">0.88 ± 0.02</td>
+                        <td>97%</td>
+                        <td>141 ± 21</td>
+                        <td>+0.18 ± 0.66</td>
+                        <td>+0.79 ± 0.05</td>
                     </tr>
                     <tr>
                         <td><span
-                                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ea580c;margin-right:6px;vertical-align:middle"></span>Foveated
-                            (learned)</td>
-                        <td class="best">0.82</td>
-                        <td class="best">97%</td>
+                                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ea580c;margin-right:6px;vertical-align:middle"></span>Log-polar
+                        </td>
+                        <td>0.86 ± 0.01</td>
+                        <td class="best">99%</td>
+                        <td>124 ± 15</td>
+                        <td class="drop">−0.03 ± 0.76</td>
+                        <td>+0.63 ± 0.17</td>
                     </tr>
                     <tr>
                         <td><span
                                 style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:middle"></span>Uniform
                         </td>
-                        <td>0.77</td>
-                        <td>93%</td>
+                        <td>0.87 ± 0.02</td>
+                        <td>98%</td>
+                        <td>127 ± 18</td>
+                        <td class="drop">−1.79 ± 2.99</td>
+                        <td>+0.35 ± 0.80</td>
                     </tr>
                 </tbody>
             </table>
+            <p style="font-size:0.83rem;color:#6b7280;margin-bottom:0;">
+                n = 200 deterministic-rollout episodes, mean ± SEM for navigation; 5-fold episode-level CV mean ± std
+                for probes. Linear R² &lt; 0 means worse than predict-mean baseline — position is present but
+                encoded non-linearly (the MLP-2 probe recovers it).
+            </p>
         </div>
     </section>
 
-    <!-- ════════════════════════════════════════════════ H2 RESULTS -->
+    <!-- ══════════════════════════════════════════════ MAGNITUDE RESULTS -->
     <section>
         <div class="container">
-            <h2>Results — H2: Representational Format Divergence</h2>
+            <h2>Magnitude: Linear Position Code Weakens with Encoder Bandwidth</h2>
 
             <div class="callout">
-                <strong>Key finding:</strong> The five agents at comparable task competence (success 93–99%) develop
-                hidden states in <em>linearly disjoint subspaces</em>. Pairwise linear CKA &lt;10⁻⁴ between conditions;
-                1-NN purity = 1.000 vs. chance 0.20 on pooled hidden states. Cross-condition probe transfer collapses
-                (off-diagonal R² ≪ −800). Memory transplants are <em>asymmetric</em>: bottleneck-donor states are
-                toxic to rich-encoder recipients; the reverse is benign.
+                <strong>Three convergent diagnostics.</strong> (a) GPS R² declines monotonically across the bandwidth
+                axis while every agent still navigates successfully. (b) During training, all sighted conditions start
+                high then diverge: bottleneck (coarse) plateaus, rich encoders decay as the visual route consolidates.
+                (c) Layer-wise probing shows the split emerges only at L₂ — the policy-readable layer — not at input
+                or intermediate layers.
             </div>
 
-            <h3>Memory Transplant Results (subset)</h3>
+            <figure class="paper-figure">
+                <img src="assets/fig2_magnitude.png"
+                    alt="Memory magnitude figure: GPS R² bars, training curves, layer-wise probing">
+                <figcaption><strong>Figure 2 — Memory magnitude.</strong> <em>(a)</em> Per-condition GPS R² (filled) and
+                    distance-to-goal R² (hatched, control). Dashed line: predict-mean baseline. <em>(b)</em> Top-layer
+                    GPS R² across five training snapshots. The bandwidth-graded split appears after task convergence
+                    (~100M frames for sighted), consistent with later refinement. <em>(c)</em> GPS R² along the LSTM
+                    stack (L₀ input → L₂ top). The L₀ input carries GPS for every condition; the blind/rich split
+                    emerges only at L₂.</figcaption>
+            </figure>
+
+            <h3>Training Curves</h3>
+            <figure class="paper-figure">
+                <img src="assets/training_curves.png" alt="Training reward curves across all five conditions">
+                <figcaption>All five conditions converge to comparable task performance. The two endpoint regimes
+                    (bottleneck: blind, coarse; rich encoder: foveated, log-polar, uniform) are both behaviorally
+                    successful despite radically different memory formats.</figcaption>
+            </figure>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ FORMAT RESULTS -->
+    <section>
+        <div class="container">
+            <h2>Format: Position is Encoded in Distinct Forms Across Conditions</h2>
+
+            <div class="callout">
+                <strong>A format shift, not an information loss.</strong> Non-linear probes recover position at
+                R² ≥ 0.35 even for Uniform, while the linear probe fails (R² = −1.79). Total mutual information
+                I(<strong>h</strong><sub>2</sub>; pos) stays within a 1.3× range across conditions (blind 6.01 bits
+                vs. sighted mean 4.49 bits); the collapse is in format, not content. Principal angles between every
+                pair of condition position-subspaces place 9 of 10 pairs at ≥75°: these are categorically different
+                cognitive maps.
+            </div>
+
+            <figure class="paper-figure">
+                <img src="assets/fig3_format_axis.png"
+                    alt="Memory spatial format: PCA, scene-invariance, principal angles">
+                <figcaption><strong>Figure 3 — Memory spatial format.</strong> <em>(a)</em> PCA-2D projection of
+                    top-layer <strong>h</strong><sub>2</sub> per condition (1500 random steps), coloured by
+                    ground-truth x-coordinate. Blind organises into a single position-graded manifold; rich-encoder
+                    conditions fragment into scene-conditional clouds. <em>(b)</em> LOSO median R² for single-axis
+                    transfer across rooms vs. cross-condition transplant cost. Blind uniquely occupies the
+                    scene-invariant and transplant-robust quadrant. <em>(c)</em> Principal angle between every pair of
+                    conditions' position-direction subspaces — 9/10 pairs at ≥75°.</figcaption>
+            </figure>
+
+            <h3>CKA Representational Similarity</h3>
+            <figure class="paper-figure">
+                <img src="assets/h2_cka_heatmap.png" alt="CKA heatmap across conditions">
+                <figcaption>Centered Kernel Alignment (CKA) similarity between pairs of conditions' hidden-state
+                    representations. Off-diagonal CKA &lt;10⁻⁴: the five conditions develop nearly orthogonal
+                    representational geometries despite sharing identical architectures, tasks, and training.
+                </figcaption>
+            </figure>
+
+            <h3>Memory Transplant Results</h3>
             <p style="font-size:0.85rem;color:#6b7280;margin-bottom:12px;">
-                At the midpoint of an episode (step 30), the LSTM hidden state of the <em>donor</em> condition is
-                transplanted into the <em>recipient</em> agent. Diagonal = baseline (own memory). Highlighted cells
-                show significant SPL drops.
+                At episode midpoint (step 30), the LSTM hidden state of the <em>donor</em> is transplanted into the
+                <em>recipient</em> agent. Diagonal = self-transplant baseline. Highlighted cells show significant
+                SPL drops — the representational divergence is mechanistically real, not just a probe artefact.
             </p>
+            <figure class="paper-figure" style="margin-bottom:20px;">
+                <img src="assets/transplant_bars.png" alt="Memory transplant results bar chart">
+                <figcaption>Cross-condition memory transplant costs. Bottleneck-to-rich transplants (blind donor →
+                    rich-encoder recipient) are asymmetrically more harmful than the reverse, reflecting the
+                    incompatible position-code formats.</figcaption>
+            </figure>
             <table>
                 <thead>
                     <tr>
@@ -370,48 +392,237 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Blind → Foveated (fix)</td>
+                        <td>Blind → Foveated</td>
                         <td>0.92</td>
                         <td class="drop">0.77</td>
                         <td class="drop">−16%</td>
                     </tr>
                     <tr>
-                        <td>Foveated (fix) → Blind</td>
+                        <td>Foveated → Blind</td>
                         <td>0.68</td>
                         <td class="drop">0.56</td>
                         <td class="drop">−18%</td>
                     </tr>
                     <tr>
-                        <td>Uniform → Foveated (fix)</td>
+                        <td>Uniform → Foveated</td>
                         <td>0.92</td>
                         <td class="drop">0.69</td>
                         <td class="drop">−25%</td>
                     </tr>
                     <tr>
-                        <td>Foveated (fix) → Uniform</td>
+                        <td>Foveated → Uniform</td>
                         <td>0.96</td>
                         <td class="drop">0.78</td>
                         <td class="drop">−19%</td>
                     </tr>
                 </tbody>
             </table>
-            <p style="font-size:0.83rem;color:#6b7280;margin-bottom:28px;">
-                Full 5×5 transplant matrix available in the codebase
-                (<code>scripts/eval/transplant.py</code>). Bottleneck-to-rich transplants are asymmetrically more
-                costly than rich-to-bottleneck. Direction-dependence is robust across pairs.
+            <p style="font-size:0.83rem;color:#6b7280;margin-bottom:0;">
+                Full 5×5 transplant matrix available in the paper (Appendix Fig. A7a). The pattern is robust across
+                transplant midpoints t ∈ {15, 30, 60, 90} steps and decays toward zero by t ≥ 400 as most
+                successful episodes have terminated.
             </p>
+        </div>
+    </section>
 
-            <h3>Cognitive-Map Use vs. Readout Dissociation</h3>
-            <p style="font-size:0.85rem;color:#6b7280;margin-bottom:12px;">
-                Two conditions fall off-diagonal: "Has a cognitive map" and "uses a cognitive map" can dissociate
-                in either direction.
+    <!-- ════════════════════════════════════════════════════ RSA RESULTS -->
+    <section>
+        <div class="container">
+            <h2>Representational Similarity Analysis</h2>
+
+            <div class="callout">
+                <strong>RSA reveals two surprises.</strong> (H1) The foveated condition is the only one whose
+                memory geometry shows <em>no</em> significant eccentricity effect (τ_a&nbsp;=&nbsp;+0.053,
+                p&nbsp;=&nbsp;0.250) — the blur transform actively suppresses eccentricity-dependent structure,
+                while all other conditions including log-polar retain it. (H2) Coarse and Uniform share the
+                <em>most</em> similar RDM structure (τ_a&nbsp;=&nbsp;0.723), and Uniform is closer to Blind
+                (0.642) than to Foveated (0.264) — RSA geometry does not track the linear-readability axis.
+            </div>
+
+            <h3>Representational Dissimilarity Matrices</h3>
+            <figure class="paper-figure">
+                <img src="assets/rdm_grid.png" alt="RDM grid across all five conditions">
+                <figcaption>Representational dissimilarity matrices (RDMs) for all five conditions.
+                    Each cell is the pairwise dissimilarity between hidden states
+                    <strong>h</strong><sub>2</sub> at two timesteps, ordered by spatial position.
+                    Structure in the RDM reveals how the geometry of memory is organised — whether
+                    nearby positions are represented more similarly.
+                </figcaption>
+            </figure>
+
+            <h3>H1 — Eccentricity Effect on Memory Geometry</h3>
+            <p style="font-size:0.88rem;color:#374151;margin-bottom:12px;">
+                Does the representational geometry of memory reflect spatial eccentricity
+                (distance from scene centre)? Kendall's τ_a compares RDMs at low vs. high eccentricity.
+                A significant positive τ_a means the memory structure is shaped by eccentricity.
             </p>
+            <figure class="paper-figure">
+                <img src="assets/h1_eccentricity.png" alt="H1 eccentricity effect per condition">
+                <figcaption>Eccentricity effect on representational geometry per condition.
+                    Blind, Coarse, Log-polar, and Uniform all show significant eccentricity structure
+                    in memory (p &lt; 0.001). The Foveated condition alone is non-significant (p = 0.250),
+                    suggesting that Gaussian blur actively removes eccentricity-dependent information
+                    from the hidden state — a qualitatively different representational signature from
+                    the log-polar condition, which also applies a gaze-centred transform yet retains
+                    eccentricity structure.</figcaption>
+            </figure>
             <table>
                 <thead>
                     <tr>
                         <th>Condition</th>
-                        <th>GPS code readable?</th>
-                        <th>Policy uses it?</th>
+                        <th>τ_a (low vs. high eccentricity)</th>
+                        <th>p-value</th>
+                        <th>Δ mean dissimilarity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span
+                                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1d4ed8;margin-right:6px;vertical-align:middle"></span>Blind
+                        </td>
+                        <td>+0.418</td>
+                        <td class="check">&lt; 0.001</td>
+                        <td>−0.204</td>
+                    </tr>
+                    <tr>
+                        <td><span
+                                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-right:6px;vertical-align:middle"></span>Coarse
+                        </td>
+                        <td>+0.489</td>
+                        <td class="check">&lt; 0.001</td>
+                        <td>+0.458</td>
+                    </tr>
+                    <tr>
+                        <td><span
+                                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:6px;vertical-align:middle"></span>Foveated
+                        </td>
+                        <td>+0.053</td>
+                        <td class="drop">0.250 (n.s.)</td>
+                        <td>+11.50</td>
+                    </tr>
+                    <tr>
+                        <td><span
+                                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ea580c;margin-right:6px;vertical-align:middle"></span>Log-polar
+                        </td>
+                        <td>+0.422</td>
+                        <td class="check">&lt; 0.001</td>
+                        <td>+0.449</td>
+                    </tr>
+                    <tr>
+                        <td><span
+                                style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:middle"></span>Uniform
+                        </td>
+                        <td>+0.413</td>
+                        <td class="check">&lt; 0.001</td>
+                        <td>+0.369</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>H2 — Cross-Agent RDM Similarity</h3>
+            <p style="font-size:0.88rem;color:#374151;margin-bottom:12px;">
+                How similar is the representational geometry between pairs of conditions?
+                Kendall's τ_a between RDMs measures whether the two conditions organise
+                their hidden states in a similar relational structure (rotation-invariant,
+                unlike CKA or principal angles).
+            </p>
+            <figure class="paper-figure">
+                <img src="assets/h2_cross_agent.png" alt="H2 cross-agent RDM similarity">
+                <figcaption>Cross-agent RDM similarity (Kendall's τ_a). Coarse–Uniform and
+                    Uniform–Blind pairs share the highest structural similarity (τ_a ≥ 0.642),
+                    while Foveated is the most structurally isolated condition. This complements
+                    the principal-angle result from Figure 3c: the subspaces are orthogonal (different
+                    <em>directions</em>), yet the pairwise-dissimilarity <em>structure</em> can
+                    still be shared.
+                </figcaption>
+            </figure>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Pair</th>
+                        <th>τ_a</th>
+                        <th>p-value</th>
+                        <th>Interpretation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Coarse vs. Uniform</td>
+                        <td class="best">0.723</td>
+                        <td class="check">&lt; 0.001</td>
+                        <td>Most similar RDM structure</td>
+                    </tr>
+                    <tr>
+                        <td>Uniform vs. Blind</td>
+                        <td>0.642</td>
+                        <td class="check">&lt; 0.001</td>
+                        <td>High — despite orthogonal subspaces</td>
+                    </tr>
+                    <tr>
+                        <td>Foveated vs. Log-polar</td>
+                        <td>0.290</td>
+                        <td class="check">&lt; 0.001</td>
+                        <td>Moderate — share gaze-centred transform</td>
+                    </tr>
+                    <tr>
+                        <td>Foveated vs. Uniform</td>
+                        <td>0.264</td>
+                        <td class="check">&lt; 0.001</td>
+                        <td>Low</td>
+                    </tr>
+                    <tr>
+                        <td>Foveated vs. Blind</td>
+                        <td>0.204</td>
+                        <td class="check">0.002</td>
+                        <td>Lowest — Foveated most structurally isolated</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ CONSUMPTION RESULTS -->
+    <section>
+        <div class="container">
+            <h2>Consumption: Probe-Readability Dissociates from Policy Reliance</h2>
+
+            <div class="callout">
+                <strong>Two off-diagonal cases.</strong> Coarse carries a strong linear GPS code (R²&nbsp;=&nbsp;+0.58)
+                yet shows little reset penalty ("readable but unused"). Uniform carries no linear code yet suffers the
+                largest persistent-memory penalty ("used but not linearly readable"). Uniform's policy reads
+                a scene-history anchor — "head where I was going last time in this scene" — rather than world-frame
+                position.
+            </div>
+
+            <figure class="paper-figure">
+                <img src="assets/fig5_consumption.png" alt="Consumption: shortcut paradigm and probe scrubbing">
+                <figcaption><strong>Figure 5 — Probe-readable position is not what drives behaviour.</strong>
+                    <em>(a)</em> Each condition's position in the readability–reliance plane; horizontal arrows show
+                    the per-condition pull margin (rightward = "locks old goal"; leftward = "tries new goal"). Only
+                    Uniform locks onto the old goal. <em>(b)</em> Two trajectories under identical setup: Uniform
+                    fails to navigate to a new goal (persistent memory pulls it to the old goal area); Log-polar
+                    succeeds. <em>(c)</em> β-subspace scrubbing: removing the readable linear axis collapses the
+                    linear probe but barely moves the MLP probe, showing position is distributed redundantly across
+                    many directions.
+                </figcaption>
+            </figure>
+
+            <h3>Shortcut Paradigm Results</h3>
+            <figure class="paper-figure">
+                <img src="assets/shortcut_bars.png" alt="Shortcut paradigm SPL results">
+                <figcaption>Per-condition persistent vs. reset SPL. The gap measures how much the policy relies on
+                    memory carry-over from a previous episode in the same scene. Uniform's large negative gap
+                    (persistent &lt; reset) confirms it reads a scene-history anchor despite carrying no linear
+                    GPS code.</figcaption>
+            </figure>
+
+            <h3>Cognitive-Map Readout vs. Policy Reliance Dissociation</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th>GPS code linearly readable?</th>
+                        <th>Policy relies on memory?</th>
                         <th>Shortcut SPL penalty</th>
                     </tr>
                 </thead>
@@ -420,90 +631,249 @@
                         <td><span
                                 style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-right:6px;vertical-align:middle"></span>Coarse
                         </td>
-                        <td class="check">✓ (R² = 0.78)</td>
-                        <td class="cross">✗</td>
-                        <td>−0.09 <span style="color:#6b7280;font-size:0.8rem">(small)</span></td>
+                        <td class="check">✓ (R² = +0.58)</td>
+                        <td class="cross">✗ (small penalty)</td>
+                        <td>small (readable but unused)</td>
                     </tr>
                     <tr>
                         <td><span
                                 style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:middle"></span>Uniform
                         </td>
-                        <td class="cross">✗ (R² ≈ 0)</td>
-                        <td class="check">✓</td>
-                        <td>−0.32 <span style="color:#6b7280;font-size:0.8rem">(large)</span></td>
+                        <td class="cross">✗ (R² = −1.79)</td>
+                        <td class="check">✓ (large penalty)</td>
+                        <td class="drop">large (scene-history anchor)</td>
                     </tr>
                 </tbody>
             </table>
-        </div>
-    </section>
-
-    <!-- ════════════════════════════════════════════════ H3 RESULTS -->
-    <section>
-        <div class="container">
-            <h2>Results — H3: Gaze &amp; Memory Coupling</h2>
-            <p style="color:#374151;max-width:800px;">
-                The <strong>Foveated (learned)</strong> condition achieves SPL = 0.82, the best overall navigation
-                performance across all five conditions, suggesting that active gaze control amplifies the
-                foveation benefit. However, the learned gaze policy exhibits collapse toward a fixed center
-                position during training, which limits the strength of the H3 test. Ongoing experiments —
-                stochastic gaze with bounded-σ Gaussian sampling and multi-seed replication — are designed to
-                restore gaze diversity and provide a clean H3 measurement. The foveated-shifted control
-                (gaze hardcoded at the collapsed position) is queued to isolate static-gaze-location effects
-                from learned-gaze dynamics. Full H3 analysis is pending multi-seed and stochastic-gaze results.
+            <p style="font-size:0.83rem;color:#6b7280;margin-bottom:0;">
+                The β-subspace scrubbing ablation (Fig. 5c) shows the readable linear axis is epiphenomenal: removing
+                it collapses the linear probe but barely affects MLP readout or navigation. Position is encoded
+                redundantly across many directions, paralleling biological place-cell population redundancy.
             </p>
         </div>
     </section>
 
-    <!-- ══════════════════════════════════════════ ONGOING EXPERIMENTS -->
+    <!-- ══════════════════════════════════════════ COGNEURO ANALYSES -->
     <section>
         <div class="container">
-            <h2>Ongoing Experiments</h2>
+            <h2>Cognitive Neuroscience Analyses</h2>
+            <p class="abstract-text">
+                We apply a battery of systems-neuroscience tools — intrinsic timescales, temporal generalization
+                matrices, persistent homology, and an architecture-agnostic world-model probe — to characterise
+                the memory format shift beyond linear probing. These tools are drawn directly from the biological
+                cognitive-map literature and applied here to a controlled comparative population where a single
+                variable (sensor bandwidth) is varied while everything else is held fixed, a comparison that is
+                hard to realise in biological systems.
+            </p>
+
+            <!-- ── Temporal dynamics ── -->
+            <h3>Temporal Dynamics: Intrinsic Timescales &amp; Temporal Generalization</h3>
+            <div class="callout">
+                <strong>Integration route runs slow; visual route ticks fast.</strong> Blind's memory units have
+                a median autocorrelation timescale of τ&nbsp;≈&nbsp;19.3 steps — more than twice any sighted
+                condition (τ&nbsp;≈&nbsp;7.7–9.2). The temporal generalization matrix (TGM) shows a
+                complementary split: blind yields a diagonal stripe (the goal-vector decoder works only near
+                the step it was trained at, reflecting continuous map construction); coarse yields the largest
+                stable block (the code is stationary across the episode). This mirrors the slow-prefrontal /
+                fast-sensory cortical-hierarchy gradient within a single recurrent module.
+            </div>
+
+            <figure class="paper-figure">
+                <img src="assets/fig4_temporal.png"
+                     alt="Temporal format: TGM heatmap, intrinsic timescale distributions, predictive horizon">
+                <figcaption><strong>Figure 4 — Memory temporal format.</strong>
+                    <em>(a) Is the readout axis stationary or does it rotate?</em> Temporal generalization
+                    matrix (TGM): a linear decoder of egocentric goal-vector trained at step t<sub>train</sub>
+                    and tested at every other step t<sub>test</sub>. A square block = stationary world-anchored
+                    map (coarse); a diagonal stripe = step-by-step constructed map (blind).
+                    <em>(b) How long does a unit hold its past?</em> Distribution of per-unit intrinsic
+                    timescale τ — the lag at which within-episode autocorrelation falls to 1/e.
+                    <em>(c) Does memory carry a forward-rolling trajectory?</em> R² of decoding position
+                    k steps ahead from current memory — the successor-representation cognitive-map signature.</figcaption>
+            </figure>
+
+            <h3>Intrinsic Timescale Data</h3>
+            <p style="font-size:0.88rem;color:#374151;margin-bottom:12px;">
+                Per-unit autocorrelation timescale τ measured across 30 sampled units. Blind's distribution
+                is wide and shifted toward slow integration (p10–p90 range: 9.2–31.3 steps); every sighted
+                condition collapses to a narrow fast-ticking cluster (IQR ≈ 7–11 steps). The two routes
+                segregate timescales even within a single recurrent module.
+            </p>
             <table>
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>What it tests</th>
-                        <th>Status</th>
+                        <th>Condition</th>
+                        <th>Median τ (steps)</th>
+                        <th>IQR</th>
+                        <th>p10 – p90</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Encoder-capacity scaling sweep K ∈ {32, 64, 96, 128, 192}</td>
-                        <td>H1 bandwidth axis — smooth vs. threshold transition?</td>
-                        <td><span class="status-running">In flight</span></td>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1d4ed8;margin-right:6px;vertical-align:middle"></span>Blind</td>
+                        <td class="best">19.3</td>
+                        <td>[13.2, 26.1]</td>
+                        <td>9.2 – 31.3</td>
                     </tr>
                     <tr>
-                        <td>Stochastic gaze (bounded-σ Gaussian)</td>
-                        <td>H3 gaze dynamics with diversity</td>
-                        <td><span class="status-running">In flight</span></td>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-right:6px;vertical-align:middle"></span>Coarse</td>
+                        <td>7.7</td>
+                        <td>[7.0, 10.8]</td>
+                        <td>6.5 – 14.1</td>
                     </tr>
                     <tr>
-                        <td>Multi-seed replication (blind, coarse, foveated_learned)</td>
-                        <td>Replication robustness across random seeds</td>
-                        <td><span class="status-running">In flight</span></td>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:6px;vertical-align:middle"></span>Foveated</td>
+                        <td>9.2</td>
+                        <td>[7.0, 10.4]</td>
+                        <td>6.1 – 15.1</td>
                     </tr>
                     <tr>
-                        <td>Log-polar foveation</td>
-                        <td>Falsifiable H1 test — spatial sampling vs. blur strength</td>
-                        <td><span class="status-running">In flight</span></td>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ea580c;margin-right:6px;vertical-align:middle"></span>Log-polar</td>
+                        <td>9.0</td>
+                        <td>[7.3, 10.3]</td>
+                        <td>5.6 – 12.9</td>
                     </tr>
                     <tr>
-                        <td>Foveated v2 clean re-run</td>
-                        <td>NaN-fix validation on fresh checkpoint chain</td>
-                        <td><span class="status-running">In flight</span></td>
-                    </tr>
-                    <tr>
-                        <td>Foveated-shifted control</td>
-                        <td>H3 isolation: static-gaze-location vs. learned-gaze dynamics</td>
-                        <td><span class="status-pending">Pending</span></td>
-                    </tr>
-                    <tr>
-                        <td>σ_max strength sweep (σ = 2 / 4 / 12 / 20)</td>
-                        <td>H1 as continuous foveation-strength lever</td>
-                        <td><span class="status-pending">Pending</span></td>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:middle"></span>Uniform</td>
+                        <td>8.5</td>
+                        <td>[7.2, 11.1]</td>
+                        <td>6.4 – 16.4</td>
                     </tr>
                 </tbody>
             </table>
+
+            <!-- ── Persistent Homology ── -->
+            <h3>Topological Structure: Persistent Homology</h3>
+            <div class="callout">
+                <strong>H₁ loop counts decrease monotonically with encoder bandwidth.</strong>
+                Persistent H₁ topology counts the number of long-lived 1-cycles (loops) in the hidden-state
+                manifold — a parameter-free signature of representational geometry used to detect toroidal
+                grid-cell structure in mouse cortex. Here the counts order blind (219) &gt; coarse (203)
+                &gt; log-polar (183) &gt; foveated (152) &gt; uniform (133), mirroring the magnitude axis.
+                Cross-condition Wasserstein-2 distances between H₁ persistence diagrams are roughly
+                2× within-condition noise for every pair, confirming topological distinguishability.
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th>H₁ persistent loops (mean ± std)</th>
+                        <th>Max persistence</th>
+                        <th>Within-cond. W₂</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1d4ed8;margin-right:6px;vertical-align:middle"></span>Blind</td>
+                        <td class="best">219.3 ± 4.1</td>
+                        <td>0.338</td>
+                        <td>8.86 ± 0.69</td>
+                    </tr>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-right:6px;vertical-align:middle"></span>Coarse</td>
+                        <td>203.3 ± 5.2</td>
+                        <td>0.321</td>
+                        <td>10.32 ± 1.34</td>
+                    </tr>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ea580c;margin-right:6px;vertical-align:middle"></span>Log-polar</td>
+                        <td>183.3 ± 11.8</td>
+                        <td>0.350</td>
+                        <td>11.12 ± 0.86</td>
+                    </tr>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:6px;vertical-align:middle"></span>Foveated</td>
+                        <td>152.0 ± 4.2</td>
+                        <td>0.313</td>
+                        <td>8.59 ± 0.39</td>
+                    </tr>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:middle"></span>Uniform</td>
+                        <td>133.3 ± 2.1</td>
+                        <td>0.321</td>
+                        <td>8.17 ± 0.18</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="font-size:0.83rem;color:#6b7280;margin-bottom:0;">
+                Cross-condition Wasserstein-2 distances (selected pairs): foveated vs. uniform = 9.73;
+                coarse vs. foveated-logpolar = 12.96; foveated vs. foveated-logpolar = 14.21;
+                blind vs. foveated = 18.85; coarse vs. uniform = 21.38. Every cross-condition distance
+                exceeds the within-condition noise floor (~8–11), confirming topological distinguishability.
+                Persistent homology prediction was pre-registered in the opposite direction (we expected
+                uniform highest); we report what the data show.
+            </p>
+
+            <!-- ── World model probe ── -->
+            <h3>Architecture-Agnostic Confirmation: Memory Maze + DINOv2</h3>
+            <div class="callout">
+                <strong>The format-shift dichotomy reproduces in a completely different setting.</strong>
+                Frozen DINOv2-Base patch features at five bandwidths feed a small LSTM trained on Memory
+                Maze 9×9 offline trajectories with a next-feature prediction objective. Unlike Habitat,
+                there is no GPS/compass channel — the encoder is the only route to absolute position. This
+                reverses the linear R² direction (blind ≈ 0, uniform ≈ 0.45), but the non-linear gap
+                (MLP R² − linear R²) still decreases with bandwidth (coarse +0.62, uniform +0.55), replicating
+                the format-shift in a setup with a different encoder family, environment, and training regime.
+            </div>
+
+            <figure class="paper-figure">
+                <img src="assets/fig9_world_model_probe.png"
+                     alt="World model probe: Memory Maze with DINOv2 encoder at five bandwidths">
+                <figcaption><strong>Figure 9 — Format shift reproduces on Memory Maze with DINOv2.</strong>
+                    <em>(a)</em> Linear (Ridge, blue) and 4-layer MLP (red) eval R² for agent position from
+                    the LSTM hidden state, across five encoder bandwidths. Linear R² rises with bandwidth
+                    (blind ≈ 0 → uniform ≈ 0.45) — the reversed direction reflects the absence of GPS.
+                    MLP R² saturates at ≈0.998 for all sighted conditions and stays at chance for blind.
+                    <em>(b)</em> Non-linear gap (MLP − linear) decreases with bandwidth, reproducing the
+                    format-shift dichotomy.</figcaption>
+            </figure>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th>Linear R² (Ridge α=10)</th>
+                        <th>MLP R²</th>
+                        <th>Non-linear gap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1d4ed8;margin-right:6px;vertical-align:middle"></span>Blind</td>
+                        <td class="drop">0.005</td>
+                        <td class="drop">−0.000</td>
+                        <td>≈ 0</td>
+                    </tr>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-right:6px;vertical-align:middle"></span>Coarse</td>
+                        <td>0.375</td>
+                        <td class="best">0.998</td>
+                        <td class="best">+0.623</td>
+                    </tr>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:6px;vertical-align:middle"></span>Foveated</td>
+                        <td>0.410</td>
+                        <td class="best">0.998</td>
+                        <td>+0.588</td>
+                    </tr>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ea580c;margin-right:6px;vertical-align:middle"></span>Log-polar</td>
+                        <td>0.412</td>
+                        <td class="best">0.998</td>
+                        <td>+0.586</td>
+                    </tr>
+                    <tr>
+                        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:middle"></span>Uniform</td>
+                        <td class="best">0.447</td>
+                        <td class="best">0.998</td>
+                        <td>+0.551</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="font-size:0.83rem;color:#6b7280;margin-bottom:0;">
+                Memory Maze setup: LSTM trained on 9×9 offline trajectories, next-feature prediction objective.
+                n = 80k train / 20k eval frames, eval window steps 250–500 of T=500 trajectories. Ridge
+                values shown at α=10; results stable across α ∈ {0.1, 1, 10, 100}.
+            </p>
         </div>
     </section>
 
@@ -515,14 +885,16 @@
                 <a class="resource-btn" href="https://github.com/alunxu/agentic-cognitive-map" target="_blank">
                     <span class="rb-icon">⌨</span>
                     Code ↗
-                    <span class="rb-desc">Training configs, custom policies (foveated, learned-gaze, log-polar),
-                        probing pipeline, figure scripts, and cluster submission scripts for DD-PPO on SCITAS.</span>
+                    <span class="rb-desc">Training configs, custom sensor policies (foveated, log-polar, uniform),
+                        probing pipeline (collect → analyze → visualize), evaluation scripts
+                        (shortcut, transplant), and figure generation.</span>
                 </a>
                 <a class="resource-btn" href="https://huggingface.co/alunxu/spatial-memory-checkpoints" target="_blank">
                     <span class="rb-icon">🤗</span>
                     Checkpoints ↗
-                    <span class="rb-desc">Trained LSTM policy checkpoints for all five conditions. Load directly
-                        with <code>src.habitat</code> for probing, evaluation, or fine-tuning.</span>
+                    <span class="rb-desc">Trained DD-PPO LSTM policy checkpoints for all five conditions (250M
+                        frames each). Load directly with <code>src.habitat</code> for probing, evaluation,
+                        or analysis.</span>
                 </a>
             </div>
         </div>
@@ -534,7 +906,7 @@
             <h2>BibTeX</h2>
             <div class="bibtex-wrap">
                 <pre id="bibtex-text">@inproceedings{xu2026sensor,
-  title     = {Sensor Structure Shapes Cognitive Maps in Navigation Agents},
+  title     = {Sensor Structure Shapes the Format of Cognitive Maps in Navigation Agents},
   author    = {Xu, Alun and Bruneau, L{\'e}o and Abkari, Rim and Aoutir, Zyad},
   booktitle = {CS503 Visual Intelligence, EPFL},
   year      = {2026},
