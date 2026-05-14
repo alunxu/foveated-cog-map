@@ -124,7 +124,7 @@ def build_rdm(
 
 def kendall_tau_a(rdm1: np.ndarray, rdm2: np.ndarray) -> float:
     """Compare two RDMs using Kendall's τ_a on upper-triangle entries.
-
+    Theory : 
     Kendall's τ_a is preferred over Spearman ρ for RDM comparison because:
     (a) it handles ties correctly (ties are treated as 0, not ranked)
     (b) it is a proper distance metric on the space of orderings

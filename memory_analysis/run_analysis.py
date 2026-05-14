@@ -11,12 +11,12 @@ Orchestrates the full RSA pipeline:
   Step 4. H2 — cross-agent comparison: do different agents encode
            the same spatial information in structurally different ways?
   Step 5. Training dynamics: how do RDMs evolve from init → convergence?
-  Step 6. Save results + figures to results/
+  Step 6. Save figures to results/
 
 Usage
 -----
-  # First collect activations (run once):
-  python collect_activations.py late
+  # First collect activations :
+  python collect_activations.py 
 
   # Then run the analysis:
   python run_analysis.py
@@ -351,7 +351,6 @@ def plot_h1_eccentricity(h1_results: dict, fname: str = "h1_eccentricity.png"):
     taus = [h1_results[a]["tau_low_vs_high"] for a in agents]
     bars = ax.bar(x, taus, color=colours, edgecolor="k", linewidth=0.7)
 
-    # Significance asterisks
     for i, agent in enumerate(agents):
         p = h1_results[agent]["p_low_vs_high"]
         sig = "**" if p < 0.01 else ("*" if p < 0.05 else "")
