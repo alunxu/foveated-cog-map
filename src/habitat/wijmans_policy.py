@@ -281,8 +281,12 @@ class WijmansPointNavNet(Net):
             self.close_embedding = None
 
         # ---- Visual encoder (only for sighted agents) ----
+        # Blind Wijmans agents intentionally have no visual channels.
+        # Therefore we must skip ResNetEncoder entirely in blind mode.
         if force_blind_policy:
-            use_obs_space = spaces.Dict({})
+            self.visual_encoder = None
+            self.visual_fc = None
+            visual_dim = 0
         else:
             use_obs_space = spaces.Dict(
                 {
@@ -292,26 +296,26 @@ class WijmansPointNavNet(Net):
                 }
             )
 
-        self.visual_encoder = ResNetEncoder(
-            use_obs_space,
-            baseplanes=resnet_baseplanes,
-            ngroups=resnet_baseplanes // 2,
-            make_backbone=getattr(resnet, backbone),
-            normalize_visual_inputs=normalize_visual_inputs,
-        )
-
-        if not self.visual_encoder.is_blind:
-            self.visual_fc = nn.Sequential(
-                nn.Flatten(),
-                nn.Linear(
-                    int(np.prod(self.visual_encoder.output_shape)), hidden_size
-                ),
-                nn.ReLU(True),
+            self.visual_encoder = ResNetEncoder(
+                use_obs_space,
+                baseplanes=resnet_baseplanes,
+                ngroups=resnet_baseplanes // 2,
+                make_backbone=getattr(resnet, backbone),
+                normalize_visual_inputs=normalize_visual_inputs,
             )
-            visual_dim = hidden_size
-        else:
-            self.visual_fc = None
-            visual_dim = 0
+
+            if not self.visual_encoder.is_blind:
+                self.visual_fc = nn.Sequential(
+                    nn.Flatten(),
+                    nn.Linear(
+                        int(np.prod(self.visual_encoder.output_shape)), hidden_size
+                    ),
+                    nn.ReLU(True),
+                )
+                visual_dim = hidden_size
+            else:
+                self.visual_fc = None
+                visual_dim = 0
 
         # ---- Recurrent state encoder (3-layer LSTM-512) ----
         rnn_input_size = visual_dim + sensor_block_dim
@@ -332,7 +336,7 @@ class WijmansPointNavNet(Net):
 
     @property
     def is_blind(self):
-        return self.visual_encoder.is_blind
+        return self.visual_encoder is None or self.visual_encoder.is_blind
 
     @property
     def num_recurrent_layers(self):

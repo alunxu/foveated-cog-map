@@ -121,7 +121,16 @@ def build_dataset(args):
     if not scenes_txt.exists():
         raise FileNotFoundError(f"Missing scenes lookup: {scenes_txt}")
     with open(scenes_txt) as f:
-        scene_lookup = [l.strip() for l in f if l.strip()]
+        scene_lookup = []
+        for l in f:
+            l = l.strip()
+            if not l:
+                continue
+            parts = l.split(maxsplit=1)
+            if len(parts) == 2 and parts[0].isdigit():
+                scene_lookup.append(parts[1])
+            else:
+                scene_lookup.append(l)
 
     unique_eps = np.unique(episode_ids)
     print(f"Episodes: {len(unique_eps)} (total steps: {len(h_layers)})")
