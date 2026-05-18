@@ -27,8 +27,14 @@
     </div>
 
     <!-- ══════════════════════════════════════════════ SIDEBAR NAV ── -->
-    <aside class="sidebar" aria-label="Section navigation">
-        <div class="sidebar-title">Contents</div>
+    <button class="sidebar-pebble" id="sidebar-pebble" aria-label="Open contents">
+        <span class="pebble-icon">☰</span> Contents
+    </button>
+    <aside class="sidebar collapsed" id="sidebar" aria-label="Section navigation">
+        <div class="sidebar-header">
+            <span class="sidebar-title">Contents</span>
+            <button class="sidebar-close" id="sidebar-close" aria-label="Close contents">×</button>
+        </div>
         <nav class="sidebar-nav">
             <a href="#abstract" class="lvl-1">Abstract</a>
             <a href="#methods" class="lvl-1">Setup &amp; Methods</a>
@@ -1074,6 +1080,23 @@
             &nbsp;·&nbsp; 2026
         </div>
     </footer>
+
+    <script>
+        (function () {
+            var bar = document.getElementById('sidebar');
+            var pebble = document.getElementById('sidebar-pebble');
+            var closeBtn = document.getElementById('sidebar-close');
+            function open() { bar.classList.remove('collapsed'); pebble.classList.add('hidden'); }
+            function close() { bar.classList.add('collapsed'); pebble.classList.remove('hidden'); }
+            pebble.addEventListener('click', open);
+            closeBtn.addEventListener('click', close);
+            document.querySelectorAll('.sidebar-nav a').forEach(function (a) {
+                a.addEventListener('click', function () {
+                    if (window.innerWidth <= 960) close();
+                });
+            });
+        })();
+    </script>
 
 </body>
 
