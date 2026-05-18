@@ -32,6 +32,7 @@
                 <a href="#rsa">RSA</a>
                 <a href="#consumption">Consumption</a>
                 <a href="#cogneuro">Cog-Neuro</a>
+                <a href="#appendix">Appendix</a>
                 <a href="#code">Code</a>
             </nav>
         </div>
@@ -436,9 +437,9 @@
                 </tbody>
             </table>
             <p style="font-size:0.83rem;color:#6b7280;margin-bottom:0;">
-                Full 5×5 transplant matrix available in the paper (Appendix Fig. A7a). The pattern is robust across
-                transplant midpoints t ∈ {15, 30, 60, 90} steps and decays toward zero by t ≥ 400 as most
-                successful episodes have terminated.
+                The pattern is robust across transplant midpoints t ∈ {15, 30, 60, 90} steps and decays toward zero
+                by t ≥ 400 as most successful episodes have terminated. The <a href="#appendix">Appendix</a> shows
+                the full 5×5 matrix and a complementary cross-condition probe-transfer analysis.
             </p>
         </div>
     </section>
@@ -908,6 +909,86 @@
                 Memory Maze setup: LSTM trained on 9×9 offline trajectories, next-feature prediction objective.
                 n = 80k train / 20k eval frames, eval window steps 250–500 of T=500 trajectories. Ridge
                 values shown at α=10; results stable across α ∈ {0.1, 1, 10, 100}.
+            </p>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ APPENDIX -->
+    <section id="appendix">
+        <div class="container">
+            <h2>Appendix — Supplementary Material</h2>
+            <p style="font-size:0.88rem;color:#6b7280;margin-bottom:24px;">
+                Additional diagnostics that corroborate the main results but are not essential to the
+                storyline above. The full implementation of every probe, intervention, and figure is
+                available in the <a href="https://github.com/alunxu/agentic-cognitive-map" target="_blank">code
+                repository</a>.
+            </p>
+
+            <h3>A · Cross-Condition Probe Transfer (Format · H2)</h3>
+            <div class="callout">
+                <strong>Position axes are jointly incompatible at the readout level.</strong> Train a Ridge GPS
+                probe on the hidden states of one condition (row), test it on another (column). Every off-diagonal
+                cell is strongly negative — far worse than predict-mean baseline — confirming that each condition's
+                readable position direction is unusable for any other, even though all five visit the same scenes
+                and solve the same task.
+            </div>
+            <p style="font-size:0.9rem;color:#374151;margin-bottom:8px;">
+                The asymmetry is directional: <strong>blind-row off-diagonals are mildly negative</strong>
+                (R² ∈ [−0.28, −0.15]), while sighted-trained probes evaluated cross-condition
+                <strong>collapse catastrophically</strong> (R² ∈ [−6.0, −1.2], with raw values reaching
+                ≈ −3.5×10⁴ before clipping). This mirrors the transplant-cost asymmetry: the blind position
+                axis is the closest thing to a "lingua franca" code, while rich-encoder codes are mutually
+                unintelligible. Together with the principal-angle and CKA evidence, this strengthens H2's
+                claim that format divergence is intrinsic to the policy's representation, not a probe artefact.
+            </p>
+
+            <h3>B · Full 5×5 Memory-Transplant Matrix (Format · H2)</h3>
+            <p style="font-size:0.9rem;color:#374151;margin-bottom:8px;">
+                The four-row table in the Format section reports the most-interpretable cells; the complete
+                5×5 matrix evaluates every donor → recipient pair at episode midpoint t = 30, with the diagonal
+                serving as a self-transplant baseline. Six cells (coarse ↔ {foveated, log-polar, uniform})
+                are excluded because the 48×48 vs. 256×256 visual-input size mismatch is incompatible with
+                the shared-environment transplant pipeline; the asymmetry-direction test relies on the
+                blind-axis cells only.
+            </p>
+
+            <h3>C · Robustness &amp; Controls</h3>
+            <ul class="probe-list">
+                <li><strong>Behavioural control.</strong> The same linear decoder reads distance-to-goal at
+                    R² ≥ 0.88 in every condition — the probe has the capacity, so rich-encoder
+                    <strong>h</strong><sub>2</sub> simply does not carry world-frame position as a linear target.
+                </li>
+                <li><strong>Encoder-output dimensionality.</strong> Log-polar's ~2×2 feature map sits close to
+                    coarse's 1×1 in raw cell count, yet lands with foveated and uniform on every magnitude
+                    diagnostic — per-step feature variety, not encoder geometry, is the driver.</li>
+                <li><strong>Probe-depth sweep.</strong> Linear → MLP-1 → MLP-2 → MLP-4: gap closes monotonically
+                    with depth, consistent with non-linear scene-conditional encoding.</li>
+                <li><strong>Mutual information (MINE).</strong> Total I(<strong>h</strong><sub>2</sub>; pos)
+                    stays within a 1.3× range across conditions (blind 6.01 bits vs. sighted mean 4.49 bits)
+                    while linear R² collapses by orders of magnitude — direct evidence that the shift is in
+                    format, not content.</li>
+                <li><strong>Hewitt–Liang permutation control.</strong> Every reported probe R² is
+                    label-permutation tested; selectivity exceeds the permuted baseline at p &lt; 0.001
+                    for all conditions where the probe is non-trivial.</li>
+            </ul>
+
+            <h3>D · Predictive Horizon (Format · H2, temporal axis)</h3>
+            <p style="font-size:0.9rem;color:#374151;margin-bottom:8px;">
+                Successor-representation diagnostic: linear R² from <strong>h</strong><sub>t</sub> to
+                position at <strong>h</strong><sub>t+k</sub> across k = 0 → 50 steps. Blind retains a
+                long forward horizon (R² ∈ [0.90, 0.94] from k = 0 to k = 20, dropping to 0.79 at k = 50),
+                consistent with an integration-route map that rolls forward. Sighted conditions decay
+                much faster, consistent with a moment-to-moment, vision-anchored code.
+            </p>
+
+            <h3>E · Persistent Homology — Pre-Registered Direction</h3>
+            <p style="font-size:0.9rem;color:#374151;margin-bottom:8px;">
+                The persistent-homology direction reported in the Cog-Neuro section (blind highest H₁ loop
+                count, uniform lowest) was <strong>pre-registered in the opposite direction</strong> — we
+                expected uniform highest because rich-encoder manifolds appeared more fragmented. We
+                report what the data show; the inversion is consistent with bottleneck codes being more
+                topologically structured (fewer, longer-lived loops) while rich-encoder codes are more
+                scattered.
             </p>
         </div>
     </section>
