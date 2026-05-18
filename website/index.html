@@ -23,11 +23,22 @@
                 <a class="btn btn-secondary" href="https://huggingface.co/alunxu/spatial-memory-checkpoints"
                     target="_blank">Checkpoints ↗</a>
             </div>
+            <nav class="toc">
+                <a href="#abstract">Abstract</a>
+                <a href="#methods">Methods</a>
+                <a href="#navigation">Navigation</a>
+                <a href="#magnitude">Magnitude</a>
+                <a href="#format">Format</a>
+                <a href="#rsa">RSA</a>
+                <a href="#consumption">Consumption</a>
+                <a href="#cogneuro">Cog-Neuro</a>
+                <a href="#code">Code</a>
+            </nav>
         </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════════ ABSTRACT -->
-    <section>
+    <section id="abstract">
         <div class="container">
             <h2>Abstract</h2>
             <p class="abstract-text">
@@ -48,22 +59,29 @@
                 <em>cognition-enabling</em> rather than merely compute-saving.
             </p>
 
+            <p class="abstract-text" style="margin-bottom:18px;font-size:0.95rem;color:#1e3a8a;background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 6px 6px 0;padding:12px 16px;">
+                <strong>How to read this page.</strong> The three cards below — <em>Magnitude</em>,
+                <em>Format</em>, <em>Consumption</em> — frame the central claim. Each results section
+                supports one of them; the RSA and Cognitive-Neuroscience sections corroborate
+                <em>Format</em> with independent, biology-derived tools.
+            </p>
+
             <div class="hyp-cards">
                 <div class="hyp-card">
-                    <div class="hyp-label">Magnitude</div>
+                    <div class="hyp-label">H1 · Magnitude</div>
                     <p>Linear GPS readability declines monotonically from R²&nbsp;=&nbsp;+0.93 (blind) to −1.79
                         (uniform) while every agent still reliably reaches the goal. The encoder and LSTM memory compete
                         for a finite capacity budget: richer encoders pre-format position visually, freeing memory from
                         the integration route.</p>
                 </div>
                 <div class="hyp-card">
-                    <div class="hyp-label">Format</div>
+                    <div class="hyp-label">H2 · Format</div>
                     <p>The magnitude collapse is a <em>format shift</em>, not an information loss. MLP probes recover
                         position even where linear probes fail. Conditions develop nearly orthogonal position subspaces
                         (9/10 pairs &gt;75°), and scene-invariance flips binary at the vision-on/off boundary.</p>
                 </div>
                 <div class="hyp-card">
-                    <div class="hyp-label">Consumption</div>
+                    <div class="hyp-label">H3 · Consumption</div>
                     <p>Probe-readability dissociates from policy reliance: Coarse has a readable code but barely uses
                         it; Uniform has no readable code yet suffers the largest persistent-memory penalty. A causal
                         β-subspace ablation shows the readable axis is one window into a distributed population
@@ -74,7 +92,7 @@
     </section>
 
     <!-- ═══════════════════════════════════════════════════════ METHODS -->
-    <section>
+    <section id="methods">
         <div class="container">
             <h2>Setup &amp; Methods</h2>
 
@@ -217,7 +235,7 @@
     </section>
 
     <!-- ════════════════════════════════════════════ NAVIGATION RESULTS -->
-    <section>
+    <section id="navigation">
         <div class="container">
             <h2>Navigation Performance &amp; Spatial Probes</h2>
 
@@ -301,9 +319,9 @@
     </section>
 
     <!-- ══════════════════════════════════════════════ MAGNITUDE RESULTS -->
-    <section>
+    <section id="magnitude">
         <div class="container">
-            <h2>Magnitude: Linear Position Code Weakens with Encoder Bandwidth</h2>
+            <h2><span class="section-tag">H1</span> Magnitude: Linear Position Code Weakens with Encoder Bandwidth</h2>
 
             <div class="callout">
                 <strong>Three convergent diagnostics.</strong> (a) GPS R² declines monotonically across the bandwidth
@@ -335,9 +353,9 @@
     </section>
 
     <!-- ════════════════════════════════════════════════ FORMAT RESULTS -->
-    <section>
+    <section id="format">
         <div class="container">
-            <h2>Format: Position is Encoded in Distinct Forms Across Conditions</h2>
+            <h2><span class="section-tag">H2</span> Format: Position is Encoded in Distinct Forms Across Conditions</h2>
 
             <div class="callout">
                 <strong>A format shift, not an information loss.</strong> Non-linear probes recover position at
@@ -377,9 +395,9 @@
             </p>
             <figure class="paper-figure" style="margin-bottom:20px;">
                 <img src="assets/transplant_bars.png" alt="Memory transplant results bar chart">
-                <figcaption>Cross-condition memory transplant costs. Bottleneck-to-rich transplants (blind donor →
-                    rich-encoder recipient) are asymmetrically more harmful than the reverse, reflecting the
-                    incompatible position-code formats.</figcaption>
+                <figcaption>Cross-condition memory transplant costs. Every cross-condition transplant produces a
+                    significant SPL drop (−16% to −25%), confirming that the position-code formats are mechanistically
+                    incompatible — not just superficially different probe readouts.</figcaption>
             </figure>
             <table>
                 <thead>
@@ -426,15 +444,20 @@
     </section>
 
     <!-- ════════════════════════════════════════════════════ RSA RESULTS -->
-    <section>
+    <section id="rsa">
         <div class="container">
-            <h2>Representational Similarity Analysis</h2>
+            <h2><span class="section-tag h2-tag">H2</span> Representational Similarity Analysis</h2>
+            <p style="font-size:0.88rem;color:#6b7280;margin-bottom:14px;">
+                <strong>Where this fits:</strong> RSA is a rotation-invariant geometry check that complements the
+                subspace-direction evidence for <em>Format</em> (H2). It asks whether <em>pairwise dissimilarity
+                structure</em> — not the readout axis — varies with sensor condition.
+            </p>
 
             <div class="callout">
-                <strong>RSA reveals two surprises.</strong> (H1) The foveated condition is the only one whose
+                <strong>RSA reveals two surprises.</strong> (RSA-Q1) The foveated condition is the only one whose
                 memory geometry shows <em>no</em> significant eccentricity effect (τ_a&nbsp;=&nbsp;+0.053,
                 p&nbsp;=&nbsp;0.250) — the blur transform actively suppresses eccentricity-dependent structure,
-                while all other conditions including log-polar retain it. (H2) Coarse and Uniform share the
+                while all other conditions including log-polar retain it. (RSA-Q2) Coarse and Uniform share the
                 <em>most</em> similar RDM structure (τ_a&nbsp;=&nbsp;0.723), and Uniform is closer to Blind
                 (0.642) than to Foveated (0.264) — RSA geometry does not track the linear-readability axis.
             </div>
@@ -450,7 +473,7 @@
                 </figcaption>
             </figure>
 
-            <h3>H1 — Eccentricity Effect on Memory Geometry</h3>
+            <h3>RSA-Q1 — Eccentricity Effect on Memory Geometry</h3>
             <p style="font-size:0.88rem;color:#374151;margin-bottom:12px;">
                 Does the representational geometry of memory reflect spatial eccentricity
                 (distance from scene centre)? Kendall's τ_a compares RDMs at low vs. high eccentricity.
@@ -498,7 +521,7 @@
                         </td>
                         <td>+0.053</td>
                         <td class="drop">0.250 (n.s.)</td>
-                        <td>+11.50</td>
+                        <td>+11.50<sup>†</sup></td>
                     </tr>
                     <tr>
                         <td><span
@@ -518,8 +541,14 @@
                     </tr>
                 </tbody>
             </table>
+            <p style="font-size:0.78rem;color:#6b7280;margin-top:-18px;margin-bottom:24px;">
+                <sup>†</sup> Foveated's Δ mean dissimilarity (+11.50) is roughly 25× the other conditions because
+                the blur transform inflates the absolute scale of pairwise hidden-state distances. Despite this
+                large absolute gap, the <em>rank-order</em> structure is unchanged (τ_a&nbsp;=&nbsp;+0.053, n.s.),
+                which is the eccentricity-effect signal — not the magnitude column.
+            </p>
 
-            <h3>H2 — Cross-Agent RDM Similarity</h3>
+            <h3>RSA-Q2 — Cross-Agent RDM Similarity</h3>
             <p style="font-size:0.88rem;color:#374151;margin-bottom:12px;">
                 How similar is the representational geometry between pairs of conditions?
                 Kendall's τ_a between RDMs measures whether the two conditions organise
@@ -582,9 +611,9 @@
     </section>
 
     <!-- ══════════════════════════════════════════════ CONSUMPTION RESULTS -->
-    <section>
+    <section id="consumption">
         <div class="container">
-            <h2>Consumption: Probe-Readability Dissociates from Policy Reliance</h2>
+            <h2><span class="section-tag">H3</span> Consumption: Probe-Readability Dissociates from Policy Reliance</h2>
 
             <div class="callout">
                 <strong>Two off-diagonal cases.</strong> Coarse carries a strong linear GPS code (R²&nbsp;=&nbsp;+0.58)
@@ -654,9 +683,15 @@
     </section>
 
     <!-- ══════════════════════════════════════════ COGNEURO ANALYSES -->
-    <section>
+    <section id="cogneuro">
         <div class="container">
             <h2>Cognitive Neuroscience Analyses</h2>
+            <p style="font-size:0.88rem;color:#6b7280;margin-bottom:14px;">
+                <strong>Where this fits:</strong> these four analyses corroborate <em>Format</em> (H2) with
+                independent, biology-derived tools — temporal dynamics, manifold topology, and an
+                architecture-agnostic re-test on Memory Maze + DINOv2. Together they show the format-shift
+                holds beyond linear probing.
+            </p>
             <p class="abstract-text">
                 We apply a battery of systems-neuroscience tools — intrinsic timescales, temporal generalization
                 matrices, persistent homology, and an architecture-agnostic world-model probe — to characterise
@@ -878,7 +913,7 @@
     </section>
 
     <!-- ═══════════════════════════════════════════════════ CODE & DATA -->
-    <section>
+    <section id="code">
         <div class="container">
             <h2>Code &amp; Data</h2>
             <div class="resource-buttons">

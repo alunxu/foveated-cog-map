@@ -95,10 +95,57 @@ a:hover {
     border: 1px solid #d1d5db;
 }
 
+/* ── TOC ── */
+.toc {
+    margin-top: 22px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 6px;
+    max-width: 740px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.toc a {
+    font-size: 0.78rem;
+    color: #6b7280;
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+}
+
+.toc a:hover {
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    text-decoration: none;
+}
+
+/* ── SECTION TAG ── */
+.section-tag {
+    display: inline-block;
+    background: #1d4ed8;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    vertical-align: middle;
+    margin-right: 8px;
+    letter-spacing: 0.05em;
+}
+
+.section-tag.h2-tag {
+    background: #7c3aed;
+}
+
 /* ── SECTIONS ── */
 section {
     padding: 56px 0;
     border-bottom: 1px solid #e5e7eb;
+    scroll-margin-top: 12px;
 }
 
 section:last-of-type {
