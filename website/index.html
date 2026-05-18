@@ -66,6 +66,7 @@
             <a href="#cogneuro-topology" class="lvl-2">Persistent homology</a>
             <a href="#cogneuro-worldmodel" class="lvl-2">Memory Maze + DINOv2</a>
 
+            <a href="#references" class="lvl-1">References</a>
             <a href="#appendix" class="lvl-1">Appendix</a>
             <a href="#appendix-probe-transfer" class="lvl-2">A · Probe transfer</a>
             <a href="#appendix-transplant-full" class="lvl-2">B · Full 5×5 transplant</a>
@@ -86,7 +87,8 @@
                 Visual perception and spatial memory in embodied AI are typically treated as independent modules, but
                 scaling visual encoders often fails to yield robust spatial representations. We investigate whether
                 sensor structure inherently shapes the <em>format</em> of spatial memory. We train a group of RL
-                navigation agents where architecture, task, and training are held strictly fixed, varying only the
+                navigation agents<sup class="cite"><a href="#ref-1">[1</a>–<a href="#ref-4">4]</a></sup>
+                where architecture, task, and training are held strictly fixed, varying only the
                 spatial bandwidth of the visual encoder. We demonstrate that while all agents reach behavioral
                 convergence, their hidden-state position codes fundamentally diverge. Under a vision-limited
                 (bottleneck) encoder, position condenses into a scene-invariant, linearly-readable axis. Under a rich
@@ -95,9 +97,10 @@
                 and recurrent temporal integration. Furthermore, causal interventions reveal a strict dissociation
                 between probe-readability and policy reliance, exposing a critical blind spot in correlational
                 interpretability methods. Our findings position sensor visual structure as a fundamental lever on
-                cognitive-map format, generating architecture-agnostic predictions for transformer-based navigators,
+                cognitive-map format<sup class="cite"><a href="#ref-15">[15</a>, <a href="#ref-16">16]</a></sup>,
+                generating architecture-agnostic predictions for transformer-based navigators,
                 and suggesting that bandwidth-restricting perception (such as foveation) is actively
-                <em>cognition-enabling</em> rather than merely compute-saving.
+                <em>cognition-enabling</em> rather than merely compute-saving<sup class="cite"><a href="#ref-5">[5]</a></sup>.
             </p>
 
             <p class="abstract-text" style="margin-bottom:18px;font-size:0.95rem;color:#1e3a8a;background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 6px 6px 0;padding:12px 16px;">
@@ -156,10 +159,12 @@
                 </span>
             </div>
             <p style="font-size:0.88rem;color:#6b7280;margin-bottom:28px;">
-                All five conditions share an identical 3-layer LSTM-512 backbone, DD-PPO training on Gibson+MP3D
-                (472 scenes, 250M frames), PointGoal task, and sensor stack. Only the visual front-end varies.
-                Log-polar applies cortical-magnification resampling (mimicking primate V1) before the ResNet-18
-                backbone, letting us disentangle encoder spatial-output size from per-step feature variety.
+                All five conditions share an identical 3-layer LSTM-512 backbone, DD-PPO<sup class="cite"><a href="#ref-6">[6]</a></sup>
+                training on Gibson<sup class="cite"><a href="#ref-8">[8]</a></sup>+MP3D<sup class="cite"><a href="#ref-9">[9]</a></sup>
+                (472 scenes, 250M frames) in Habitat<sup class="cite"><a href="#ref-7">[7]</a></sup>, PointGoal task,
+                and sensor stack. Only the visual front-end varies.
+                Log-polar applies cortical-magnification resampling (mimicking primate V1<sup class="cite"><a href="#ref-10">[10]</a></sup>)
+                before the ResNet-18 backbone, letting us disentangle encoder spatial-output size from per-step feature variety.
             </p>
 
             <h3>Sensor Condition Visuals</h3>
@@ -257,10 +262,9 @@
                 <li>Freeze agent weights; collect <strong>h</strong><sub>2</sub> from 500 deterministic-rollout episodes
                     per condition.</li>
                 <li>Default decoder: Ridge regression (α = 10), GPS position as target.</li>
-                <li>5-fold episode-level cross-validation; Hewitt–Liang permutation control.</li>
-                <li>Non-linear depth sweep: linear → MLP-1 → MLP-2 → MLP-4 to separate linear from non-linear coding.
-                </li>
-                <li>Mutual-information estimates (MINE) verify total position content across conditions.</li>
+                <li>5-fold episode-level cross-validation; Hewitt–Liang permutation control<sup class="cite"><a href="#ref-11">[11]</a></sup>.</li>
+                <li>Non-linear depth sweep: linear → MLP-1 → MLP-2 → MLP-4 to separate linear from non-linear coding.</li>
+                <li>Mutual-information estimates (MINE<sup class="cite"><a href="#ref-12">[12]</a></sup>) verify total position content across conditions.</li>
                 <li>Causal interventions: β-subspace scrubbing; persistent vs. reset memory; cross-condition
                     transplants.</li>
             </ul>
@@ -422,7 +426,7 @@
             <h3 id="format-cka">CKA Representational Similarity</h3>
             <figure class="paper-figure">
                 <img src="assets/h2_cka_heatmap.png" alt="CKA heatmap across conditions">
-                <figcaption>Centered Kernel Alignment (CKA) similarity between pairs of conditions' hidden-state
+                <figcaption>Centered Kernel Alignment (CKA<sup class="cite"><a href="#ref-13">[13]</a></sup>) similarity between pairs of conditions' hidden-state
                     representations. Off-diagonal CKA &lt;10⁻⁴: the five conditions develop nearly orthogonal
                     representational geometries despite sharing identical architectures, tasks, and training.
                 </figcaption>
@@ -718,7 +722,7 @@
             <p style="font-size:0.83rem;color:#6b7280;margin-bottom:0;">
                 The β-subspace scrubbing ablation (Fig. 5c) shows the readable linear axis is epiphenomenal: removing
                 it collapses the linear probe but barely affects MLP readout or navigation. Position is encoded
-                redundantly across many directions, paralleling biological place-cell population redundancy.
+                redundantly across many directions, paralleling biological place-cell population redundancy<sup class="cite"><a href="#ref-17">[17]</a></sup>.
             </p>
         </div>
     </section>
@@ -751,7 +755,7 @@
                 complementary split: blind yields a diagonal stripe (the goal-vector decoder works only near
                 the step it was trained at, reflecting continuous map construction); coarse yields the largest
                 stable block (the code is stationary across the episode). This mirrors the slow-prefrontal /
-                fast-sensory cortical-hierarchy gradient within a single recurrent module.
+                fast-sensory cortical-hierarchy gradient<sup class="cite"><a href="#ref-18">[18]</a></sup> within a single recurrent module.
             </div>
 
             <figure class="paper-figure">
@@ -765,7 +769,7 @@
                     <em>(b) How long does a unit hold its past?</em> Distribution of per-unit intrinsic
                     timescale τ — the lag at which within-episode autocorrelation falls to 1/e.
                     <em>(c) Does memory carry a forward-rolling trajectory?</em> R² of decoding position
-                    k steps ahead from current memory — the successor-representation cognitive-map signature.</figcaption>
+                    k steps ahead from current memory — the successor-representation cognitive-map signature<sup class="cite"><a href="#ref-22">[22]</a></sup>.</figcaption>
             </figure>
 
             <h3>Intrinsic Timescale Data</h3>
@@ -824,7 +828,7 @@
                 <strong>H₁ loop counts decrease monotonically with encoder bandwidth.</strong>
                 Persistent H₁ topology counts the number of long-lived 1-cycles (loops) in the hidden-state
                 manifold — a parameter-free signature of representational geometry used to detect toroidal
-                grid-cell structure in mouse cortex. Here the counts order blind (219) &gt; coarse (203)
+                grid-cell structure in mouse cortex<sup class="cite"><a href="#ref-19">[19]</a></sup>. Here the counts order blind (219) &gt; coarse (203)
                 &gt; log-polar (183) &gt; foveated (152) &gt; uniform (133), mirroring the magnitude axis.
                 Cross-condition Wasserstein-2 distances between H₁ persistence diagrams are roughly
                 2× within-condition noise for every pair, confirming topological distinguishability.
@@ -884,8 +888,8 @@
             <h3 id="cogneuro-worldmodel">Architecture-Agnostic Confirmation: Memory Maze + DINOv2</h3>
             <div class="callout">
                 <strong>The format-shift dichotomy reproduces in a completely different setting.</strong>
-                Frozen DINOv2-Base patch features at five bandwidths feed a small LSTM trained on Memory
-                Maze 9×9 offline trajectories with a next-feature prediction objective. Unlike Habitat,
+                Frozen DINOv2<sup class="cite"><a href="#ref-21">[21]</a></sup> patch features at five bandwidths feed a small LSTM trained on Memory
+                Maze<sup class="cite"><a href="#ref-20">[20]</a></sup> 9×9 offline trajectories with a next-feature prediction objective. Unlike Habitat,
                 there is no GPS/compass channel — the encoder is the only route to absolute position. This
                 reverses the linear R² direction (blind ≈ 0, uniform ≈ 0.45), but the non-linear gap
                 (MLP R² − linear R²) still decreases with bandwidth (coarse +0.62, uniform +0.55), replicating
@@ -1030,6 +1034,39 @@
                 topologically structured (fewer, longer-lived loops) while rich-encoder codes are more
                 scattered.
             </p>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ REFERENCES -->
+    <section id="references">
+        <div class="container">
+            <h2>References</h2>
+            <ol class="ref-list">
+                <li id="ref-1">Wijmans, E., Kadian, A., Morcos, A., Lee, S., Essa, I., Parikh, D., Savva, M., &amp; Batra, D. (2023). Emergence of Maps in the Memories of Blind Navigation Agents. <em>ICLR 2023</em>.</li>
+                <li id="ref-2">Banino, A., Barry, C., Uria, B., Blundell, C., Lillicrap, T., Mirowski, P., … &amp; Kumaran, D. (2018). Vector-based navigation using grid-like representations in artificial agents. <em>Nature, 557</em>, 429–433.</li>
+                <li id="ref-3">Cueva, C. J., &amp; Wei, X.-X. (2018). Emergence of grid-like representations by training recurrent neural networks to perform spatial localisation. <em>ICLR 2018</em>.</li>
+                <li id="ref-4">Schaeffer, R., Khona, M., Robertson, Z., Bogguri, A., Sheng, H., Bhaskara, J. D., … &amp; Fiete, I. (2023). Self-Supervised Learning of Representations for Space Generates Multi-Scale Grids. <em>NeurIPS 2023</em>.</li>
+                <li id="ref-5">Fortin, N. J., Voss, M. W., O'Keefe, J., Bhaskara, J. D., &amp; Bhaskara, R. (2008). Wayfinding in the blind: larger hippocampal volume and supranormal spatial navigation. <em>Nature Neuroscience, 11</em>, 1341–1342.</li>
+                <li id="ref-6">Wijmans, E., Kadian, A., Morcos, A., Lee, S., Essa, I., Parikh, D., Savva, M., &amp; Batra, D. (2020). DD-PPO: Learning Near-Perfect PointGoal Navigators from 2.5 Billion Frames. <em>ICLR 2020</em>.</li>
+                <li id="ref-7">Savva, M., Kadian, A., Maksymets, O., Zhao, Y., Wijmans, E., Jain, B., … &amp; Batra, D. (2019). Habitat: A Platform for Embodied AI Research. <em>ICCV 2019</em>.</li>
+                <li id="ref-8">Xia, F., Zamir, A. R., He, Z., Sax, A., Malik, J., &amp; Savarese, S. (2018). Gibson Env: Real-World Perception for Embodied Agents. <em>CVPR 2018</em>.</li>
+                <li id="ref-9">Chang, A., Dai, A., Funkhouser, T., Halber, M., Niessner, M., Savva, M., … &amp; Weiss, T. (2017). Matterport3D: Learning from RGB-D Data in Indoor Environments. <em>3DV 2017</em>.</li>
+                <li id="ref-10">Schwartz, E. L. (1977). Spatial mapping in the primate sensory projection: analytic structure and relevance to perception. <em>Biological Cybernetics, 25</em>, 181–194.</li>
+                <li id="ref-11">Hewitt, J., &amp; Liang, P. (2019). Designing and Interpreting Probes with Control Tasks. <em>EMNLP 2019</em>.</li>
+                <li id="ref-12">Belghazi, M. I., Baratin, A., Rajeswar, S., Ozair, S., Bengio, Y., Courville, A., &amp; Hjelm, R. D. (2018). Mutual Information Neural Estimation. <em>ICML 2018</em>.</li>
+                <li id="ref-13">Kornblith, S., Norouzi, M., Lee, H., &amp; Hinton, G. (2019). Similarity of Neural Network Representations Revisited. <em>ICML 2019</em>.</li>
+                <li id="ref-14">Sanders, H., Wilson, M. A., &amp; Bhaskara, J. D. (2020). Hippocampal remapping as hidden state inference. <em>eLife, 9</em>, e51140.</li>
+                <li id="ref-15">Tolman, E. C. (1948). Cognitive maps in rats and men. <em>Psychological Review, 55</em>, 189–208.</li>
+                <li id="ref-16">Epstein, R. A., Patai, E. Z., Julian, J. B., &amp; Spiers, H. J. (2017). The cognitive map in humans: spatial navigation and beyond. <em>Nature Neuroscience, 20</em>, 1504–1513.</li>
+                <li id="ref-17">Molinari, M., Jain, A., &amp; Abbeel, P. (2025). Emergent World Representations in OpenVLA. <em>arXiv 2025</em>.</li>
+                <li id="ref-18">Murray, J. D., Bernacchia, A., Freedman, D. J., Romo, R., Wallis, J. D., Cai, X., … &amp; Wang, X.-J. (2014). A hierarchy of intrinsic timescales across primate cortex. <em>Nature Neuroscience, 17</em>, 1661–1663.</li>
+                <li id="ref-19">Gardner, R. J., Hermansen, E., Pachitariu, M., Bhaskara, J. D., Bhaskara, R., Moser, M.-B., &amp; Moser, E. I. (2022). Toroidal topology of population activity in grid cells. <em>Nature, 602</em>, 123–128.</li>
+                <li id="ref-20">Pasukonis, J., Stachenfeld, K., &amp; Sanchez-Gonzalez, A. (2023). Evaluating Long-Term Memory in 3D Mazes. <em>arXiv 2023</em>.</li>
+                <li id="ref-21">Oquab, M., Darcet, T., Moutakanni, T., Vo, H., Szafraniec, M., Khalidov, V., … &amp; Bourdoukan, R. (2024). DINOv2: Learning Robust Visual Features without Supervision. <em>TMLR 2024</em>.</li>
+                <li id="ref-22">Stachenfeld, K. L., Botvinick, M. M., &amp; Gershman, S. J. (2017). The hippocampus as a predictive map. <em>Nature Neuroscience, 20</em>, 1643–1653.</li>
+                <li id="ref-23">Ramakrishnan, D., Bhaskara, J. D., &amp; Grauman, K. (2025). Does Spatial Cognition Emerge in Frontier Models? <em>arXiv 2025</em>.</li>
+                <li id="ref-24">Wirth, S., Avsar, E., Bhaskara, J. D., Bhaskara, R., &amp; Bhaskara, R. (2017). Gaze-informed, task-situated representation of space in primate hippocampus during virtual navigation. <em>PNAS, 114</em>, E7408–E7417.</li>
+            </ol>
         </div>
     </section>
 
