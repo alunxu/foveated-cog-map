@@ -95,32 +95,92 @@ a:hover {
     border: 1px solid #d1d5db;
 }
 
-/* ── TOC ── */
-.toc {
-    margin-top: 22px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px 6px;
-    max-width: 740px;
-    margin-left: auto;
-    margin-right: auto;
+/* ── SIDEBAR NAV ── */
+:root {
+    --sidebar-width: 240px;
 }
 
-.toc a {
-    font-size: 0.78rem;
-    color: #6b7280;
-    padding: 3px 10px;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
+body {
+    padding-left: var(--sidebar-width);
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    overflow-y: auto;
     background: #fafafa;
+    border-right: 1px solid #e5e7eb;
+    padding: 22px 0 32px;
+    z-index: 50;
+    font-size: 0.85rem;
 }
 
-.toc a:hover {
-    color: #1d4ed8;
-    border-color: #bfdbfe;
+.sidebar-title {
+    padding: 0 18px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b7280;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 8px;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    color: #374151;
+    padding: 5px 18px;
+    line-height: 1.35;
+    border-left: 2px solid transparent;
+}
+
+.sidebar-nav a:hover {
     background: #eff6ff;
+    color: #1d4ed8;
+    border-left-color: #2563eb;
     text-decoration: none;
+}
+
+.sidebar-nav a.lvl-1 {
+    font-weight: 600;
+    color: #111827;
+    margin-top: 10px;
+    font-size: 0.88rem;
+}
+
+.sidebar-nav a.lvl-1:first-child {
+    margin-top: 0;
+}
+
+.sidebar-nav a.lvl-2 {
+    padding-left: 34px;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.sidebar-nav .lvl-tag {
+    display: inline-block;
+    background: #1d4ed8;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    margin-right: 6px;
+    letter-spacing: 0.05em;
+}
+
+.sidebar-nav .lvl-tag.h2 {
+    background: #7c3aed;
 }
 
 /* ── SECTION TAG ── */
@@ -594,6 +654,44 @@ footer {
 }
 
 /* ── RESPONSIVE ── */
+@media (max-width: 960px) {
+    :root {
+        --sidebar-width: 0px;
+    }
+
+    body {
+        padding-left: 0;
+    }
+
+    .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        max-height: 240px;
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 0 8px;
+    }
+
+    .sidebar-nav a {
+        padding: 4px 10px;
+        border-left: none;
+    }
+
+    .sidebar-nav a.lvl-1 {
+        margin-top: 0;
+    }
+
+    .sidebar-nav a.lvl-2 {
+        padding-left: 10px;
+    }
+}
+
 @media (max-width: 640px) {
     .hyp-cards {
         grid-template-columns: 1fr;

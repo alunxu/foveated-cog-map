@@ -23,20 +23,54 @@
                 <a class="btn btn-secondary" href="https://huggingface.co/alunxu/spatial-memory-checkpoints"
                     target="_blank">Checkpoints ↗</a>
             </div>
-            <nav class="toc">
-                <a href="#abstract">Abstract</a>
-                <a href="#methods">Methods</a>
-                <a href="#navigation">Navigation</a>
-                <a href="#magnitude">Magnitude</a>
-                <a href="#format">Format</a>
-                <a href="#rsa">RSA</a>
-                <a href="#consumption">Consumption</a>
-                <a href="#cogneuro">Cog-Neuro</a>
-                <a href="#appendix">Appendix</a>
-                <a href="#code">Code</a>
-            </nav>
         </div>
     </div>
+
+    <!-- ══════════════════════════════════════════════ SIDEBAR NAV ── -->
+    <aside class="sidebar" aria-label="Section navigation">
+        <div class="sidebar-title">Contents</div>
+        <nav class="sidebar-nav">
+            <a href="#abstract" class="lvl-1">Abstract</a>
+            <a href="#methods" class="lvl-1">Setup &amp; Methods</a>
+            <a href="#methods-conditions" class="lvl-2">Five conditions</a>
+            <a href="#methods-arch" class="lvl-2">Architecture</a>
+            <a href="#methods-transforms" class="lvl-2">Visual transforms</a>
+            <a href="#methods-probing" class="lvl-2">Probing setup</a>
+
+            <a href="#navigation" class="lvl-1">Navigation &amp; Probes</a>
+
+            <a href="#magnitude" class="lvl-1"><span class="lvl-tag">H1</span>Magnitude</a>
+            <a href="#magnitude-training" class="lvl-2">Training curves</a>
+
+            <a href="#format" class="lvl-1"><span class="lvl-tag">H2</span>Format</a>
+            <a href="#format-cka" class="lvl-2">CKA similarity</a>
+            <a href="#format-transplant" class="lvl-2">Memory transplant</a>
+
+            <a href="#rsa" class="lvl-1"><span class="lvl-tag h2">H2</span>RSA</a>
+            <a href="#rsa-rdms" class="lvl-2">RDM grid</a>
+            <a href="#rsa-q1" class="lvl-2">Q1 · Eccentricity</a>
+            <a href="#rsa-q2" class="lvl-2">Q2 · Cross-agent</a>
+
+            <a href="#consumption" class="lvl-1"><span class="lvl-tag">H3</span>Consumption</a>
+            <a href="#consumption-shortcut" class="lvl-2">Shortcut paradigm</a>
+            <a href="#consumption-dissociation" class="lvl-2">Readout vs. reliance</a>
+
+            <a href="#cogneuro" class="lvl-1">Cognitive Neuroscience</a>
+            <a href="#cogneuro-temporal" class="lvl-2">Temporal dynamics</a>
+            <a href="#cogneuro-topology" class="lvl-2">Persistent homology</a>
+            <a href="#cogneuro-worldmodel" class="lvl-2">Memory Maze + DINOv2</a>
+
+            <a href="#appendix" class="lvl-1">Appendix</a>
+            <a href="#appendix-probe-transfer" class="lvl-2">A · Probe transfer</a>
+            <a href="#appendix-transplant-full" class="lvl-2">B · Full 5×5 transplant</a>
+            <a href="#appendix-robustness" class="lvl-2">C · Robustness</a>
+            <a href="#appendix-horizon" class="lvl-2">D · Predictive horizon</a>
+            <a href="#appendix-prereg" class="lvl-2">E · Pre-reg topology</a>
+
+            <a href="#code" class="lvl-1">Code &amp; Data</a>
+        </nav>
+    </aside>
+
 
     <!-- ══════════════════════════════════════════════════════ ABSTRACT -->
     <section id="abstract">
@@ -97,7 +131,7 @@
         <div class="container">
             <h2>Setup &amp; Methods</h2>
 
-            <h3>Five Experimental Conditions</h3>
+            <h3 id="methods-conditions">Five Experimental Conditions</h3>
             <div class="conditions">
                 <span class="cond-badge" style="color:#1d4ed8;border-color:#1d4ed8;background:#eff6ff">
                     <span class="cond-dot" style="background:#1d4ed8"></span>Blind (no camera)
@@ -150,7 +184,7 @@
                 </figure>
             </div>
 
-            <h3>Architecture</h3>
+            <h3 id="methods-arch">Architecture</h3>
             <figure class="paper-figure">
                 <img src="assets/architecture_setup.png" alt="Architecture and experimental setup diagram">
                 <figcaption>Non-visual sensors (goal-in-start-frame, GPS, compass, close-to-goal, previous action)
@@ -159,7 +193,7 @@
                     policy head and is the target of all probes.</figcaption>
             </figure>
 
-            <h3>Visual Transforms</h3>
+            <h3 id="methods-transforms">Visual Transforms</h3>
             <div class="fov-row">
                 <div class="fov-text">
                     <p style="margin-bottom:6px;font-weight:600;color:#111827;">Foveated — eccentricity-dependent
@@ -212,7 +246,7 @@
                     title="Schematic: log-polar resampling — rows = eccentricity, columns = angle"></div>
             </div>
 
-            <h3>Probing &amp; Analysis Setup</h3>
+            <h3 id="methods-probing">Probing &amp; Analysis Setup</h3>
             <ul class="probe-list">
                 <li>Freeze agent weights; collect <strong>h</strong><sub>2</sub> from 500 deterministic-rollout episodes
                     per condition.</li>
@@ -343,7 +377,7 @@
                     emerges only at L₂.</figcaption>
             </figure>
 
-            <h3>Training Curves</h3>
+            <h3 id="magnitude-training">Training Curves</h3>
             <figure class="paper-figure">
                 <img src="assets/training_curves.png" alt="Training reward curves across all five conditions">
                 <figcaption>All five conditions converge to comparable task performance. The two endpoint regimes
@@ -379,7 +413,7 @@
                     conditions' position-direction subspaces — 9/10 pairs at ≥75°.</figcaption>
             </figure>
 
-            <h3>CKA Representational Similarity</h3>
+            <h3 id="format-cka">CKA Representational Similarity</h3>
             <figure class="paper-figure">
                 <img src="assets/h2_cka_heatmap.png" alt="CKA heatmap across conditions">
                 <figcaption>Centered Kernel Alignment (CKA) similarity between pairs of conditions' hidden-state
@@ -388,7 +422,7 @@
                 </figcaption>
             </figure>
 
-            <h3>Memory Transplant Results</h3>
+            <h3 id="format-transplant">Memory Transplant Results</h3>
             <p style="font-size:0.85rem;color:#6b7280;margin-bottom:12px;">
                 At episode midpoint (step 30), the LSTM hidden state of the <em>donor</em> is transplanted into the
                 <em>recipient</em> agent. Diagonal = self-transplant baseline. Highlighted cells show significant
@@ -463,7 +497,7 @@
                 (0.642) than to Foveated (0.264) — RSA geometry does not track the linear-readability axis.
             </div>
 
-            <h3>Representational Dissimilarity Matrices</h3>
+            <h3 id="rsa-rdms">Representational Dissimilarity Matrices</h3>
             <figure class="paper-figure">
                 <img src="assets/rdm_grid.png" alt="RDM grid across all five conditions">
                 <figcaption>Representational dissimilarity matrices (RDMs) for all five conditions.
@@ -474,7 +508,7 @@
                 </figcaption>
             </figure>
 
-            <h3>RSA-Q1 — Eccentricity Effect on Memory Geometry</h3>
+            <h3 id="rsa-q1">RSA-Q1 — Eccentricity Effect on Memory Geometry</h3>
             <p style="font-size:0.88rem;color:#374151;margin-bottom:12px;">
                 Does the representational geometry of memory reflect spatial eccentricity
                 (distance from scene centre)? Kendall's τ_a compares RDMs at low vs. high eccentricity.
@@ -549,7 +583,7 @@
                 which is the eccentricity-effect signal — not the magnitude column.
             </p>
 
-            <h3>RSA-Q2 — Cross-Agent RDM Similarity</h3>
+            <h3 id="rsa-q2">RSA-Q2 — Cross-Agent RDM Similarity</h3>
             <p style="font-size:0.88rem;color:#374151;margin-bottom:12px;">
                 How similar is the representational geometry between pairs of conditions?
                 Kendall's τ_a between RDMs measures whether the two conditions organise
@@ -637,7 +671,7 @@
                 </figcaption>
             </figure>
 
-            <h3>Shortcut Paradigm Results</h3>
+            <h3 id="consumption-shortcut">Shortcut Paradigm Results</h3>
             <figure class="paper-figure">
                 <img src="assets/shortcut_bars.png" alt="Shortcut paradigm SPL results">
                 <figcaption>Per-condition persistent vs. reset SPL. The gap measures how much the policy relies on
@@ -646,7 +680,7 @@
                     GPS code.</figcaption>
             </figure>
 
-            <h3>Cognitive-Map Readout vs. Policy Reliance Dissociation</h3>
+            <h3 id="consumption-dissociation">Cognitive-Map Readout vs. Policy Reliance Dissociation</h3>
             <table>
                 <thead>
                     <tr>
@@ -703,7 +737,7 @@
             </p>
 
             <!-- ── Temporal dynamics ── -->
-            <h3>Temporal Dynamics: Intrinsic Timescales &amp; Temporal Generalization</h3>
+            <h3 id="cogneuro-temporal">Temporal Dynamics: Intrinsic Timescales &amp; Temporal Generalization</h3>
             <div class="callout">
                 <strong>Integration route runs slow; visual route ticks fast.</strong> Blind's memory units have
                 a median autocorrelation timescale of τ&nbsp;≈&nbsp;19.3 steps — more than twice any sighted
@@ -779,7 +813,7 @@
             </table>
 
             <!-- ── Persistent Homology ── -->
-            <h3>Topological Structure: Persistent Homology</h3>
+            <h3 id="cogneuro-topology">Topological Structure: Persistent Homology</h3>
             <div class="callout">
                 <strong>H₁ loop counts decrease monotonically with encoder bandwidth.</strong>
                 Persistent H₁ topology counts the number of long-lived 1-cycles (loops) in the hidden-state
@@ -841,7 +875,7 @@
             </p>
 
             <!-- ── World model probe ── -->
-            <h3>Architecture-Agnostic Confirmation: Memory Maze + DINOv2</h3>
+            <h3 id="cogneuro-worldmodel">Architecture-Agnostic Confirmation: Memory Maze + DINOv2</h3>
             <div class="callout">
                 <strong>The format-shift dichotomy reproduces in a completely different setting.</strong>
                 Frozen DINOv2-Base patch features at five bandwidths feed a small LSTM trained on Memory
@@ -924,7 +958,7 @@
                 repository</a>.
             </p>
 
-            <h3>A · Cross-Condition Probe Transfer (Format · H2)</h3>
+            <h3 id="appendix-probe-transfer">A · Cross-Condition Probe Transfer (Format · H2)</h3>
             <div class="callout">
                 <strong>Position axes are jointly incompatible at the readout level.</strong> Train a Ridge GPS
                 probe on the hidden states of one condition (row), test it on another (column). Every off-diagonal
@@ -942,7 +976,7 @@
                 claim that format divergence is intrinsic to the policy's representation, not a probe artefact.
             </p>
 
-            <h3>B · Full 5×5 Memory-Transplant Matrix (Format · H2)</h3>
+            <h3 id="appendix-transplant-full">B · Full 5×5 Memory-Transplant Matrix (Format · H2)</h3>
             <p style="font-size:0.9rem;color:#374151;margin-bottom:8px;">
                 The four-row table in the Format section reports the most-interpretable cells; the complete
                 5×5 matrix evaluates every donor → recipient pair at episode midpoint t = 30, with the diagonal
@@ -952,7 +986,7 @@
                 blind-axis cells only.
             </p>
 
-            <h3>C · Robustness &amp; Controls</h3>
+            <h3 id="appendix-robustness">C · Robustness &amp; Controls</h3>
             <ul class="probe-list">
                 <li><strong>Behavioural control.</strong> The same linear decoder reads distance-to-goal at
                     R² ≥ 0.88 in every condition — the probe has the capacity, so rich-encoder
@@ -972,7 +1006,7 @@
                     for all conditions where the probe is non-trivial.</li>
             </ul>
 
-            <h3>D · Predictive Horizon (Format · H2, temporal axis)</h3>
+            <h3 id="appendix-horizon">D · Predictive Horizon (Format · H2, temporal axis)</h3>
             <p style="font-size:0.9rem;color:#374151;margin-bottom:8px;">
                 Successor-representation diagnostic: linear R² from <strong>h</strong><sub>t</sub> to
                 position at <strong>h</strong><sub>t+k</sub> across k = 0 → 50 steps. Blind retains a
@@ -981,7 +1015,7 @@
                 much faster, consistent with a moment-to-moment, vision-anchored code.
             </p>
 
-            <h3>E · Persistent Homology — Pre-Registered Direction</h3>
+            <h3 id="appendix-prereg">E · Persistent Homology — Pre-Registered Direction</h3>
             <p style="font-size:0.9rem;color:#374151;margin-bottom:8px;">
                 The persistent-homology direction reported in the Cog-Neuro section (blind highest H₁ loop
                 count, uniform lowest) was <strong>pre-registered in the opposite direction</strong> — we
