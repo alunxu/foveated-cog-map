@@ -95,10 +95,180 @@ a:hover {
     border: 1px solid #d1d5db;
 }
 
+/* ── FLOATING SIDEBAR + PEBBLE ── */
+.sidebar-pebble {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.sidebar-pebble:hover {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.sidebar-pebble .pebble-icon {
+    font-size: 0.9rem;
+    letter-spacing: 0;
+}
+
+.sidebar-pebble.hidden {
+    display: none;
+}
+
+.sidebar {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    width: 252px;
+    max-height: calc(100vh - 28px);
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: saturate(140%) blur(8px);
+    -webkit-backdrop-filter: saturate(140%) blur(8px);
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+    padding: 6px 0 14px;
+    z-index: 55;
+    font-size: 0.85rem;
+    transition: opacity 0.18s, transform 0.18s;
+}
+
+.sidebar.collapsed {
+    opacity: 0;
+    transform: translateX(-12px);
+    pointer-events: none;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px 8px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 8px;
+}
+
+.sidebar-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+.sidebar-close {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.15s;
+}
+
+.sidebar-close:hover {
+    color: #111827;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    color: #374151;
+    padding: 5px 18px;
+    line-height: 1.35;
+    border-left: 2px solid transparent;
+}
+
+.sidebar-nav a:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-left-color: #2563eb;
+    text-decoration: none;
+}
+
+.sidebar-nav a.lvl-1 {
+    font-weight: 600;
+    color: #111827;
+    margin-top: 10px;
+    font-size: 0.88rem;
+}
+
+.sidebar-nav a.lvl-1:first-child {
+    margin-top: 0;
+}
+
+.sidebar-nav a.lvl-2 {
+    padding-left: 34px;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.sidebar-nav .lvl-tag {
+    display: inline-block;
+    background: #1d4ed8;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    margin-right: 6px;
+    letter-spacing: 0.05em;
+}
+
+.sidebar-nav .lvl-tag.h2 {
+    background: #7c3aed;
+}
+
+/* ── SECTION TAG ── */
+.section-tag {
+    display: inline-block;
+    background: #1d4ed8;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    vertical-align: middle;
+    margin-right: 8px;
+    letter-spacing: 0.05em;
+}
+
+.section-tag.h2-tag {
+    background: #7c3aed;
+}
+
 /* ── SECTIONS ── */
 section {
     padding: 56px 0;
     border-bottom: 1px solid #e5e7eb;
+    scroll-margin-top: 12px;
 }
 
 section:last-of-type {
@@ -537,6 +707,40 @@ td.cross {
     background: #f8f9fa;
 }
 
+/* ── CITATIONS ── */
+sup.cite {
+    font-size: 0.7em;
+    vertical-align: super;
+    line-height: 0;
+}
+
+sup.cite a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+sup.cite a:hover {
+    text-decoration: underline;
+}
+
+.ref-list {
+    list-style: decimal;
+    padding-left: 24px;
+    font-size: 0.84rem;
+    color: #374151;
+    line-height: 1.65;
+}
+
+.ref-list li {
+    margin-bottom: 8px;
+    scroll-margin-top: 12px;
+}
+
+.ref-list em {
+    color: #111827;
+}
+
 /* ── FOOTER ── */
 footer {
     text-align: center;
@@ -548,6 +752,11 @@ footer {
 
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
+    .sidebar {
+        width: calc(100vw - 28px);
+        max-width: 320px;
+    }
+
     .hyp-cards {
         grid-template-columns: 1fr;
     }
