@@ -202,14 +202,16 @@ def panel_a_dissociation_with_pull(ax) -> None:
         ax.scatter(x, y, s=320, color=r["colour"],
                    marker=r["marker"], edgecolor="white", linewidth=1.8,
                    zorder=5)
-        tip_offset = 8 if stem_dx >= 0 else -8
-        ha = "left" if stem_dx >= 0 else "right"
+        # Margin value annotated on the RIGHT side of the marker (arrow
+        # tail), independent of arrow direction --- keeps all margin
+        # labels in a clean right-of-marker column rather than scattered
+        # at the arrow tips.
         ax.annotate(
             f"{m:+.1f} m",
-            (x + stem_dx, y),
-            xytext=(tip_offset, 0), textcoords="offset points",
+            (x, y),
+            xytext=(14, 0), textcoords="offset points",
             fontsize=17, color=r["colour"], weight="bold",
-            ha=ha, va="center", zorder=6,
+            ha="left", va="center", zorder=6,
         )
         # Per-condition label offsets to avoid overlap.
         # Default: 14pt above the marker, centred horizontally.
