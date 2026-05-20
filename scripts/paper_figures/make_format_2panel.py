@@ -42,12 +42,21 @@ apply_paper_style()
 
 CONDS = [
     # (rcp_key,            mlp_key,             loso_key,            label,     color,    marker)
-    ("blind_izar",        "blind_izar",        "blind",            "Blind",         "#444444", "o"),
+    # rcp_key is also used as the transplant-file stem (blind, coarse, fnorm, ...) and the NPZ_FILES lookup.
+    ("blind",             "blind_izar",        "blind",            "Blind",         "#444444", "o"),
     ("coarse",            "coarse",            "coarse",           "Coarse",        "#377eb8", "s"),
-    ("foveated_logpolar", "foveated_logpolar", "foveated_logpolar","Log-polar",  "#984ea3", "v"),
-    ("foveated",          "foveated",          "foveated",          "Foveated",      "#e41a1c", "D"),
+    ("fnorm",             "fnorm",             "foveated",         "Foveated",      "#e41a1c", "D"),
+    ("foveated_logpolar", "foveated_logpolar", "foveated_logpolar","Log-polar",     "#984ea3", "v"),
     ("uniform",           "uniform",           "uniform",          "Uniform",       "#4daf4a", "^"),
 ]
+# Explicit NPZ filename per condition (used by panel A PCA manifold).
+NPZ_FILES = {
+    "blind":             "blind_det_ckpt49.npz",
+    "coarse":            "coarse_det.npz",
+    "foveated_logpolar": "foveated_logpolar_det.npz",
+    "fnorm":             "fnorm_det_ckpt49.npz",
+    "uniform":           "uniform_det.npz",
+}
 CLIP_MIN = -1.0
 RCP_DIR = Path("/tmp/rcp_analysis")
 RCP_V3 = Path("/tmp/rcp_analysis_v3")
@@ -88,7 +97,7 @@ def panel_a_manifold(fig, parent_gs) -> None:
     pooled_x = []
     sampled = {}
     for rcp_key, *_ in CONDS:
-        p = NPZ_DIR / f"{rcp_key}_det_RCP.npz"
+        p = NPZ_DIR / NPZ_FILES.get(rcp_key, f"{rcp_key}_det_RCP.npz")
         if not p.exists():
             continue
         d = np.load(p, allow_pickle=True)
@@ -152,14 +161,14 @@ def _aggregate_transplant_recipient_cost(rcp_dir: Path) -> dict:
 
     Returns: {recipient_key: mean_abs_delta}
     """
-    keys = ["blind_izar", "coarse", "foveated_logpolar", "foveated", "uniform"]
-    # Map cluster filenames (no '_izar') to keys
+    keys = ["blind", "coarse", "fnorm", "foveated_logpolar", "uniform"]
+    # Map cluster filenames — these match the transplant_results/{donor}_to_{recipient}_mid30.json naming.
     KEY_FILE_MAP = {
-        "blind_izar": "blind",
-        "coarse": "coarse",
+        "blind":             "blind",
+        "coarse":            "coarse",
         "foveated_logpolar": "foveated_logpolar",
-        "foveated": "foveated",
-        "uniform": "uniform",
+        "fnorm":             "fnorm",
+        "uniform":           "uniform",
     }
     out = {}
     for rec_key in keys:

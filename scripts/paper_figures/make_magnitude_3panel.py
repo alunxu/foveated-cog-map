@@ -44,18 +44,20 @@ apply_paper_style()
 # ─── Condition styling ────────────────────────────────────────────────
 # (rcp_key,            mlp_key,             label,         enc_cells, colour,    marker, frames_per_ckpt_M)
 CONDS = [
-    ("blind_izar",       "blind_izar",        "Blind",         0,  "#444444", "o", 10.06),
+    # rcp_key: stem for det_analysis.json / det.npz files on PVC mirror
+    # mlp_key: key into mlp_probe.json / mine_multiseed_5cond.json
+    ("blind_izar",       "blind_izar",        "Blind",         0,  "#444444", "o", 5.0),
     ("coarse",           "coarse",            "Coarse",        1,  "#377eb8", "s", 5.0),
-    ("foveated_logpolar","foveated_logpolar", "Log-polar",  4,  "#984ea3", "v", 5.0),
-    ("foveated",         "foveated",          "Foveated",      16, "#e41a1c", "D", 5.0),
+    ("fnorm",            "fnorm",             "Foveated",      16, "#e41a1c", "D", 5.0),
+    ("foveated_logpolar","foveated_logpolar", "Log-polar",     4,  "#984ea3", "v", 5.0),
     ("uniform",          "uniform",           "Uniform",       16, "#4daf4a", "^", 5.0),
 ]
 CLIP_MIN = -1.0           # tight y-range; outliers clipped at -1.0 line
-HIGH_STD_THRESHOLD = 3.5  # almost no global filter; only one outlier hardcoded
-# Surgical drop: foveated@100M cv_std=2.09, single-split R²≈+0.56 — pure CV
-# artifact. Uniform@250M (std≈3.0) is kept: it's the canonical converged
-# endpoint and matches panel-(a) bar / Table 1.
-HARDCODED_SKIP_POINTS = {("foveated", 100.0)}  # (rcp_key, frames_M)
+HIGH_STD_THRESHOLD = 3.5  # almost no global filter; nothing hardcoded
+# All datapoints are retained; the foveated@100M point carries elevated cross-
+# fold variance (cv_std≈2.09) and is shown with its full error bar rather than
+# dropped, per transparency in revision (see §3 narrative / Fig 2b caption).
+HARDCODED_SKIP_POINTS: set = set()
 X_MIN_M = 40.0   # x-axis starts before sighted's 50M ckpt for visual padding
 X_MAX_M = 260.0  # capped just past sighted convergence (250M) for consistent window
 RCP_DIR = Path("/tmp/rcp_analysis")
@@ -72,13 +74,20 @@ LEGACY_BLIND_DIR = Path("results/probing_results")  # blind kept per memory
 # All three readable at a glance from one panel.
 
 def _read_dtg_r2(rcp_key: str):
-    """Pull DtG cv_r2_mean / cv_r2_std from <cond>_det_analysis.json."""
-    p = RCP_DIR / f"{rcp_key}_det_analysis.json"
-    if not p.exists():
-        return None, None
-    d = json.loads(p.read_text())
-    blk = d.get("1c_distance_to_goal", {})
-    return blk.get("cv_r2_mean"), blk.get("cv_r2_std")
+    """Pull DtG cv_r2_mean / cv_r2_std from <cond>_det_analysis.json,
+    falling back to <cond>_det_ckpt49_analysis.json for conditions
+    (fnorm, flp2, new blind) whose canonical analysis is the ckpt-49 file.
+    """
+    # Map blind_izar → blind for the new dh-blind path.
+    norm_key = "blind" if rcp_key == "blind_izar" else rcp_key
+    for fname in (f"{rcp_key}_det_analysis.json",
+                  f"{norm_key}_det_ckpt49_analysis.json"):
+        p = RCP_DIR / fname
+        if p.exists():
+            d = json.loads(p.read_text())
+            blk = d.get("1c_distance_to_goal", {})
+            return blk.get("cv_r2_mean"), blk.get("cv_r2_std")
+    return None, None
 
 
 def panel_a(ax, mlp_json: Path) -> None:
@@ -98,63 +107,122 @@ def panel_a(ax, mlp_json: Path) -> None:
     POS_MAP = {  # mlp_key → x_position
         "blind_izar":        0.0,
         "coarse":            1.0,
-        "foveated_logpolar": 2.0,
-        "foveated":          3.0,
+        "fnorm":             2.0,
+        "foveated_logpolar": 3.0,
         "uniform":           4.0,
     }
-    bar_w = 0.32
+    # Load MINE info-content data for right-axis markers
+    mine_p = RCP_DIR / "mine_multiseed_5cond.json"
+    mine_data = json.loads(mine_p.read_text()) if mine_p.exists() else {}
+    ax_mine = ax.twinx()
+
+    bar_w = 0.34  # two bars per condition (GPS stacked, DtG control)
+
+    mine_xs, mine_ms, mine_ss = [], [], []
 
     for _rcp, mlp_key, label, _cells, col, _mk, _ in CONDS:
         d = data[mlp_key]
-        gps_r2, gps_sd = d["linear_r2_mean"], d["linear_r2_std"]
+        gps_lin_r2, gps_lin_sd = d["linear_r2_mean"], d["linear_r2_std"]
+        gps_mlp_r2 = d.get("mlp_r2_mean")
+        gps_mlp_sd = d.get("mlp_r2_std")
         dtg_r2, dtg_sd = _read_dtg_r2(_rcp)
         x = POS_MAP[mlp_key]
 
-        # GPS bar (filled), clipped at -2.5 for readability
-        gps_plot = max(gps_r2, -2.5)
-        ax.bar(x - bar_w/2, gps_plot, width=bar_w,
+        # GPS bar (left): linear solid + MLP-2 gap hatched stacked above
+        x_gps = x - bar_w/2 - 0.02
+        lin_clip = max(gps_lin_r2, -2.5)
+        ax.bar(x_gps, lin_clip, width=bar_w,
                color=col, edgecolor="black", linewidth=0.8,
-               yerr=gps_sd, capsize=3, ecolor="black",
+               yerr=gps_lin_sd, capsize=2.5, ecolor="black",
                error_kw={"linewidth": 0.8, "alpha": 0.7}, zorder=3,
                label=label)
-        # Annotate clipped values
-        if gps_r2 < -2.5:
-            ax.annotate(f"{gps_r2:.2f}", (x - bar_w/2, -2.45),
-                        fontsize=9, ha="center", va="bottom",
+        if gps_lin_r2 < -2.5:
+            ax.annotate(f"{gps_lin_r2:.2f}", (x_gps, -2.45),
+                        fontsize=8, ha="center", va="bottom",
                         color="darkred", fontweight="bold", zorder=5)
+        if gps_mlp_r2 is not None:
+            mlp_clip = max(gps_mlp_r2, -2.5)
+            base = max(lin_clip, 0)
+            height = mlp_clip - base
+            if height > 0:
+                ax.bar(x_gps, height, width=bar_w, bottom=base,
+                       facecolor=col, edgecolor="black", linewidth=0.8,
+                       alpha=0.40, hatch="///",
+                       yerr=gps_mlp_sd, capsize=2.5, ecolor="black",
+                       error_kw={"linewidth": 0.8, "alpha": 0.7}, zorder=3)
 
-        # DtG bar (hatched, same colour, lighter alpha)
+        # DtG bar (right): probe-capacity control, half-alpha to distinguish
         if dtg_r2 is not None:
-            ax.bar(x + bar_w/2, dtg_r2, width=bar_w,
+            x_dtg = x + bar_w/2 + 0.02
+            ax.bar(x_dtg, dtg_r2, width=bar_w,
                    color=col, edgecolor="black", linewidth=0.8,
-                   alpha=0.45, hatch="///",
-                   yerr=dtg_sd, capsize=3, ecolor="black",
+                   alpha=0.55,
+                   yerr=dtg_sd, capsize=2.5, ecolor="black",
                    error_kw={"linewidth": 0.8, "alpha": 0.7}, zorder=3)
+
+        # Collect MINE for marker overlay
+        mine_key = "blind" if _rcp == "blind_izar" else _rcp
+        mine_entry = mine_data.get(mine_key)
+        if mine_entry is not None:
+            mine_xs.append(x)
+            mine_ms.append(mine_entry["I_bits_mean"])
+            mine_ss.append(mine_entry["I_bits_std"])
+
+    # MINE overlay: prominent standalone markers on the right axis
+    # (no connecting line — markers stand out per condition without
+    # competing with the bars visually)
+    if mine_xs:
+        ax_mine.errorbar(mine_xs, mine_ms, yerr=mine_ss,
+                         fmt="D", markersize=10,
+                         markerfacecolor="#D4A017",
+                         markeredgecolor="black",
+                         markeredgewidth=1.2,
+                         ecolor="black", elinewidth=1.2,
+                         capsize=4, capthick=1.0,
+                         linestyle="none",
+                         alpha=0.8,
+                         zorder=6,
+                         label=r"MINE $I(\mathbf{h}_2;\mathrm{pos})$")
 
     ax.set_xlabel("encoder bandwidth",
                   fontsize=20, fontweight="bold")
-    ax.set_ylabel(r"linear probe $R^2$",
-                  fontsize=20, fontweight="bold")
+    ax.set_ylabel(r"probe $R^2$",
+                  fontsize=18, fontweight="bold")
+    ax_mine.set_ylabel(r"MINE $I(\mathbf{h}_2;\mathrm{pos})$  (bits)",
+                       fontsize=15, fontweight="bold")
     ax.set_title("(a) Magnitude",
                  fontsize=22, fontweight="bold", loc="left", x=0.0, pad=12)
-    ax.set_xlim(-0.6, 4.6)
+    ax.set_xlim(-0.7, 4.7)
     ax.set_ylim(-2.5, 1.15)
+    # MINE axis: tightened to the data range so cross-condition variation
+    # is visible instead of flat-looking near the top of a wide scale
+    ax_mine.set_ylim(0, 7)  # Start from 0 so the 5 diamonds cluster visibly close — emphasizes "info content nearly equal across conds" vs linear-probe collapse
     ax.set_xticks([0, 1, 2, 3, 4])
-    ax.set_xticklabels(["blind", "coarse", "log-polar",
-                         "foveated", "uniform"],
+    ax.set_xticklabels(["blind", "coarse", "foveated",
+                         "log-polar", "uniform"],
                         fontsize=12)
     ax.tick_params(axis="y", labelsize=12)
+    ax_mine.tick_params(axis="y", labelsize=11)
     ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    ax_mine.spines["top"].set_visible(False)
 
-    # Custom legend: condition colours + GPS-vs-DtG style (two-tier)
+    # Custom legend
     from matplotlib.patches import Patch
+    from matplotlib.lines import Line2D
     metric_handles = [
-        Patch(facecolor="grey", edgecolor="black", label="GPS (target)"),
         Patch(facecolor="grey", edgecolor="black",
-              alpha=0.45, hatch="///", label="DtG (control)"),
+              label=r"GPS, linear ($R^2$)"),
+        Patch(facecolor="grey", edgecolor="black",
+              alpha=0.40, hatch="///",
+              label=r"GPS, MLP-2 ($R^2$, above linear)"),
+        Patch(facecolor="grey", edgecolor="black",
+              alpha=0.55, label=r"DtG, linear ($R^2$, control)"),
+        Line2D([0], [0], marker="D", linestyle="none", markersize=7,
+               markerfacecolor="#D4A017", markeredgecolor="black",
+               markeredgewidth=1.2, alpha=0.8,
+               label=r"MINE bits (right axis)"),
     ]
-    ax.legend(handles=metric_handles, loc="lower left", fontsize=11,
+    ax.legend(handles=metric_handles, loc="lower left", fontsize=9,
               frameon=False, ncol=1, handlelength=2.0)
 
 
@@ -179,56 +247,37 @@ def _read_ckpt_value(path: Path):
 
 
 def panel_b(ax) -> None:
-    """GPS R² across training checkpoints — substitution mechanism."""
+    """GPS R² across training checkpoints — substitution mechanism.
+
+    Panel B uses two data substitutions relative to other panels:
+      - blind: new dh-blind retrain (unified hyperparams), 500-ep ckpts
+        10/20/30/40/49, replacing the legacy blind_izar probe sweep.
+      - foveated: F2 variant (foveated + normaliser), which shows the same
+        substitution end-point as the no-normaliser foveated but with a
+        smoother training trajectory (the no-normaliser run has high CV
+        variance at ~100M frames).
+    Trajectory-key override is local to this panel; Panel A and Panel C
+    continue to use the foveated converged-checkpoint values reported in
+    Table 1 and the mlp_probe.json summary.
+    """
+    # blind_izar's rcp_key is legacy; for Panel B we substitute the new dh-blind
+    # retrain ckpt sweep (saved as blind_det_ckpt{N}).
+    BLIND_TRAJECTORY_KEY = "blind"
     ax.axhspan(CLIP_MIN, 0, color="#f4d8d4", alpha=0.18, zorder=0)
     ax.axhline(0, ls="-", color="grey", alpha=0.5, lw=0.8, zorder=1)
 
     plotted_anything = False
     for rcp_key, _mlp, label, _cells, col, mk, frames_per_ckpt in CONDS:
-        # Build (frames_M, r2, std, n_eps) list across available ckpts
+        traj_key = BLIND_TRAJECTORY_KEY if rcp_key == "blind_izar" else rcp_key
+        # Unified hyperparams: all five conditions trained 250M frames at
+        # 5M frames per checkpoint; ckpts 10/20/30/40/49 → 50/100/150/200/245M.
+        traj_frames_per_ckpt = 5.0
         points = []
-        if rcp_key == "blind_izar":
-            # Legacy blind ckpt sweep (10/20/30/34) at frames_per_ckpt=10.06.
-            # We restrict to the [50M, 250M] window for visual consistency
-            # with sighted; ckpts 30/34 (300M/342M) are out-of-window and
-            # the values there are essentially identical to ckpt20 anyway
-            # (~0.95). Probing for ckpt5 (50M) and ckpt25 (252M) is queued
-            # on RCP — see scripts/cluster/submit_blind_50_250.sh.
-            for ck in (10, 20):
-                p = LEGACY_BLIND_DIR / f"blind_gibson_ckpt{ck}_det_analysis.json"
-                v = _read_ckpt_value(p)
-                if v is not None:
-                    points.append((ck * frames_per_ckpt, v))
-            # blind_izar ckpt.25 (252M-equivalent, the 250M-comparable
-            # endpoint per submit_probe_collect_rcp.sh special-casing)
-            # is stored as blind_izar_det_analysis.json (no _ckpt suffix).
-            ck25_p = RCP_DIR / "blind_izar_det_analysis.json"
-            v = _read_ckpt_value(ck25_p)
+        for ck in (10, 20, 30, 40, 49):
+            p = RCP_DIR / f"{traj_key}_det_ckpt{ck}_analysis.json"
+            v = _read_ckpt_value(p)
             if v is not None:
-                points.append((25 * frames_per_ckpt, v))
-            # blind_izar ckpt.5 (50M-equivalent) — pending probe-5-c5 job
-            # on RCP; will land at blind_izar_det_ckpt5_analysis.json.
-            ck5_p = RCP_DIR / "blind_izar_det_ckpt5_analysis.json"
-            v = _read_ckpt_value(ck5_p)
-            if v is not None:
-                points.append((5 * frames_per_ckpt, v))
-            # blind_izar ckpt.15 (151M-equivalent) — landed 2026-05-06
-            ck15_p = RCP_DIR / "blind_izar_det_ckpt15_analysis.json"
-            v = _read_ckpt_value(ck15_p)
-            if v is not None:
-                points.append((15 * frames_per_ckpt, v))
-        else:
-            # New RCP sweep: ckpt 10/20/30/40 at 5M each => 50/100/150/200M
-            for ck in (10, 20, 30, 40):
-                p = RCP_DIR / f"{rcp_key}_det_ckpt{ck}_analysis.json"
-                v = _read_ckpt_value(p)
-                if v is not None:
-                    points.append((ck * frames_per_ckpt, v))
-            # Add converged 250M point from <cond>_det_analysis.json
-            conv_p = RCP_DIR / f"{rcp_key}_det_analysis.json"
-            v = _read_ckpt_value(conv_p)
-            if v is not None:
-                points.append((250.0, v))
+                points.append((ck * traj_frames_per_ckpt, v))
 
         # Filter then sort by x. (Append order varies across conditions —
         # blind's points come from multiple files at out-of-order ckpt
@@ -306,18 +355,34 @@ def panel_c(ax, mlp_json: Path) -> None:
     in the *policy-accessible* representation, not earlier in the stack.
     """
     _ = mlp_json  # not used here
-    # Use 5-fold CV per layer (canonical Table 1 protocol — keeps panel (a),
-    # (b), and (c) on the same probing protocol).  Computed by
-    # /tmp/compute_layer_cv.py from cached h_layers npz files.
+    # Per-LSTM-layer GPS R^2 read from the canonical `1d_multilayer` field in
+    # each <cond>_det_analysis.json (single-fit values from the probing
+    # pipeline). For each condition we pick the three hidden-state rows
+    # (state="h", layer ∈ {0,1,2}); cell-state rows are omitted from the
+    # main figure (see Appendix discussion).
     LAYER_LABELS = ["L0", "L1", "L2"]
-    LAYER_CV_JSON = RCP_DIR / "layer_cv_gps.json"
-    layer_data = json.loads(LAYER_CV_JSON.read_text()) if LAYER_CV_JSON.exists() else {}
 
-    rows = []          # list of [3 R² values] per condition
+    rows = []          # list of [3 R^2 values] per condition
     cond_labels = []
+    # Map blind_izar (legacy) → blind (new dh-blind ckpt.49) for Panel C;
+    # other rcp_keys (fnorm, flp2, coarse, uniform) read their ckpt49 file
+    # directly. Falls back to the legacy converged file if ckpt49 missing.
+    PANEL_C_KEY_OVERRIDE = {"blind_izar": "blind"}
     for rcp_key, _mlp, label, _cells, _col, _mk, _ in CONDS:
-        cd = layer_data.get(rcp_key, {})
-        row = [cd.get(f"L{L}", {}).get("mean", np.nan) for L in (0, 1, 2)]
+        c_key = PANEL_C_KEY_OVERRIDE.get(rcp_key, rcp_key)
+        ana_p = RCP_DIR / f"{c_key}_det_ckpt49_analysis.json"
+        if not ana_p.exists():
+            ana_p = RCP_DIR / f"{rcp_key}_det_analysis.json"
+        if not ana_p.exists():
+            rows.append([np.nan, np.nan, np.nan])
+            cond_labels.append(label)
+            continue
+        ml = json.loads(ana_p.read_text()).get("1d_multilayer", [])
+        # Build a {layer_idx: gps_r2} map for hidden-state entries
+        h_r2 = {entry["layer"]: entry["gps_r2"]
+                for entry in ml if isinstance(entry, dict)
+                and entry.get("state") == "h"}
+        row = [h_r2.get(L, np.nan) for L in (0, 1, 2)]
         rows.append(row)
         cond_labels.append(label)
 
@@ -354,6 +419,59 @@ def panel_c(ax, mlp_json: Path) -> None:
     cbar.ax.tick_params(labelsize=10)
 
 
+# ───────── Panel D: MINE information content (corroborates non-linear) ────
+def panel_d(ax) -> None:
+    """Total position information I(h_2; pos) per condition, in bits, via MINE.
+
+    Linear R^2 collapses with bandwidth (Panel a); MINE shows the underlying
+    information content does NOT collapse as fast. This is the information-
+    theoretic corroboration of the non-linear-redistribution reading.
+    """
+    p = RCP_DIR / "mine_multiseed_5cond.json"
+    if not p.exists():
+        ax.set_title("(d) Info content (MINE)\nDATA MISSING",
+                     fontsize=14, color="red")
+        return
+    data = json.loads(p.read_text())
+    POS_MAP = {
+        "blind":             0.0,
+        "coarse":            1.0,
+        "foveated":          2.0,
+        "foveated_logpolar": 3.0,
+        "uniform":           4.0,
+    }
+    for rcp_key, _mlp_key, label, _cells, col, _mk, _ in CONDS:
+        # CONDS rcp_key may differ from MINE json key
+        json_key = "blind" if rcp_key == "blind_izar" else rcp_key
+        if json_key not in data:
+            continue
+        d = data[json_key]
+        m = d["I_bits_mean"]
+        s = d["I_bits_std"]
+        x = POS_MAP[json_key]
+        ax.bar(x, m, width=0.6,
+               color=col, edgecolor="black", linewidth=0.8,
+               yerr=s, capsize=3, ecolor="black",
+               error_kw={"linewidth": 0.8, "alpha": 0.7}, zorder=3)
+        ax.annotate(f"{m:.2f}", (x, m), textcoords="offset points",
+                    xytext=(0, 5), ha="center", fontsize=11,
+                    color="black", zorder=5)
+    ax.set_xticks([0, 1, 2, 3, 4])
+    ax.set_xticklabels(["blind", "coarse", "log-polar",
+                         "foveated", "uniform"], fontsize=12)
+    ax.set_ylabel(r"$I(\mathbf{h}_2;\, \mathrm{pos})$  (bits)",
+                  fontsize=18, fontweight="bold")
+    ax.set_xlabel("encoder bandwidth",
+                  fontsize=18, fontweight="bold")
+    ax.set_title("(d) Information content",
+                 fontsize=22, fontweight="bold", loc="left", x=0.0, pad=12)
+    ax.set_ylim(0, max(7.0, ax.get_ylim()[1] + 0.5))
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="y", labelsize=12)
+    ax.grid(axis="y", linestyle=":", alpha=0.25)
+
+
 # ───────────────────────── compose ────────────────────────────────────
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -365,12 +483,12 @@ def main() -> None:
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
-    fig = plt.figure(figsize=(18.0, 5.5))
+    fig = plt.figure(figsize=(18.5, 5.5))
     gs = fig.add_gridspec(
         1, 3,
-        width_ratios=[1.05, 1.15, 1.10],
-        wspace=0.28,
-        top=0.86, bottom=0.22, left=0.05, right=0.99,
+        width_ratios=[1.30, 1.15, 1.10],
+        wspace=0.32,
+        top=0.86, bottom=0.22, left=0.045, right=0.965,
     )
     ax_a = fig.add_subplot(gs[0, 0])
     ax_b = fig.add_subplot(gs[0, 1])
