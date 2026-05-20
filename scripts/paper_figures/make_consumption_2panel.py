@@ -211,14 +211,27 @@ def panel_a_dissociation_with_pull(ax) -> None:
             fontsize=17, color=r["colour"], weight="bold",
             ha=ha, va="center", zorder=6,
         )
-        # Right shift on label so leftmost markers (uniform clipped at
-        # X_CLIP) don't run into the y-axis tick column.
-        label_dx = 28 if x <= X_CLIP + 0.05 else 0
+        # Per-condition label offsets to avoid overlap.
+        # Default: 14pt above the marker, centred horizontally.
+        label_dx, label_dy, label_ha, label_va = 0, 14, "center", "bottom"
+        if x <= X_CLIP + 0.05:
+            # Leftmost markers (uniform clipped at X_CLIP) shift right to
+            # clear the y-axis tick column.
+            label_dx = 28
+        if r["rcp_key"] == "foveated_logpolar":
+            # Log-polar sits next to coarse on the x-axis; nudge label
+            # left and right-align so it doesn't collide with Coarse.
+            label_dx, label_ha = -32, "right"
+        if r["rcp_key"] == "fnorm":
+            # Foveated marker (diamond) sits just below coarse on the
+            # readability axis; move label below to avoid the coarse
+            # marker above it.
+            label_dy, label_va = -16, "top"
         ax.annotate(
             r["label"], (x, y),
-            xytext=(label_dx, 14), textcoords="offset points",
+            xytext=(label_dx, label_dy), textcoords="offset points",
             fontsize=22, color=r["colour"], weight="bold",
-            ha="center", va="bottom", zorder=6,
+            ha=label_ha, va=label_va, zorder=6,
         )
 
     # Axis labels
@@ -365,7 +378,7 @@ def _draw_topdown_axis(
             path_effects=pe)
 
     if show_legend:
-        leg = ax.legend(loc="lower right", fontsize=13, frameon=True,
+        leg = ax.legend(loc="lower left", fontsize=13, frameon=True,
                         framealpha=0.92, handlelength=1.8, borderpad=0.4)
         leg.set_zorder(10)
 
