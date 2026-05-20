@@ -41,10 +41,12 @@ import numpy as np
 # ─── Condition styling (matches paper-canonical palette) ───────────────
 # (rcp_key,            traj_cond,           scene_id_key,  short_label, colour,    marker)
 CONDS = [
-    ("blind_izar",        "blind",             "blind",             "Blind",      "#444444", "o"),
-    ("coarse",            "matched",           "coarse",            "Coarse",     "#377eb8", "s"),
+    # rcp_key: used for /tmp/rcp_analysis/{rcp_key}_det_analysis.json or _ckpt49_analysis.json
+    # traj_key: used for results/shortcut_results/{traj_key}_traj.{json,npz}
+    ("blind",             "blind",             "blind",             "Blind",      "#444444", "o"),
+    ("coarse",            "coarse",            "coarse",            "Coarse",     "#377eb8", "s"),
     ("foveated_logpolar", "foveated_logpolar", "foveated_logpolar", "Log-polar",  "#984ea3", "v"),
-    ("foveated",          "foveated",          "foveated",          "Foveated",   "#e41a1c", "D"),
+    ("fnorm",             "fnorm",             "foveated",          "Foveated",   "#e41a1c", "D"),
     ("uniform",           "uniform",           "uniform",           "Uniform",    "#4daf4a", "^"),
 ]
 RCP_DIR = Path("/tmp/rcp_analysis")
@@ -64,7 +66,7 @@ def panel_a_dissociation(ax) -> None:
     rows = []
     for rcp_key, traj_key, _, label, colour, marker in CONDS:
         gp = RCP_DIR / f"{rcp_key}_det_analysis.json"
-        sp = SHORTCUT_DIR / f"{traj_key}_gibson.json"
+        sp = SHORTCUT_DIR / f"{traj_key}_traj.json"
         if not (gp.exists() and sp.exists()):
             continue
         gd = json.loads(gp.read_text())
@@ -145,7 +147,7 @@ def compute_margins_per_cond() -> dict:
     SAME_FLOOR_Y = 1.5
     PERSIST_FAIL_SPL = 0.2
     for rcp_key, traj_key, _, label, colour, _ in CONDS:
-        p = TRAJ_DIR / f"{traj_key}_gibson_traj.npz"
+        p = TRAJ_DIR / f"{traj_key}_traj.npz"
         if not p.exists():
             continue
         d = np.load(p, allow_pickle=True)
@@ -258,7 +260,7 @@ SELECTED_EP = 3   # NEW episode index (OLD = SELECTED_EP - 1)
 
 def _fetch_paired(cond_traj_key: str, scene: str, ep: int) -> dict:
     """Pull OLD and NEW trajectories for one (scene, ep) pair."""
-    d = np.load(TRAJ_DIR / f"{cond_traj_key}_gibson_traj.npz",
+    d = np.load(TRAJ_DIR / f"{cond_traj_key}_traj.npz",
                 allow_pickle=True)
     mask_new = (d["scenes"] == scene) & (d["ep_idx"] == ep) & \
                (d["conditions"] == "persistent")

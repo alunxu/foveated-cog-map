@@ -9,11 +9,14 @@
     strip plot) which split the same story across two panels.
 
 (b) Single paired-scene contrast — same Gibson scene + episode for
-    Uniform and Log-polar. Top-down navmesh shown as background,
-    OLD-trial trajectory ghost-trail in dashed grey, NEW-persistent
-    trajectory in condition colour. Reveals the dissociation
-    geometrically: Uniform's NEW-persistent path circles back to the
-    OLD goal area; Log-polar's converges on NEW.
+    Blind (top) and Uniform (bottom). Top-down navmesh shown as
+    background, OLD-trial trajectory ghost-trail in dashed grey,
+    NEW-persistent trajectory in condition colour. Reveals the
+    integration-vs-vision dichotomy geometrically: Blind's
+    NEW-persistent path returns to the OLD-goal area because its
+    integration-only memory carries over without a visual reset;
+    Uniform's converges on NEW because vision provides a per-step
+    external anchor that overrides the carried-over memory.
 
 Selection in (b) is the (scene, episode) with the largest contrast in
 panel (a)'s pull-direction signal — reproducible from
@@ -50,10 +53,11 @@ apply_paper_style()
 # ─── Condition styling (matches paper-canonical palette) ───────────────
 # (rcp_key,            traj_cond,           scene_id_key,  short_label, colour,    marker)
 CONDS = [
-    ("blind_izar",        "blind",             "blind",             "Blind",      "#444444", "o"),
-    ("coarse",            "matched",           "coarse",            "Coarse",     "#377eb8", "s"),
+    # rcp_key, traj_key, scrub_key (matches subspace_scrubbing.json keys), label, colour, marker
+    ("blind",             "blind",             "blind",             "Blind",      "#444444", "o"),
+    ("coarse",            "coarse",            "coarse",            "Coarse",     "#377eb8", "s"),
+    ("fnorm",             "fnorm",             "foveated",          "Foveated",   "#e41a1c", "D"),
     ("foveated_logpolar", "foveated_logpolar", "foveated_logpolar", "Log-polar",  "#984ea3", "v"),
-    ("foveated",          "foveated",          "foveated",          "Foveated",   "#e41a1c", "D"),
     ("uniform",           "uniform",           "uniform",           "Uniform",    "#4daf4a", "^"),
 ]
 RCP_DIR = Path("/tmp/rcp_analysis")
@@ -80,7 +84,7 @@ def compute_margins_per_cond() -> dict:
     SAME_FLOOR_Y = 1.5
     PERSIST_FAIL_SPL = 0.2
     for rcp_key, traj_key, _, label, colour, _ in CONDS:
-        p = TRAJ_DIR / f"{traj_key}_gibson_traj.npz"
+        p = TRAJ_DIR / f"{traj_key}_traj.npz"
         if not p.exists():
             continue
         d = np.load(p, allow_pickle=True)
@@ -134,7 +138,9 @@ def panel_a_dissociation_with_pull(ax) -> None:
     rows = []
     for rcp_key, traj_key, _, label, colour, marker in CONDS:
         gp = RCP_DIR / f"{rcp_key}_det_analysis.json"
-        sp = SHORTCUT_DIR / f"{traj_key}_gibson.json"
+        if not gp.exists():
+            gp = RCP_DIR / f"{rcp_key}_det_ckpt49_analysis.json"
+        sp = SHORTCUT_DIR / f"{traj_key}_traj.json"
         if not (gp.exists() and sp.exists()):
             continue
         gd = json.loads(gp.read_text())
@@ -196,23 +202,38 @@ def panel_a_dissociation_with_pull(ax) -> None:
         ax.scatter(x, y, s=320, color=r["colour"],
                    marker=r["marker"], edgecolor="white", linewidth=1.8,
                    zorder=5)
-        tip_offset = 8 if stem_dx >= 0 else -8
-        ha = "left" if stem_dx >= 0 else "right"
+        # Margin value annotated on the RIGHT side of the marker (arrow
+        # tail), independent of arrow direction --- keeps all margin
+        # labels in a clean right-of-marker column rather than scattered
+        # at the arrow tips.
         ax.annotate(
             f"{m:+.1f} m",
-            (x + stem_dx, y),
-            xytext=(tip_offset, 0), textcoords="offset points",
+            (x, y),
+            xytext=(14, 0), textcoords="offset points",
             fontsize=17, color=r["colour"], weight="bold",
-            ha=ha, va="center", zorder=6,
+            ha="left", va="center", zorder=6,
         )
-        # Right shift on label so leftmost markers (uniform clipped at
-        # X_CLIP) don't run into the y-axis tick column.
-        label_dx = 28 if x <= X_CLIP + 0.05 else 0
+        # Per-condition label offsets to avoid overlap.
+        # Default: 14pt above the marker, centred horizontally.
+        label_dx, label_dy, label_ha, label_va = 0, 14, "center", "bottom"
+        if x <= X_CLIP + 0.05:
+            # Leftmost markers (uniform clipped at X_CLIP) shift right to
+            # clear the y-axis tick column.
+            label_dx = 28
+        if r["rcp_key"] == "foveated_logpolar":
+            # Log-polar sits next to coarse on the x-axis; nudge label
+            # left and right-align so it doesn't collide with Coarse.
+            label_dx, label_ha = -32, "right"
+        if r["rcp_key"] == "fnorm":
+            # Foveated marker (diamond) sits just below coarse on the
+            # readability axis; move label below to avoid the coarse
+            # marker above it.
+            label_dy, label_va = -16, "top"
         ax.annotate(
             r["label"], (x, y),
-            xytext=(label_dx, 14), textcoords="offset points",
+            xytext=(label_dx, label_dy), textcoords="offset points",
             fontsize=22, color=r["colour"], weight="bold",
-            ha="center", va="bottom", zorder=6,
+            ha=label_ha, va=label_va, zorder=6,
         )
 
     # Axis labels
@@ -221,7 +242,7 @@ def panel_a_dissociation_with_pull(ax) -> None:
     ax.set_ylabel("shortcut SPL drop",
                   fontsize=31, fontweight="bold")
     ax.set_xlim(X_CLIP - 0.15, 1.30)
-    ax.set_ylim(-0.04, 0.66)
+    ax.set_ylim(-0.04, 1.05)
     ax.tick_params(axis="both", labelsize=22)
     for s_ in ("top", "right"):
         ax.spines[s_].set_visible(False)
@@ -233,15 +254,22 @@ def panel_a_dissociation_with_pull(ax) -> None:
 # PANEL B: Paired-scene trajectory contrast on top-down navmesh
 # ════════════════════════════════════════════════════════════════════════
 
-# Selected scene + episode: largest paired contrast (uniform locks back
-# to OLD vs. log-polar finds NEW), among same-floor and persistent-
-# failure cases. Top-of-list ranking on (uniform_margin − lp_margin).
-SELECTED_SCENE = "17DRP5sb8fy"
-SELECTED_EP = 3   # NEW episode index (OLD = SELECTED_EP - 1)
+# Selected scene + episode: clean blind-locks-OLD vs uniform-finds-NEW
+# pair, among same-floor and persistent-failure cases. Filter: blind
+# trajectory length >= 2 steps (excludes stationary "STOP on step 0"
+# failures whose end position is just the start).
+# Choice: Ackermanville ep=1. Blind moves 536 steps and ends 2.38m
+# from OLD-goal (clean lock); Uniform succeeds at 0.03m from NEW-goal
+# in 86 steps. OLD and NEW goals are roughly perpendicular from NEW
+# start (NEW down, OLD right) so the two trajectories diverge
+# orthogonally — visually unambiguous. Bbox 12x6m (wide-flat) matches
+# the original figure aspect.
+SELECTED_SCENE = "Ackermanville"
+SELECTED_EP = 1   # NEW episode index (OLD = SELECTED_EP - 1)
 
 
 def _fetch_paired(cond_traj_key: str, scene: str, ep: int) -> dict:
-    d = np.load(TRAJ_DIR / f"{cond_traj_key}_gibson_traj.npz",
+    d = np.load(TRAJ_DIR / f"{cond_traj_key}_traj.npz",
                 allow_pickle=True)
     mask_new = (d["scenes"] == scene) & (d["ep_idx"] == ep) & \
                (d["conditions"] == "persistent")
@@ -352,23 +380,25 @@ def _draw_topdown_axis(
             path_effects=pe)
 
     if show_legend:
-        leg = ax.legend(loc="lower right", fontsize=13, frameon=True,
+        leg = ax.legend(loc="lower left", fontsize=13, frameon=True,
                         framealpha=0.92, handlelength=1.8, borderpad=0.4)
         leg.set_zorder(10)
 
 
 def panel_b_paired_scene(ax_top, ax_bot) -> None:
-    """Panel (b): two sub-axes stacked vertically. Top = Uniform; bottom = Log-polar."""
+    """Panel (b): two sub-axes stacked vertically.
+    Top = Blind (locks OLD goal because integration carries over);
+    Bottom = Uniform (tries NEW because vision provides external anchor)."""
+    bl  = _fetch_paired("blind",   SELECTED_SCENE, SELECTED_EP)
     uni = _fetch_paired("uniform", SELECTED_SCENE, SELECTED_EP)
-    lp  = _fetch_paired("foveated_logpolar", SELECTED_SCENE, SELECTED_EP)
 
     topdown_img = np.array(Image.open(TOPDOWN_DIR / f"{SELECTED_SCENE}.png"))
     topdown_meta = json.loads((TOPDOWN_DIR / f"{SELECTED_SCENE}.json").read_text())
 
     all_xz = np.concatenate([
+        bl["old_traj"][:, [0, 2]], bl["new_traj"][:, [0, 2]],
         uni["old_traj"][:, [0, 2]], uni["new_traj"][:, [0, 2]],
-        lp["old_traj"][:, [0, 2]], lp["new_traj"][:, [0, 2]],
-        uni["old_goal"][None, [0, 2]], uni["new_goal"][None, [0, 2]],
+        bl["old_goal"][None, [0, 2]], bl["new_goal"][None, [0, 2]],
     ])
     pad = 0.6
     xlim = (all_xz[:, 0].min() - pad - 1.0,
@@ -376,13 +406,13 @@ def panel_b_paired_scene(ax_top, ax_bot) -> None:
     zlim = (all_xz[:, 1].min() - pad,
             all_xz[:, 1].max() + pad + 1.2)
 
+    bl_meta  = next(c for c in CONDS if c[0] == "blind")
     uni_meta = next(c for c in CONDS if c[0] == "uniform")
-    lp_meta  = next(c for c in CONDS if c[0] == "foveated_logpolar")
 
-    _draw_topdown_axis(ax_top, uni, uni_meta[3], uni_meta[4],
+    _draw_topdown_axis(ax_top, bl, bl_meta[3], bl_meta[4],
                        topdown_img, topdown_meta,
                        xlim, zlim, show_y_axis=True, show_legend=True)
-    _draw_topdown_axis(ax_bot, lp,  lp_meta[3],  lp_meta[4],
+    _draw_topdown_axis(ax_bot, uni, uni_meta[3], uni_meta[4],
                        topdown_img, topdown_meta,
                        xlim, zlim, show_y_axis=True, show_legend=True)
     # Top sub-axis: hide x labels (shared with bottom)
