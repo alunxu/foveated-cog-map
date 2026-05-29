@@ -1077,4 +1077,11 @@ footer { text-align: center; padding: 32px 24px; font-size: 0.85rem; color: var(
   .lander-card h1 { font-size: 1.2rem; }
   .lander-sticky,
   .end-sticky { padding: 16px 16px; }
+  /* Stack floated charts/tables full-width so text isn't squeezed on phones */
+  .section-chart-wrap,
+  .section-table-box {
+    float: none !important;
+    width: 100% !important;
+    margin: 0 0 20px 0 !important;
+  }
 }
