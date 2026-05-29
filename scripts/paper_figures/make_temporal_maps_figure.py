@@ -49,13 +49,21 @@ SCENE = "Almena"             # tight scene-id match + striking 4.8x blind/sighte
 # in the same file).  Order matches paper-canonical condition order.
 CONDS = [
     # (npz_key,             label,         colour)
-    ("blind_izar",          "Blind",       "#444444"),
+    ("blind",               "Blind",       "#444444"),
     ("coarse",              "Coarse",      "#377eb8"),
-    ("foveated_logpolar",   "Log-polar",      "#984ea3"),
-    ("foveated",            "Foveated",    "#e41a1c"),
+    ("foveated",            "Foveated",    "#e41a1c"),  # → F2 (fnorm)
+    ("foveated_logpolar",   "Log-polar",   "#984ea3"),
     ("uniform",             "Uniform",     "#4daf4a"),
 ]
 NPZ_DIR = Path("/tmp/rcp_analysis_v3")
+# Explicit NPZ filename per condition (rather than f"{key}_det_RCP.npz" suffix).
+NPZ_FILES = {
+    "blind":             "blind_det_ckpt49.npz",
+    "coarse":            "coarse_det.npz",
+    "foveated":          "fnorm_det_ckpt49.npz",
+    "foveated_logpolar": "foveated_logpolar_det.npz",
+    "uniform":           "uniform_det.npz",
+}
 TOPDOWN_DIR = Path("results/topdown_fig5")
 TGM_NPZ = Path("results/cogneuro_data/tgm_results.npz")
 LAGK_JSON = Path("/tmp/rcp_analysis/lagk_summary.json")
@@ -129,7 +137,7 @@ def successful_eps_in_scene(cond_key: str, scene: str) -> set[int] | None:
     condition completed successfully (final dtg <= 0.5, step count in
     [20, 600]).  Used to pick a common episode_id across all five
     conditions so each panel shows the SAME (start, goal) pair."""
-    p_npz = NPZ_DIR / f"{cond_key}_det_RCP.npz"
+    p_npz = NPZ_DIR / NPZ_FILES.get(cond_key, f"{cond_key}_det_RCP.npz")
     d = np.load(p_npz, allow_pickle=True)
     _, lo, hi = load_topdown(scene)
     sid = find_scene_id(d, lo, hi)
@@ -168,7 +176,7 @@ def pick_common_episode(scene: str) -> int | None:
     if not common:
         return None
     # Rank by blind's step count (the slowest, winding-est trajectory).
-    blind_p = NPZ_DIR / f"{CONDS[0][0]}_det_RCP.npz"
+    blind_p = NPZ_DIR / NPZ_FILES.get(CONDS[0][0], f"{CONDS[0][0]}_det_RCP.npz")
     d = np.load(blind_p, allow_pickle=True)
     sid = find_scene_id(d, *load_topdown(scene)[1:])
     eps = d["episode_ids"]; sids = d["scene_ids"]
@@ -191,7 +199,7 @@ def load_episode_from_npz(cond_key: str, scene: str,
     Returns dict with keys: positions (Tx3), n_steps, start, goal,
     h2 (Tx512), cum_h2_path (T,) — cumulative L2 distance travelled
     in h_2 space up to step t."""
-    p_npz = NPZ_DIR / f"{cond_key}_det_RCP.npz"
+    p_npz = NPZ_DIR / NPZ_FILES.get(cond_key, f"{cond_key}_det_RCP.npz")
     d = np.load(p_npz, allow_pickle=True)
     img, lo, hi = load_topdown(scene)
     sid = find_scene_id(d, lo, hi)
@@ -354,7 +362,7 @@ def compute_per_cond_autocorr() -> dict:
     out = {}
     threshold = 1.0 / np.e
     for key, label, colour in CONDS:
-        p = NPZ_DIR / f"{key}_det_RCP.npz"
+        p = NPZ_DIR / NPZ_FILES.get(key, f"{key}_det_RCP.npz")
         if not p.exists():
             continue
         d = np.load(p, allow_pickle=True)
@@ -406,7 +414,7 @@ def compute_per_cond_autocorr() -> dict:
 # (the temporal-generalisation-matrix view).
 # ──────────────────────────────────────────────────────────────────────
 TGM_KEY_MAP = {
-    "blind_izar":        "blind",
+    "blind":        "blind",
     "coarse":            "coarse",
     "foveated_logpolar": "foveated_logpolar",
     "foveated":          "foveated",
@@ -469,7 +477,7 @@ def panel_predictive_horizon(ax, _unused=None):
     Y_MIN = -1.5
 
     # Marker shapes per condition (match make_magnitude_3panel.py)
-    MARKERS = {"blind_izar": "o", "coarse": "s", "foveated_logpolar": "v",
+    MARKERS = {"blind": "o", "coarse": "s", "foveated_logpolar": "v",
                "foveated": "D", "uniform": "^"}
 
     # Shaded "no-signal" zone first
@@ -626,7 +634,7 @@ def compute_aggregate_cum_h2(min_episodes_at_step: int = 30,
     well-supported).  Returns dict cond -> (steps, mean, lo, hi)."""
     out = {}
     for key, label, colour in CONDS:
-        p = NPZ_DIR / f"{key}_det_RCP.npz"
+        p = NPZ_DIR / NPZ_FILES.get(key, f"{key}_det_RCP.npz")
         if not p.exists():
             continue
         d = np.load(p, allow_pickle=True)
@@ -713,7 +721,7 @@ def panel_traj_overlay(ax, eps_by_cond: dict):
     for key, label, colour in CONDS:
         if key not in eps_by_cond:
             continue
-        if key == "blind_izar":
+        if key == "blind":
             continue
         ep = eps_by_cond[key]
         xz = ep["positions"][:, [0, 2]]
@@ -721,8 +729,8 @@ def panel_traj_overlay(ax, eps_by_cond: dict):
                 zorder=3, solid_capstyle="round", label=label)
 
     # Blind drawn thick on top.
-    if "blind_izar" in eps_by_cond:
-        ep = eps_by_cond["blind_izar"]
+    if "blind" in eps_by_cond:
+        ep = eps_by_cond["blind"]
         xz = ep["positions"][:, [0, 2]]
         ax.plot(xz[:, 0], xz[:, 1], color="white", lw=4.5, alpha=0.85,
                 zorder=4, solid_capstyle="round")

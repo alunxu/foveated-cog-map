@@ -56,7 +56,14 @@ def _init_zero_state(num_recurrent_layers: int, hidden_size: int, device):
     return rnn_hidden, prev_action, not_done_mask
 
 
-def _step_policy(env, obs, policy, rnn_hidden, prev_action, not_done_mask, device):
+def _step_policy(env, obs, policy, rnn_hidden, prev_action, not_done_mask, device,
+                 mask_gps: bool = False, mask_compass: bool = False):
+    # Policy-time sensor ablation: zero the named sensor channels in obs before
+    # forwarding to the policy. Mirrors scripts/probing/collect.py mask logic.
+    if mask_gps and "gps" in obs:
+        obs = {**obs, "gps": np.zeros_like(obs["gps"])}
+    if mask_compass and "compass" in obs:
+        obs = {**obs, "compass": np.zeros_like(obs["compass"])}
     batch = {
         k: torch.from_numpy(np.expand_dims(v, 0)).to(device)
         for k, v in obs.items()
@@ -76,7 +83,8 @@ def _step_policy(env, obs, policy, rnn_hidden, prev_action, not_done_mask, devic
 
 
 def _run_full_episode(env, obs, policy, rnn_hidden, prev_action, not_done_mask,
-                      device, max_steps: int = 2000) -> dict:
+                      device, max_steps: int = 2000,
+                      mask_gps: bool = False, mask_compass: bool = False) -> dict:
     episode = env.current_episode
     start_pos = np.array(episode.start_position)
     goal_pos = np.array(episode.goals[0].position)
@@ -91,6 +99,7 @@ def _run_full_episode(env, obs, policy, rnn_hidden, prev_action, not_done_mask,
     while not done and steps < max_steps:
         obs, done, rnn_hidden, prev_action, not_done_mask, action_int = _step_policy(
             env, obs, policy, rnn_hidden, prev_action, not_done_mask, device,
+            mask_gps=mask_gps, mask_compass=mask_compass,
         )
         cur_pos = env.sim.get_agent_state().position
         path_length += float(np.linalg.norm(cur_pos - prev_pos))
@@ -135,7 +144,50 @@ def parse_args():
     p.add_argument("--no-sample", action="store_true",
                    help="If set, evaluate ALL episodes in pool (no rng sub-sample). "
                         "Use this for MP3D-test runs to evaluate full 1008-episode set.")
+    p.add_argument("--mask-gps", action="store_true",
+                   help="Policy-time GPS sensor ablation: zero the GPS channel of obs "
+                        "before forwarding to the policy at every step. The geodesic / "
+                        "ground-truth labels in the output JSON are unaffected.")
+    p.add_argument("--mask-compass", action="store_true",
+                   help="Policy-time compass sensor ablation: zero the compass channel. "
+                        "Typically used together with --mask-gps for the §5 causal test.")
     return p.parse_args()
+
+
+def _partial_path(out: Path) -> Path:
+    """Where to write mid-run cache so a pod restart can resume."""
+    return out.with_suffix(".partial" + out.suffix)
+
+
+def _load_partial(out: Path) -> list[dict]:
+    """Return list of already-completed per_episode dicts (empty if none)."""
+    p = _partial_path(out)
+    if not p.exists():
+        return []
+    try:
+        data = json.loads(p.read_text())
+        return list(data.get("per_episode", []))
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  WARN: ignoring corrupt partial cache {p}: {e}")
+        return []
+
+
+def _save_partial(out: Path, per_episode: list[dict], rows: list[dict],
+                  args, n_total: int) -> None:
+    """Atomic write of mid-run state. Crash-safe: tmp + rename."""
+    p = _partial_path(out)
+    payload = {
+        "condition_config": args.config,
+        "ckpt": str(args.ckpt),
+        "split": args.split,
+        "n_episodes_target": n_total,
+        "n_episodes_done": len(per_episode),
+        "summary": _agg(rows),
+        "per_episode": per_episode,
+    }
+    tmp = p.with_suffix(p.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2))
+    tmp.replace(p)
 
 
 def _agg(rows: list[dict]) -> dict:
@@ -209,15 +261,33 @@ def main() -> None:
         )
         return obs
 
-    per_episode = []
-    rows: list[dict] = []
+    # --- Resume from partial cache if a previous pod crashed mid-run --------
+    cached = _load_partial(args.out)
+    done_ids = {r["episode_id"] for r in cached}
+    if cached:
+        print(f"\n=== Resuming: {len(cached)}/{n} episodes already cached "
+              f"({args.out.with_suffix('.partial' + args.out.suffix).name}); "
+              f"{n - len(cached)} remaining")
+        per_episode = list(cached)
+        rows: list[dict] = [
+            {k: r[k] for k in ("success", "spl", "path_length",
+                               "geodesic", "steps", "dist_to_goal")}
+            for r in cached
+        ]
+        sampled_eps = [ep for ep in sampled_eps if str(ep.episode_id) not in done_ids]
+    else:
+        per_episode = []
+        rows: list[dict] = []
+
     t0 = time.time()
+    n_resume = len(per_episode)
 
     for ei, ep in enumerate(sampled_eps):
         obs = _pin(ep)
         rnn_h, prev_a, mask = _init_zero_state(layers, hidden, device)
         metrics = _run_full_episode(
             env, obs, policy, rnn_h, prev_a, mask, device, args.max_steps,
+            mask_gps=args.mask_gps, mask_compass=args.mask_compass,
         )
         rows.append(metrics)
         per_episode.append({
@@ -226,13 +296,17 @@ def main() -> None:
             **metrics,
         })
 
-        if (ei + 1) % 25 == 0:
+        global_idx = n_resume + ei + 1  # 1-indexed over the WHOLE eval (incl resumed)
+        if global_idx % 25 == 0:
             ag = _agg(rows)
             elapsed = time.time() - t0
-            eta = elapsed / (ei + 1) * (n - ei - 1)
-            print(f"  [{ei+1}/{n}]  SPL={ag['mean_spl']:.3f}  "
+            done_this_run = ei + 1
+            remaining = len(sampled_eps) - done_this_run
+            eta = elapsed / done_this_run * remaining if done_this_run else 0
+            print(f"  [{global_idx}/{n}]  SPL={ag['mean_spl']:.3f}  "
                   f"succ={ag['success_rate']:.3f}  "
                   f"elapsed={elapsed/60:.1f}min  eta={eta/60:.1f}min")
+            _save_partial(args.out, per_episode, rows, args, n)
 
     env.close()
     agg = _agg(rows)
@@ -247,11 +321,19 @@ def main() -> None:
         "ckpt": str(args.ckpt),
         "split": args.split,
         "n_episodes": n,
+        "mask_gps": bool(args.mask_gps),
+        "mask_compass": bool(args.mask_compass),
         "summary": agg,
         "per_episode": per_episode,
     }
     args.out.write_text(json.dumps(out, indent=2))
     print(f"\nWrote {args.out}")
+
+    # Clean up partial cache on successful completion
+    partial = _partial_path(args.out)
+    if partial.exists():
+        partial.unlink()
+        print(f"Cleaned partial cache: {partial.name}")
 
 
 if __name__ == "__main__":
