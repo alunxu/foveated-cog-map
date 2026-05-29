@@ -92,7 +92,7 @@ results/shortcut_results/*_traj.npz
 # hard-coded /scratch/wxu/ paths, kubectl namespaces) are kept private
 # under scripts/cluster_rcp/ because they depend on a private K8s/RunAI
 # cluster the teammate + course infrastructure don't have access to.
-docs/
+
 docker/build_with_kaniko.sh
 scripts/cluster_rcp/
 scripts/probing/lagk_rcp.sh

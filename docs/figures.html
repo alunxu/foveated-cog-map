@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Figures — Sensor Structure Shapes Cognitive Maps</title>
+  <link rel="stylesheet" href="figures-styles.css">
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header class="rubric-header">
+    <a href="index.html" class="rubric-back">&#8592; Back to paper</a>
+    <div class="rubric-header-center">
+      <span class="rubric-section-badge" id="rubric-section-badge"></span>
+      <span class="rubric-panel-label" id="rubric-panel-label"></span>
+    </div>
+    <span class="rubric-counter" id="rubric-counter">1 / 8</span>
+  </header>
+
+  <!-- ── Slide area ─────────────────────────────────────── -->
+  <main class="rubric-main" id="rubric-main"></main>
+
+  <!-- ── Footer nav ─────────────────────────────────────── -->
+  <footer class="rubric-footer">
+    <button class="rubric-nav-btn" id="prev-btn" aria-label="Previous figure" disabled>&#8592;</button>
+    <div class="rubric-dots" id="rubric-dots" role="tablist" aria-label="Figure navigation"></div>
+    <button class="rubric-nav-btn" id="next-btn" aria-label="Next figure">&#8594;</button>
+  </footer>
+
+  <!-- ── Figure scripts ─────────────────────────────────── -->
+  <script src="js/fig2a_magnitude.js"></script>
+  <script src="js/fig2b_substitution.js"></script>
+  <script src="js/fig2c_layer_localisation.js"></script>
+  <script src="js/fig3b_format_dichotomy.js"></script>
+  <script src="js/fig4c_future_position.js"></script>
+  <script src="js/fig5a_readability.js"></script>
+  <script src="js/fig5c_scrubbing.js"></script>
+  <script src="js/figa10_goal_vector.js"></script>
+
+  <!-- ── Slide deck ─────────────────────────────────────── -->
+  <script>
+  (function () {
+
+    var BADGE_COLORS = {
+      'H1':       { bg: '#1d4ed8', text: '#fff' },
+      'H2':       { bg: '#7c3aed', text: '#fff' },
+      'H3':       { bg: '#16a34a', text: '#fff' },
+      'CogNeuro': { bg: '#0e7490', text: '#fff' },
+      'App':      { bg: '#6b7280', text: '#fff' }
+    };
+
+    var SLIDES = [
+      {
+        tag:     'H1',
+        section: 'H1 · Magnitude',
+        label:   '2a',
+        title:   'Magnitude — what does h₂ encode?',
+        sub:     'Linear vs MLP-2 probe R² for GPS (solid & hatched), DtG control (lighter), MINE bits in gold on the right axis.',
+        caption:
+          '<strong>Figure 2a — Memory magnitude.</strong> ' +
+          'GPS linear R² drops from +0.96 (Blind) to −1.20 (Uniform) while MLP-2 probes stay ≥0.47 ' +
+          'across all conditions. MINE mutual-information estimates stay within 1.3× — the collapse is in ' +
+          '<em>format</em>, not total information content. DtG control bars confirm probe capacity ' +
+          'in all conditions.',
+        init: function (id) { window.renderFig2a(id); }
+      },
+      {
+        tag:     'H1',
+        section: 'H1 · Magnitude',
+        label:   '2b',
+        title:   'Substitution mechanism — when does GPS get crowded out?',
+        sub:     'Top-LSTM-layer GPS R² across training. Vision-rich agents progressively replace explicit position with visual features.',
+        caption:
+          '<strong>Figure 2b — Substitution mechanism.</strong> ' +
+          'All sighted conditions start with high GPS R² (~0.83–0.92 at 50M frames), then diverge ' +
+          'after task convergence (~100M). Coarse plateaus as it retains the integration route; ' +
+          'rich-encoder conditions decay as the visual route consolidates.',
+        init: function (id) { window.renderFig2b(id); }
+      },
+      {
+        tag:     'H1',
+        section: 'H1 · Magnitude',
+        label:   '2c',
+        title:   'Layer localisation — where in the stack is position?',
+        sub:     'Linear GPS R² on each LSTM layer. Position lives at L0 in all conditions; the top layer is where vision crowds it out.',
+        caption:
+          '<strong>Figure 2c — Layer localisation.</strong> ' +
+          'GPS R² along the LSTM stack (L0 input → L2 top). L0 carries GPS for every condition ' +
+          'because GPS is a direct sensor input. The blind/rich split emerges only at L2 — ' +
+          'the policy-readable layer.',
+        init: function (id) { window.renderFig2c(id); }
+      },
+      {
+        tag:     'H2',
+        section: 'H2 · Format',
+        label:   '3b',
+        title:   'Format dichotomy',
+        sub:     'Scene-invariance (LOSO R²) vs cost of transplanting the decoder to a new scene. Blind sits alone in the bottom-right.',
+        caption:
+          '<strong>Figure 3b — Format dichotomy.</strong> ' +
+          'Blind uniquely occupies the scene-invariant + transplant-robust quadrant ' +
+          '(high LOSO R², low transplant cost). All sighted conditions cluster in the ' +
+          'scene-conditional + brittle region. The format boundary tracks the vision-on/off ' +
+          'threshold, not the visual-quality gradient.',
+        init: function (id) { window.renderFig3b(id); }
+      },
+      {
+        tag:     'CogNeuro',
+        section: 'Cog-Neuro · Temporal',
+        label:   '4c',
+        title:   'Future-position predictability',
+        sub:     'Decoding the position k steps ahead from h₂ at t. Blind stays high to k = 50; visual agents collapse fast.',
+        caption:
+          '<strong>Figure 4c — Predictive horizon.</strong> ' +
+          'R² of decoding position k steps ahead from h₂. Blind retains high future-position R² ' +
+          'even at k = 50 (R² = 0.75), consistent with a successor-representation / forward-rolling map. ' +
+          'Rich-encoder conditions decay to chance or below within 5–20 steps.',
+        init: function (id) { window.renderFig4c(id); }
+      },
+      {
+        tag:     'H3',
+        section: 'H3 · Consumption',
+        label:   '5a',
+        title:   'Probe-readability ≠ policy use',
+        sub:     "x: how well a probe reads position from h₂. y: how much SPL drops on a shortcut trial. Coarse's map is readable yet largely unused.",
+        caption:
+          '<strong>Figure 5a — Readability ≠ policy use.</strong> ' +
+          'Coarse: readable (R² = +0.50) yet small SPL drop — the GPS code is epiphenomenal. ' +
+          'Uniform: unreadable (R² = −1.50) yet has a large disorientation distance (−3.2 m). ' +
+          'Probe-readability and policy reliance are doubly dissociated.',
+        init: function (id) { window.renderFig5a(id); }
+      },
+      {
+        tag:     'H3',
+        section: 'H3 · Consumption',
+        label:   '5c',
+        title:   'β-scrubbing the readable axis',
+        sub:     'Drop in probe R² after zeroing the linear-readable direction. The linear axis is one window onto position, not the substrate.',
+        caption:
+          '<strong>Figure 5c — Readable axis is one window.</strong> ' +
+          'Removing the top linear GPS direction collapses the linear probe (large positive drop) ' +
+          'but barely affects the MLP probe (near-zero). Position is encoded redundantly across ' +
+          'many directions — the readable axis is a window into a distributed population code.',
+        init: function (id) { window.renderFig5c(id); }
+      },
+      {
+        tag:     'App',
+        section: 'Appendix A · Goal Vector',
+        label:   'A10',
+        title:   'Goal vector probe R²',
+        sub:     'Ridge probe R² for three goal-vector formulations. Off-scale negative R² values written in red below their bars.',
+        caption:
+          '<strong>Figure A10 — Goal vector probe.</strong> ' +
+          'Goal <em>distance</em> is linearly decodable from h₂ in all conditions except Uniform. ' +
+          'Goal <em>direction</em> and the full 2D goal vector are not decodable in any condition. ' +
+          'Memory encodes where the agent is, not where it needs to go.',
+        init: function (id) { window.renderFigA10(id); }
+      }
+    ];
+
+    // ── Build DOM ──────────────────────────────────────────
+    var mainEl  = document.getElementById('rubric-main');
+    var dotsEl  = document.getElementById('rubric-dots');
+    var current = 0;
+    var inited  = new Array(SLIDES.length).fill(false);
+
+    SLIDES.forEach(function (s, i) {
+      // Slide
+      var slide = document.createElement('div');
+      slide.className = 'rubric-slide' + (i === 0 ? ' active' : '');
+      slide.id = 'slide-' + i;
+
+      // Figure card
+      var fig = document.createElement('div');
+      fig.className = 'rubric-figure';
+
+      var header = document.createElement('div');
+      header.className = 'rubric-figure-header';
+      header.innerHTML =
+        '<span class="rubric-figure-label">' + s.label + '</span>' +
+        '<span class="rubric-figure-title">' + s.title + '</span>';
+      fig.appendChild(header);
+
+      var sub = document.createElement('p');
+      sub.className = 'rubric-figure-sub';
+      sub.textContent = s.sub;
+      fig.appendChild(sub);
+
+      var chart = document.createElement('div');
+      chart.id  = 'chart-' + i;
+      chart.className = 'rubric-chart';
+      fig.appendChild(chart);
+
+      slide.appendChild(fig);
+
+      // Caption / takeaway
+      var cap = document.createElement('figcaption');
+      cap.className = 'rubric-caption';
+      cap.innerHTML = s.caption;
+      slide.appendChild(cap);
+
+      mainEl.appendChild(slide);
+
+      // Dot
+      var dot = document.createElement('button');
+      dot.className = 'rubric-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('role', 'tab');
+      dot.setAttribute('aria-label', 'Figure ' + (i + 1) + ': ' + s.label + ' ' + s.title);
+      dot.addEventListener('click', function () { goTo(i); });
+      dotsEl.appendChild(dot);
+    });
+
+    // ── Update header & controls ────────────────────────────
+    function updateUI() {
+      var s   = SLIDES[current];
+      var col = BADGE_COLORS[s.tag] || BADGE_COLORS['App'];
+
+      var badge = document.getElementById('rubric-section-badge');
+      badge.textContent      = s.section;
+      badge.style.background = col.bg;
+      badge.style.color      = col.text;
+
+      document.getElementById('rubric-panel-label').textContent =
+        '(' + s.label + ') ' + s.title;
+      document.getElementById('rubric-counter').textContent =
+        (current + 1) + ' / ' + SLIDES.length;
+
+      document.querySelectorAll('.rubric-dot').forEach(function (d, i) {
+        d.classList.toggle('active', i === current);
+      });
+
+      document.getElementById('prev-btn').disabled = current === 0;
+      document.getElementById('next-btn').disabled = current === SLIDES.length - 1;
+    }
+
+    // ── Navigate ────────────────────────────────────────────
+    // Force SVG to fill its container — viewBox-only SVGs collapse to 0×0
+    // in browsers that don't infer intrinsic size from viewBox alone.
+    function fixSvg(chartId) {
+      var el = document.getElementById(chartId);
+      if (!el) return;
+      el.querySelectorAll('svg').forEach(function (s) {
+        var vb = s.getAttribute('viewBox');
+        if (vb) {
+          var p = vb.trim().split(/[\s,]+/);
+          if (p.length >= 4) {
+            var vw = parseFloat(p[2]), vh = parseFloat(p[3]);
+            if (vw > 0 && vh > 0) s.style.aspectRatio = vw + ' / ' + vh;
+          }
+        }
+        s.setAttribute('width', '100%');
+        s.removeAttribute('height');
+      });
+    }
+
+    function goTo(n) {
+      if (n === current || n < 0 || n >= SLIDES.length) return;
+
+      document.getElementById('slide-' + current).classList.remove('active');
+      current = n;
+      document.getElementById('slide-' + current).classList.add('active');
+
+      if (!inited[current]) {
+        SLIDES[current].init('chart-' + current);
+        fixSvg('chart-' + current);
+        inited[current] = true;
+      }
+
+      updateUI();
+    }
+
+    document.getElementById('prev-btn').addEventListener('click', function () { goTo(current - 1); });
+    document.getElementById('next-btn').addEventListener('click', function () { goTo(current + 1); });
+
+    // Keyboard
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+    });
+
+    // Touch swipe
+    var touchStartX = 0;
+    document.addEventListener('touchstart', function (e) {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      var dx = e.changedTouches[0].screenX - touchStartX;
+      if (Math.abs(dx) > 50) goTo(dx < 0 ? current + 1 : current - 1);
+    }, { passive: true });
+
+    // Init first slide
+    window.addEventListener('load', function () {
+      SLIDES[0].init('chart-0');
+      fixSvg('chart-0');
+      inited[0] = true;
+      updateUI();
+    });
+
+  })();
+  </script>
+
+</body>
+</html>

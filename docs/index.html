@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Structure Shapes the Format of Cognitive Maps in Navigation Agents</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- LANDER -->
+    <section id="lander">
+        <div class="lander-sticky">
+            <div class="lander-image-box">
+                <img src="assets/presentation_assets/landing.png" alt="Foveated cognitive map">
+                <div class="lander-overlay">
+                    <div class="lander-card">
+                        <h1>Sensor Structure Shapes the Format of<br>Cognitive Maps in Navigation Agents</h1>
+                        <p class="authors">Alun Xu &nbsp;·&nbsp; Léo Bruneau &nbsp;·&nbsp; Rim Abkari &nbsp;·&nbsp; Zyad
+                            Aoutir &nbsp;—&nbsp; EPFL</p>
+                        <span class="venue">CS503 Visual Intelligence &nbsp;·&nbsp; Spring 2026</span>
+                        <div class="lander-buttons">
+                            <a class="btn btn-primary" href="https://github.com/alunxu/agentic-cognitive-map"
+                                target="_blank">Code ↗</a>
+                            <a class="btn btn-secondary" href="https://huggingface.co/alunxu/spatial-memory-checkpoints"
+                                target="_blank">Checkpoints ↗</a>
+                            <a class="btn btn-figures" href="figures.html">Interactive Figures ↗</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator">↓</div>
+        </div>
+    </section>
+
+    <!-- TIMELINE RAIL (hidden until lander exits) -->
+    <div id="timeline-rail" class="timeline-hidden" aria-hidden="true">
+        <div class="timeline-line"></div>
+        <div class="timeline-dot dot-future" data-section="motivation"></div>
+        <div class="timeline-dot dot-future" data-section="hypothesis"></div>
+        <div class="timeline-dot dot-future" data-section="methods"></div>
+        <div class="timeline-dot dot-future" data-section="result1"></div>
+        <div class="timeline-dot dot-future" data-section="result2"></div>
+        <div class="timeline-dot dot-future" data-section="result3"></div>
+        <div class="timeline-dot dot-future" data-section="result4"></div>
+        <div class="timeline-dot dot-future" data-section="result5"></div>
+        <div class="timeline-dot dot-future" data-section="discussion"></div>
+        <div class="timeline-dot dot-future" data-section="future"></div>
+        <div class="timeline-dot dot-future" data-section="references"></div>
+        <div class="timeline-dot dot-future" data-section="code-data"></div>
+    </div>
+
+    <section id="motivation">
+        <div class="content-column">
+            <h2>Introduction — Motivation</h2>
+            <div class="section-image-box">
+                <img src="assets/presentation_assets/motivation.png" alt="Motivation">
+            </div>
+            <p>
+                In artificial intelligence, visual perception and downstream memory are commonly treated as a sequential
+                pipeline, guided by the implicit assumption that scaling the visual encoder uniformly improves
+                downstream
+                memory representations. We instead question this underlying assumption: how does the structure of a
+                sensor
+                constrain the spatial information accessible from memory? Cognitive neuroscience has long recognized
+                that
+                sensory ecologies inherently shape the format of cognitive maps. For example, foveated primates rely on
+                view
+                cells<sup class="cite"><a href="#ref-1">[1]</a></sup>, near-panoramic rodents depend on place cells<sup
+                    class="cite"><a href="#ref-2">[2]</a></sup>, and congenitally blind humans
+                show
+                striking cross-modal remapping<sup class="cite"><a href="#ref-3">[3]</a>,<a href="#ref-4">[4]</a></sup>.
+                Because biological evolutionary histories cannot be held
+                constant, empirically isolating the causal role of sensor structure in nature is notoriously difficult.
+                We
+                bridge this gap <em>in silico</em>, utilizing deep reinforcement learning agents to rigorously evaluate
+                how
+                systematically varying visual sensor constraints impacts the fundamental format of spatial memory.
+            </p>
+        </div>
+    </section>
+
+    <section id="hypothesis">
+        <div class="content-column">
+            <h2>Introduction — Hypothesis</h2>
+            <div class="section-image-box">
+                <img src="assets/presentation_assets/hypothesis.png" alt="Hypothesis">
+            </div>
+            <p>
+                We hypothesize an emergent <strong>capacity-allocation</strong> principle: an agent's visual encoder and
+                its
+                recurrent integration of continuous motion history (e.g., GPS) actively compete for a finite
+                hidden-state
+                memory budget. An agent can build its spatial representation via two distinct computational routes:
+                integrating motion over time to develop a cognitive map (which works even without vision), or reading
+                position-correlated visual landmarks from the current scene (which only works with rich vision). We
+                predict
+                that as visual bandwidth increases, the agent's internal representation will actively reallocate
+                capacity
+                away from the motion-integration route and heavily tilt toward the visual route. By varying only the
+                visual
+                sensor structure while keeping the core agent architecture fixed, we expect the underlying format of the
+                resulting cognitive maps to diverge entirely.
+            </p>
+        </div>
+    </section>
+
+    <section id="methods">
+        <div class="content-column">
+            <h2>Methods</h2>
+
+            <!-- Native HTML methods diagram -->
+            <div class="methods-diagram">
+
+                <!-- Row 1: levers -->
+                <div class="md-levers-row">
+                    <div>
+                        <div class="md-section-label">Common Lever</div>
+                        <div class="md-pill-row">
+                            <span class="md-pill">architecture</span>
+                            <span class="md-pill">pretraining data</span>
+                        </div>
+                    </div>
+                    <div class="md-our-lever">
+                        <div class="md-section-label">Our Lever</div>
+                        <div class="md-spectrum-row">
+                            <span class="md-spec-end">low</span>
+                            <div class="md-spec-bar">
+                                <div class="md-spec-dot left-dot"></div>
+                                <div class="md-spec-dot right-dot"></div>
+                            </div>
+                            <span class="md-spec-end">high</span>
+                        </div>
+                        <div class="md-spec-name">visual sensor bandwidth</div>
+                    </div>
+                </div>
+
+                <!-- Row 2: pipeline -->
+                <div class="md-section-label" style="margin-bottom:8px">Five Visual Sensors</div>
+                <div class="md-pipeline">
+
+                    <!-- Sensor thumbs -->
+                    <div class="md-sensor-row">
+                        <div class="md-sensor">
+                            <div class="md-sensor-thumb"></div>
+                            <span class="md-sensor-label">blind</span>
+                        </div>
+                        <div class="md-sensor">
+                            <div class="md-sensor-thumb"><img src="assets/fig_coarse.png" alt="coarse"></div>
+                            <span class="md-sensor-label">coarse</span>
+                        </div>
+                        <div class="md-sensor">
+                            <div class="md-sensor-thumb"><img src="assets/fig_foveated.png" alt="foveated"></div>
+                            <span class="md-sensor-label">foveated</span>
+                        </div>
+                        <div class="md-sensor">
+                            <div class="md-sensor-thumb"><img src="assets/fig_logpolar.png" alt="log-polar"></div>
+                            <span class="md-sensor-label">log-polar</span>
+                        </div>
+                        <div class="md-sensor">
+                            <div class="md-sensor-thumb"><img src="assets/fig_uniform.png" alt="uniform"></div>
+                            <span class="md-sensor-label">uniform</span>
+                        </div>
+                    </div>
+
+                    <div class="md-flow-arrow">→</div>
+
+                    <!-- ResNet-18 -->
+                    <div class="md-module">
+                        <div class="md-module-name">ResNet-18</div>
+                        <div class="md-module-sub">random init / end-to-end</div>
+                    </div>
+
+                    <div class="md-flow-arrow">→</div>
+
+                    <!-- LSTM + non-visual stack -->
+                    <div class="md-lstm-col">
+                        <div class="md-module md-lstm">
+                            <div class="md-module-name">3-layer LSTM</div>
+                            <div class="md-module-sub">512-d recurrent memory</div>
+                        </div>
+                        <div class="md-nv-stack">
+                            <div class="md-nv-arrow">↑</div>
+                            <div class="md-section-label" style="margin-bottom:4px">Same Non-Visual Stack</div>
+                            <div class="md-nv-tags">
+                                <span class="md-pill">goal</span>
+                                <span class="md-pill">GPS</span>
+                                <span class="md-pill">compass</span>
+                                <span class="md-pill">action</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="md-flow-arrow">→</div>
+
+                    <!-- Policy -->
+                    <div class="md-module md-policy">
+                        <div class="md-module-name">policy</div>
+                        <div class="md-module-sub">linear head</div>
+                    </div>
+
+                </div>
+
+                <!-- Row 3: task info + probe -->
+                <div class="md-bottom-row">
+                    <div class="md-task-box">
+                        <div class="md-section-label">Same Task / Data / Optimization</div>
+                        <div class="md-task-row">
+                            <span class="md-task-tag md-tag-task">TASK</span>
+                            <span>Habitat PointGoal navigation</span>
+                        </div>
+                        <div class="md-task-row">
+                            <span class="md-task-tag md-tag-train">TRAIN</span>
+                            <span>Gibson 0+ (411) + MP3D-train (61), DD-PPO / 250M frames</span>
+                        </div>
+                        <div class="md-task-row">
+                            <span class="md-task-tag md-tag-eval">EVAL</span>
+                            <span>MP3D-test (18 held-out scenes), 1008 deterministic episodes</span>
+                        </div>
+                    </div>
+                    <div class="md-probe">
+                        <span class="md-probe-kw">Probe</span>
+                        freeze weights; collect 500 fresh rollouts / condition
+                    </div>
+                </div>
+
+            </div><!-- /.methods-diagram -->
+
+            <p>
+                Our comparative testbed isolates visual bandwidth as the sole variable. We evaluate five
+                conditions spanning a graded scale of visual bandwidth: <em>blind</em> (no vision), <em>coarse</em>
+                (48x48
+                pixels collapsed to a 1x1 bottleneck), <em>foveated</em> (eccentricity-dependent gaussian blur),
+                <em>foveated-logpolar</em>
+                (retinal grid), and <em>uniform</em> (unblurred 256x256). Crucially, all five conditions share an
+                identical
+                ResNet-18 encoder backbone and a 3-layer LSTM<sup class="cite"><a href="#ref-6">[6]</a>,<a
+                        href="#ref-11">[11]</a></sup>, and all are provided with the exact same
+                non-visual sensor stack (goal, GPS, compass, previous action), ensuring that any divergence in memory
+                stems
+                purely from the visual input.
+                Agents were trained from scratch using DD-PPO<sup class="cite"><a href="#ref-6">[6]</a></sup> on a
+                PointGoal
+                navigation task<sup class="cite"><a href="#ref-5">[5]</a></sup> for a 250M-frame budget across a merged
+                pool of 3D environments<sup class="cite"><a href="#ref-7">[7]</a>,<a href="#ref-8">[8]</a></sup>.
+                Following training, the weights were frozen and the top-layer hidden state
+                (<em>h</em>₂ ∈ ℝ<sup>512</sup>) was collected step-by-step from fresh, out-of-distribution rollouts
+                across 18 held-out test scenes. We then read this frozen memory along three complementary views of a
+                single capacity allocation—<strong>magnitude</strong> (how much linearly-readable position survives),
+                <strong>format</strong> (what shape that code takes, spatially and temporally), and
+                <strong>consumption</strong> (whether the policy actually uses it)—using a convergent battery of linear
+                and non-linear (MLP) probes, mutual-information estimation, leave-one-scene-out validation, subspace
+                geometry, and causal memory transplants. Following standard practice in comparative-cognition
+                modeling<sup class="cite"><a href="#ref-11">[11]</a></sup>, we train a single seed per condition and
+                instead derive rigor from this multi-method convergence.
+            <p>
+                <em>Disclaimer: </em>Although the agents in this study do share the same architecture for the
+                encoder (and memory), their weights are in fact co-trained with the policy which means that, throughout
+                training,
+                the different agents will effectively end up developing different "encoders" since the weights
+                will end up being different because of the differences in the inputs.
+            </p>
+            </p>
+        </div>
+    </section>
+
+    <section id="result1">
+        <div class="content-column">
+            <h2>Result 1 — Task Performance</h2>
+            <div class="section-table-box" style="float:right;margin-right:0;margin-left:28px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Condition</th>
+                            <th>SPL</th>
+                            <th>Success</th>
+                            <th>GPS R² (no-cap)</th>
+                            <th>Compass R² (no-cap)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Blind</td>
+                            <td>0.59</td>
+                            <td>0.93</td>
+                            <td class="best">+0.934 ± 0.04</td>
+                            <td class="best">+0.844 ± 0.03</td>
+                        </tr>
+                        <tr>
+                            <td>Coarse</td>
+                            <td>0.853</td>
+                            <td>0.989</td>
+                            <td>+0.582 ± 0.099</td>
+                            <td>+0.659 ± 0.061</td>
+                        </tr>
+                        <tr>
+                            <td>Foveated</td>
+                            <td class="best">0.894</td>
+                            <td class="best">0.993</td>
+                            <td>+0.178 ± 0.659</td>
+                            <td>+0.503 ± 0.142</td>
+                        </tr>
+                        <tr>
+                            <td>Foveated-logpolar</td>
+                            <td>0.879</td>
+                            <td>0.990</td>
+                            <td>−0.029 ± 0.759</td>
+                            <td>+0.467 ± 0.330</td>
+                        </tr>
+                        <tr>
+                            <td>Uniform</td>
+                            <td>0.891</td>
+                            <td class="best">0.993</td>
+                            <td>−1.785 ± 2.993</td>
+                            <td>−1.244 ± 3.579</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="table-note">Navigation performance and spatial representational probes. SPL and Success bolded
+                    where best; R² from GPS/Compass decoded from hidden state h₂.</p>
+            </div>
+            <p>
+                Before examining the agents' internal memories, we first evaluated their behavioral competence on
+                the PointGoal navigation task. Despite receiving substantially different visual inputs, all five agent
+                conditions successfully learned to navigate and reached near-identical task performance. Success
+                rates across the conditions were at ceiling, ranging from 93% for the blind agent to over 99% for the
+                rich-encoder agents.
+                <br><br>
+                While all agents consistently reached their goals, visual bandwidth did impact their path
+                efficiency. Sighted agents—even the heavily bottlenecked coarse condition—navigated highly efficient
+                routes, achieving Success weighted by Path Length (SPL) scores between 0.85 and 0.89. The blind
+                agent, relying solely on integrated motion history, successfully navigated but took less optimal
+                paths, resulting in an SPL of 0.59. Crucially, because all conditions converged behaviorally and
+                achieved near-perfect success rates, the profound differences we observe in their internal memory
+                representations cannot be attributed to a simple gap in navigation skill; rather, they reflect a
+                true representational dissociation.
+            </p>
+        </div>
+    </section>
+
+    <section id="result2">
+        <div class="content-column">
+            <h2>Result 2 — Magnitude</h2>
+            <div class="section-chart-wrap">
+                <div class="section-chart-box" id="chart-fig2a"></div>
+                <p class="chart-footnote">Figure 2a — Magnitude — what does h₂ encode?</p>
+            </div>
+            <div class="section-chart-wrap">
+                <div class="section-chart-box" id="chart-fig2b"></div>
+                <p class="chart-footnote">Figure 2b — Substitution mechanism — when does GPS get crowded out?</p>
+            </div>
+            <p>
+                Our first view of the allocation reveals a fundamental trade-off: the linearly-readable position signal
+                at the policy-readable memory layer (<em>h</em>₂) shrinks <strong>monotonically</strong> as encoder
+                bandwidth increases (Figure 2a). The <em>blind</em> and <em>coarse</em> agents display high linear
+                decodability for absolute position—their integration route dominates the linear position code—whereas
+                the <em>foveated</em> and <em>uniform</em> agents show a near-complete collapse. Because all five
+                conditions sit at near-ceiling success (Table 1), this is a representational dissociation, not a skill
+                gap.
+                <br><br>
+                The driver is not raw output dimensionality but <em>per-step feature variety</em>. The
+                <em>foveated-logpolar</em> control, whose encoder emits only a ~2×2 feature map—nearly as small as
+                coarse's 1×1—nonetheless lands squarely in the rich-encoder regime, placing the relevant variable on the
+                diversity of visual features delivered each timestep rather than cell count. This trade-off also emerges
+                <em>during training</em>: all sighted agents start with high linear readability, but rich-encoder
+                conditions decay as the policy gradient learns to substitute internal integration with external visual
+                landmarks, while bottleneck conditions stay stable throughout.
+                <br><br>
+                Crucially, the collapse is not a loss of information. A control confirms the linear probe is capable—it
+                reads distance-to-goal at <em>R</em>² ≥ 0.81 in every condition—and a MINE mutual-information
+                estimator<sup class="cite"><a href="#ref-14">[14]</a></sup> shows total spatial information barely
+                moves (blind 6.01 bits, coarse 4.55, uniform 4.47). Rich-encoder conditions retain the position
+                information; they simply encode it non-linearly. The collapse is therefore a <em>format shift</em>, not
+                an information collapse.
+            </p>
+        </div>
+    </section>
+
+    <section id="result3">
+        <div class="content-column">
+            <h2>Result 3 — Format</h2>
+            <div class="section-chart-wrap">
+                <div class="section-chart-box" id="chart-fig3b"></div>
+                <p class="chart-footnote">Figure 3b — Format dichotomy</p>
+            </div>
+            <p>
+                The magnitude collapse of Result 2 left an ambiguity: when the linear position code vanishes, is
+                spatial information <em>lost</em>, or merely <em>reformatted</em>? We already know it survives—a
+                non-linear probe recovers it
+                <!-- (<em>R</em>² ∈ [0.51, 0.73] in rich-encoder agents)  -->
+                and total mutual
+                information barely moves—so the collapse is a <strong>format shift</strong>. The plot on the right
+                isolates the
+                sharpest cut of that shift: not <em>how much</em> position lives in memory, but in <em>what kind</em> of
+                representation it lives—a portable, world-anchored map, or a scene-specific one.
+                <br><br>
+                <strong>How to read it.</strong> Each marker is one condition, placed on two orthogonal properties of
+                its memory. The horizontal axis is <em>scene-invariance</em>, measured by <strong>Leave-One-Scene-Out
+                    (LOSO) cross-validation</strong>: we train a linear probe to decode a spatial axis from the hidden
+                state
+                on all-but-one held-out room, test it on the room it never saw, and average over every left-out room. A
+                high LOSO <em>R²</em> (right of the 0.5 divider) means a <em>single</em> position direction generalizes
+                across rooms—the agent carries one shared, world-frame map. A low LOSO <em>R²</em> (left) means the
+                position direction re-orients from room to room—the code is scene-conditional. The vertical axis is
+                <strong>transplant cost</strong>, a purely behavioral, probe-free measure drawn from the 5×5
+                memory-transplant experiment: we splice one condition's recurrent memory into the navigation loop and
+                record the resulting SPL penalty. A low cost means the memory is in a format another policy can actually
+                consume; a high cost means the code is idiosyncratic and breaks when moved. The two axes cross-check the
+                same question—"is this a universal map or a private one?"—from a decoding side and a behavioral side.
+                The desirable "true cognitive map" corner is bottom-right (scene-invariant <em>and</em>
+                transplant-robust); the top-left corner is scene-conditional and brittle.
+                <br><br>
+                <strong>What it shows.</strong> The split is not graded—it is binary. The <em>blind</em> agent sits
+                alone in the bottom-right corner (LOSO <em>R²</em> ≈ 0.9, transplant cost ≈ 0.03): one linear,
+                scene-invariant map that transfers to unseen rooms and that other policies can navigate with. Every
+                condition with <em>any</em> vision collapses into the top-left cluster (LOSO <em>R²</em> ≈ 0.2–0.4,
+                transplant cost ≈ 0.13–0.18). Crucially this includes <em>coarse</em>—the very condition whose linear
+                position code was nearly as strong as blind's in Result 2. So scene-invariance does <em>not</em> track
+                magnitude: the boundary here falls cleanly at vision-on versus vision-off, not along the graded
+                bandwidth scale. And because the LOSO (decoding) and transplant (behavioral) verdicts agree, the
+                dichotomy cannot be written off as a quirk of the linear probe.
+                <br><br>
+                <strong>What it means.</strong> A fully linear, scene-invariant cognitive map is not a property that
+                degrades gracefully with bandwidth—it requires removing vision <em>entirely</em>. The moment per-step
+                visual evidence is available, the agent stops maintaining one allocentric world frame and reorganizes
+                its position code per scene: the in-silico analogue of hippocampal <em>global remapping</em><sup
+                    class="cite"><a href="#ref-9">[9]</a></sup>, where place fields reconfigure when sensory evidence
+                supports distinct hidden states. The transplant asymmetry behind the y-axis sharpens this—blind-style
+                memory can drive <em>any</em> condition's policy, but rich-encoder memory only drives its own, mirroring
+                cross-modality remapping in biological navigators<sup class="cite"><a href="#ref-3">[3]</a></sup>. The
+                implication for AI and biology alike: a vision-deprived agent does not hold a lower-fidelity copy of the
+                sighted map—it holds a <em>categorically different</em> representation, and rich encoders do not blur
+                the cognitive map so much as replace it with a scene-bound one.
+            </p>
+        </div>
+    </section>
+
+    <section id="result4">
+        <div class="content-column">
+            <h2>Result 4 — Temporal Stability</h2>
+            <div class="section-chart-wrap">
+                <div class="section-chart-box" id="chart-fig4c"></div>
+                <p class="chart-footnote">Figure 4c — Future-position predictability</p>
+            </div>
+            <p>
+                Format is temporal as well as spatial. Vision lets an agent anchor to a fixed, stable map; without it,
+                the <em>blind</em> agent must recompute its location from self-motion at every step, so its internal
+                code <strong>continuously rotates—it rebuilds the map step-by-step</strong>. A temporal-generalization
+                analysis makes this concrete: a decoder trained at one timestep only reads nearby timesteps for the
+                blind agent (a diagonal stripe), whereas sighted agents' decoders generalize across the whole episode (a
+                stable square). Consistently, the blind agent shows the largest cumulative change in its hidden state
+                per step, and its code's stability decays fastest with time-lag.
+                <br><br>
+                This continual integration leaves a forward-looking signature (Figure 4c): only the blind agent sustains
+                a deep <em>predictive horizon</em>, linearly decoding its <em>future</em> position many steps
+                ahead—the successor-representation cognitive-map signature<sup class="cite"><a
+                        href="#ref-10">[10]</a></sup>—dropping only 0.04 in <em>R</em>² between decoding its current
+                step
+                and 20 steps into the future, while sighted agents cannot. A map actively integrated from motion and a
+                map statically extracted from vision are categorically different computational objects: blind units even
+                integrate over an intrinsic timescale 2.1–2.5× longer than every sighted condition, reproducing a
+                cortical-hierarchy slow-integrator gradient within a single recurrent network.
+            </p>
+        </div>
+    </section>
+
+    <section id="result5">
+        <div class="content-column">
+            <h2>Result 5 — Consumption & Causal Validation</h2>
+            <div class="section-chart-wrap">
+                <div class="section-chart-box" id="chart-fig5a"></div>
+                <p class="chart-footnote">Figure 5a — Readability ≠ policy use</p>
+            </div>
+            <p>
+                A linear probe reveals what memory <em>stores</em>, but not what the policy actually <em>relies on</em>.
+                To close this gap we use a paired shortcut protocol<sup class="cite"><a href="#ref-15">[15]</a></sup>:
+                an agent finishes an episode, is reset to its start, and is given a new goal in the same scene while
+                <em>retaining</em> its recurrent memory; the SPL penalty of keeping that stale memory (versus wiping it)
+                measures how much the policy leans on it. Readability and reliance dissociate in two telling cases.
+                <em>Coarse</em> carries a readable linear position code yet barely relies on it ("readable but
+                unused"), while <em>uniform</em> has <em>no</em> linear position code yet suffers the largest penalty
+                ("unused but readable via a substitute")—its memory encodes <em>scene identity</em> more strongly than
+                position. In trajectory overlays, only uniform's persistent agent locks onto the <em>previous</em>
+                episode's goal (+1.83 m closer to the old goal than the new one); blind, coarse, and foveated still head
+                for the new goal.
+                <br><br>
+                We then ground the format shift <em>causally</em>, outside any probe, with asymmetric
+                <strong>memory transplants</strong>: blind-style memory can drive <em>any</em> condition's policy, but
+                rich-encoder memory only drives its own—mirroring biological global remapping under cross-modality
+                reorganization<sup class="cite"><a href="#ref-3">[3]</a></sup>. Two further controls characterize the
+                mechanism: re-initializing memory from a previous end-state drops SPL comparably across all five
+                conditions (memory here is an <em>activity-slot</em> store, bound to trajectory dynamics rather than
+                weights), and ablating the GPS+compass sensors collapses success everywhere—confirming the position
+                sensor as the upstream causal source that the integration route encodes.
+            </p>
+        </div>
+    </section>
+
+    <section id="discussion">
+        <div class="content-column">
+            <h2>Discussion — Synthesis & Biological Parallels</h2>
+            <div class="section-image-box">
+                <img src="assets/presentation_assets/backup2.png" alt="Discussion">
+            </div>
+            <p>
+                Rather than treating magnitude, format, and consumption as independent phenomena, we synthesize them as
+                three views of a single underlying principle: the visual encoder and the integration of the position
+                sensor actively compete for a finite memory budget, and the encoder's bandwidth tilts the balance.
+                Bottleneck conditions retain a linear position code, rich-encoder conditions reallocate to the visual
+                route, and the policy reads from whichever route the memory makes available. The reading is geometric: a
+                finite memory has a fixed number of dimensions to spend. When an encoder delivers rich, near-complete
+                spatial information at every step, memory has no reason to maintain a separate linear position code and
+                commits those dimensions elsewhere; when visual bandwidth is heavily restricted, memory must reconstruct
+                position by integrating motion over time, forcing the code into a form the linear policy head can
+                consume—exactly what the invariance–disentanglement reading of the information bottleneck predicts.
+                <br><br>
+                This artificial phenomenon strongly mirrors biological precedents in comparative cognition, such as
+                cross-modality remapping in echolocating bats and congenitally blind humans<sup class="cite"><a
+                        href="#ref-3">[3]</a>,<a href="#ref-4">[4]</a></sup>. Furthermore, we
+                found this capacity-allocation principle to be architecture-agnostic. By porting our experiment to an
+                entirely different environment, Memory Maze<sup class="cite"><a href="#ref-12">[12]</a></sup>, using a
+                different visual encoder family, frozen
+                DINOv2 patch features<sup class="cite"><a href="#ref-13">[13]</a></sup>, we successfully replicated the
+                exact same format-shift dynamics. This
+                confirms that the principle governs how any finite-capacity memory interacts with sensory structures,
+                bridging artificial intelligence with the systems-neuroscience toolkit.
+            </p>
+        </div>
+    </section>
+
+    <section id="future">
+        <div class="content-column">
+            <h2>Future Work</h2>
+            <div class="section-image-box">
+                <img src="assets/presentation_assets/future.png" alt="Future Work">
+            </div>
+            <p>
+                These findings have broad theoretical implications, reframing bandwidth-restricting perception (like
+                foveation) not merely as a compute-saving measure, but as potentially <em>cognition-enabling</em>.
+                Because
+                our capacity-allocation principle acts at the interface between the encoder and memory, it generates a
+                falsifiable prediction for modern AI architectures: we predict this same format shift will appear in
+                transformer-based navigators.
+            </p>
+            <p>
+                Most provocatively, our results offer a candidate mechanism for the spatial-reasoning bottleneck in
+                state-of-the-art vision–language models (VLMs). That bottleneck is increasingly traced not to faulty
+                perception but to a failure to <em>consolidate and decode</em> spatial structure: vision encoders
+                capture geometric detail that language decoders fail to translate into accurate outputs<sup
+                    class="cite"><a href="#ref-16">[16]</a></sup>; generating discrete text tokens forces models to
+                approximate continuous space, causing numerical drift<sup class="cite"><a href="#ref-19">[19]</a></sup>;
+                models struggle with egocentric-to-allocentric transformation
+                and rarely build the spatial mental models humans use to track unseen objects<sup class="cite"><a
+                        href="#ref-18">[18]</a></sup>; and, tellingly, linguistic Chain-of-Thought prompting can even
+                <em>degrade</em> spatial reasoning<sup class="cite"><a href="#ref-17">[17]</a></sup>. Our
+                capacity-allocation account suggests <em>why</em>: when a rich encoder supplies near-complete features
+                at every step, the downstream substrate is never pressured to consolidate a linearly-readable,
+                scene-invariant cognitive map—so there is no clean map left for a decoder to read. This reframes the
+                design goal. Rather than scaling the encoder, an architecture whose memory is <em>induced</em> to build
+                an internal cognitive map—which we find bandwidth-restricting designs like foveation and log-polar
+                sampling actively encourage—should reason more readily about the geometric and semantic relationships
+                in a scene. The strongest external evidence is concurrent: VLMs trained to "map-then-reason"—to emit an
+                explicit cognitive map before reasoning over it—recover much of the lost spatial accuracy<sup
+                    class="cite"><a href="#ref-18">[18]</a></sup>. We frame this as a falsifiable hypothesis, not a
+                demonstrated result: our agents are recurrent PointGoal navigators, and porting the five-condition
+                design to VLM-scale architectures is the natural test.
+            </p>
+            <p>
+                Methodologically, while our single-seed experimental design aligns with standard comparative-cognition
+                modeling, future work will expand to multi-seed variance grids and finer continuous visual sweeps.
+                Ultimately, this paves the way toward a "comparative cognitive neuroscience of artificial navigation
+                agents," applying the analytical toolkits used on biological brains directly to AI.
+            </p>
+        </div>
+    </section>
+
+    <!-- REFERENCES -->
+    <section id="references">
+        <div class="content-column">
+            <h2>References</h2>
+            <ol class="ref-list">
+                <li id="ref-1">Wirth, S., et al. (2017). Gaze-informed, task-situated representation of space in primate
+                    hippocampus during virtual navigation. <em>PLoS Biology</em>, 15(2), e2001045. <a
+                        href="https://doi.org/10.1371/journal.pbio.2001045" target="_blank">↗</a></li>
+                <li id="ref-2">Rolls, E. T. (2024). Why do primates have view cells instead of place cells? <em>Trends
+                        in Cognitive Sciences</em>, 28(9), 862–874.</li>
+                <li id="ref-3">Geva-Sagiv, M., Romani, S., Las, L., &amp; Ulanovsky, N. (2016). Hippocampal global
+                    remapping for different sensory modalities in flying bats. <em>Nature Neuroscience</em>, 19(7),
+                    952–958.</li>
+                <li id="ref-4">Fortin, M., et al. (2008). Wayfinding in the blind: larger hippocampal volume and
+                    supranormal spatial navigation. <em>Brain</em>, 131(11), 2995–3005.</li>
+                <li id="ref-5">Savva, M., Kadian, A., Maksymets, O., et al. (2019). Habitat: A Platform for Embodied AI
+                    Research. <em>ICCV</em>.</li>
+                <li id="ref-6">Wijmans, E., Kadian, A., Morcos, A., et al. (2020). DD-PPO: Learning Near-Perfect
+                    PointGoal Navigators from 2.5 Billion Frames. <em>ICLR</em>.</li>
+                <li id="ref-7">Xia, F., Zamir, A. R., He, Z., Sax, A., Malik, J., &amp; Savarese, S. (2018). Gibson Env:
+                    Real-World Perception for Embodied Agents. <em>CVPR</em>.</li>
+                <li id="ref-8">Chang, A., Dai, A., Funkhouser, T., et al. (2017). Matterport3D: Learning from RGB-D Data
+                    in Indoor Environments. <em>3DV</em>. <a href="https://arxiv.org/abs/1709.06158"
+                        target="_blank">↗</a></li>
+                <li id="ref-9">Sanders, H., Wilson, M. A., &amp; Gershman, S. J. (2020). Hippocampal remapping as hidden
+                    state inference. <em>eLife</em>, 9, e68480. <a href="https://doi.org/10.7554/eLife.68480"
+                        target="_blank">↗</a></li>
+                <li id="ref-10">Stachenfeld, K. L., Botvinick, M. M., &amp; Gershman, S. J. (2017). The hippocampus as a
+                    predictive map. <em>Nature Neuroscience</em>, 20(11), 1643–1653.</li>
+                <li id="ref-11">Wijmans, E., et al. (2023). Emergence of maps in the memories of blind navigation
+                    agents. <em>ICLR</em>.</li>
+                <li id="ref-12">Pasukonis, J., Lillicrap, T., &amp; Hafner, D. (2023). Evaluating Long-Term Memory in 3D
+                    Mazes. <em>ICLR</em>.</li>
+                <li id="ref-13">Oquab, M., Darcet, T., Moutakanni, T., et al. (2024). DINOv2: Learning Robust Visual
+                    Features without Supervision. <em>TMLR</em>. <a href="https://arxiv.org/abs/2304.07193"
+                        target="_blank">↗</a></li>
+                <li id="ref-14">Belghazi, M. I., Baratin, A., Rajeswar, S., et al. (2018). Mutual Information Neural
+                    Estimation. <em>ICML</em>.</li>
+                <li id="ref-15">Tolman, E. C. (1948). Cognitive maps in rats and men. <em>Psychological Review</em>,
+                    55(4), 189–208.</li>
+                <li id="ref-16">Rahmanzadehgervi, P., Bolton, L., Taesiri, M. R., &amp; Nguyen, A. T. (2024). Vision
+                    language models are blind: Failing to translate detailed visual features into words. <em>ACCV</em>.
+                    <a href="https://arxiv.org/abs/2407.06581" target="_blank">↗</a>
+                </li>
+                <li id="ref-17">Yang, J., Yang, S., Gupta, A. W., Han, R., Fei-Fei, L., &amp; Xie, S. (2024). Thinking
+                    in Space: How Multimodal Large Language Models See, Remember, and Recall Spaces (VSI-Bench). <a
+                        href="https://arxiv.org/abs/2412.14171" target="_blank">↗</a></li>
+                <li id="ref-18">Wang, Q., Yin, B., Zhang, P., et al. (2025). MindCube: Spatial Mental Modeling from
+                    Limited Views. <a href="https://arxiv.org/abs/2506.21458" target="_blank">↗</a></li>
+                <li id="ref-19">Zong, Y., &amp; Tan, C. (2026). TangramSR: Can Vision-Language Models Reason in
+                    Continuous Geometric Space? <a href="https://arxiv.org/abs/2602.05570" target="_blank">↗</a></li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- CODE & DATA -->
+    <section id="code-data">
+        <div class="content-column">
+            <h2>Code, Data &amp; Figures</h2>
+            <div class="resource-buttons">
+                <a class="resource-btn" href="https://github.com/alunxu/agentic-cognitive-map" target="_blank">
+                    <span class="rb-icon">⌨</span>
+                    Code ↗
+                    <span class="rb-desc">Training configs, custom sensor policies (foveated, log-polar, uniform),
+                        probing pipeline (collect → analyze → visualize), evaluation scripts
+                        (shortcut, transplant), and figure generation.</span>
+                </a>
+                <a class="resource-btn" href="https://huggingface.co/alunxu/spatial-memory-checkpoints" target="_blank">
+                    <span class="rb-icon">🤗</span>
+                    Checkpoints ↗
+                    <span class="rb-desc">Trained DD-PPO LSTM policy checkpoints for all five conditions (250M
+                        frames each). Load directly with <code>src.habitat</code> for probing, evaluation,
+                        or analysis.</span>
+                </a>
+                <a class="resource-btn" href="figures.html">
+                    <span class="rb-icon">📊</span>
+                    Interactive Figures ↗
+                    <span class="rb-desc">Explore the key results interactively — GPS R² bars, format dichotomy,
+                        readability–reliance plane, scrubbing ablation, future-position decoding, and more.</span>
+                </a>
+            </div>
+            <h3 style="margin-top:32px;">BibTeX</h3>
+            <div class="bibtex-wrap">
+                <pre id="bibtex-text">@inproceedings{xu2026sensor,
+  title     = {Sensor Structure Shapes the Format of Cognitive Maps in Navigation Agents},
+  author    = {Xu, Alun and Bruneau, L{\'e}o and Abkari, Rim and Aoutir, Zyad},
+  booktitle = {CS503 Visual Intelligence, EPFL},
+  year      = {2026},
+}</pre>
+                <button class="copy-btn"
+                    onclick="navigator.clipboard.writeText(document.getElementById('bibtex-text').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})">Copy</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- END -->
+    <section id="end">
+        <div class="end-sticky">
+            <div class="end-image-box">
+                <img src="assets/presentation_assets/end.png" alt="End slide">
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="content-column" style="padding-top:0;padding-bottom:0">
+            Alun Xu &nbsp;·&nbsp; Léo Bruneau &nbsp;·&nbsp; Rim Abkari &nbsp;·&nbsp; Zyad Aoutir &nbsp;·&nbsp; EPFL
+            &nbsp;·&nbsp; 2026
+        </div>
+    </footer>
+
+    <script src="js/timeline.js"></script>
+    <script src="js/fig2a_magnitude.js"></script>
+    <script src="js/fig2b_substitution.js"></script>
+    <script src="js/fig3b_format_dichotomy.js"></script>
+    <script src="js/fig4c_future_position.js"></script>
+    <script src="js/fig5a_readability.js"></script>
+    <script>
+        renderFig2a('chart-fig2a');
+        renderFig2b('chart-fig2b');
+        renderFig3b('chart-fig3b');
+        renderFig4c('chart-fig4c');
+        renderFig5a('chart-fig5a');
+    </script>
+</body>
+
+</html>
