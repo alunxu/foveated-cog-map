@@ -87,12 +87,14 @@ results/tsne_subsamples/
 results/shortcut_results/*_traj.npz
 
 # --- Private cluster (RCP) artefacts ----------------------------------------
-# We borrowed a private K8s/RunAI cluster (RCP) to run the course project.
-# Teammate + course infrastructure use Izar SLURM and don't have RCP access,
-# so we keep these scripts on disk for our own use but never push them.
+# Public submission scripts (Izar SLURM, generic utilities) live in
+# scripts/cluster/. RCP-specific submission scripts (runai-rcp-prod calls,
+# hard-coded /scratch/wxu/ paths, kubectl namespaces) are kept private
+# under scripts/cluster_rcp/ because they depend on a private K8s/RunAI
+# cluster the teammate + course infrastructure don't have access to.
 docs/
 docker/build_with_kaniko.sh
-scripts/cluster/
+scripts/cluster_rcp/
 scripts/probing/lagk_rcp.sh
 scripts/probing/mlp_rcp.sh
 habitat_configs/ddppo_pointnav_foveated_normaliser_gibson.yaml

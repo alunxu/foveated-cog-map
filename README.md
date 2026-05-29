@@ -45,11 +45,14 @@ distributed separately.
 │   │   ├── temporal_probe.py / extended_lag_probe.py
 │   │   ├── analyze_subspace_divergence.py / population_coding_analysis.py
 │   │   └── ... (~30 probe-family scripts)
-│   ├── paper_figures/         # Figure generation (matplotlib)
-│   │   ├── make_consumption_2panel.py   # Figure 5 (canonical 3-panel)
-│   │   ├── make_temporal_maps_figure.py # Figure 4
-│   │   ├── make_5x5_transplant_matrix.py
-│   │   └── render_5cond_appendix.py     # Appendix battery
+│   ├── paper_figures/         # Figure generation (matplotlib); see paper_figures/STATUS.md for the script→figure index
+│   │   ├── make_magnitude_3panel.py     # Figure 2 (magnitude)
+│   │   ├── make_format_2panel.py        # Figure 3 (format)
+│   │   ├── make_temporal_maps_figure.py # Figure 4 (temporal)
+│   │   ├── make_consumption_2panel.py   # Figure 5 (consumption)
+│   │   ├── make_5x5_transplant_matrix.py # Appendix figa7a (5×5 transplant)
+│   │   └── render_5cond_appendix.py     # Appendix figa9a/9b/13 (population-coding battery)
+│   ├── cluster/               # Izar SLURM submit scripts + cross-cluster utilities (see scripts/cluster/README.md)
 │   └── data/                  # Dataset utilities (download, split)
 ├── results/                   # Probe + eval JSONs (small text artifacts)
 │   ├── probing_results/
@@ -186,10 +189,19 @@ python scripts/eval/shortcut.py   --out results/shortcut_results/
 ### Regenerate paper figures
 
 ```bash
-python scripts/paper_figures/make_consumption_2panel.py    # Figure 5 (consumption)
+python scripts/paper_figures/make_magnitude_3panel.py      # Figure 2 (magnitude)
+# Default output is fig_magnitude.pdf; rename to fig2_magnitude.pdf for paper:
+mv docs/manuscript/fig/fig_magnitude.pdf docs/manuscript/fig/fig2_magnitude.pdf
+python scripts/paper_figures/make_format_2panel.py         # Figure 3 (format)
 python scripts/paper_figures/make_temporal_maps_figure.py  # Figure 4 (temporal)
+python scripts/paper_figures/make_consumption_2panel.py    # Figure 5 (consumption)
 python scripts/paper_figures/render_5cond_appendix.py      # Appendix figures
 ```
+
+Each figure reads from `/tmp/rcp_analysis/<cond>_det_analysis.json` (probe
+summaries) and `results/shortcut_results/<cond>_traj.{json,npz}` (shortcut
+trajectories). See `scripts/paper_figures/STATUS.md` for the full
+script→figure mapping, including legacy/stale scripts kept for git history.
 
 ---
 
