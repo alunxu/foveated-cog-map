@@ -73,6 +73,9 @@ code {
   padding: 56px var(--col-pad);
   display: flow-root;
 }
+.abstract-column {
+  max-width: calc(var(--col-width) * 0.7);
+}
 
 /* ── CALLOUT ──────────────────────────────────────────────── */
 .callout {
@@ -906,7 +909,8 @@ p { color: var(--ink-body); line-height: 1.65; margin-bottom: 16px; text-align: 
   transition: opacity 0.5s;
 }
 
-#timeline-rail.timeline-hidden { opacity: 0; }
+#timeline-rail.timeline-hidden      { opacity: 0; pointer-events: none; }
+#timeline-rail.timeline-idle-hidden { opacity: 0; pointer-events: none; }
 
 .timeline-line {
   position: absolute;

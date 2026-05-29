@@ -38,8 +38,10 @@
     <!-- TIMELINE RAIL (hidden until lander exits) -->
     <div id="timeline-rail" class="timeline-hidden" aria-hidden="true">
         <div class="timeline-line"></div>
+        <div class="timeline-dot dot-future" data-section="abstract"></div>
         <div class="timeline-dot dot-future" data-section="motivation"></div>
         <div class="timeline-dot dot-future" data-section="hypothesis"></div>
+        <div class="timeline-dot dot-future" data-section="related"></div>
         <div class="timeline-dot dot-future" data-section="methods"></div>
         <div class="timeline-dot dot-future" data-section="result1"></div>
         <div class="timeline-dot dot-future" data-section="result2"></div>
@@ -47,10 +49,38 @@
         <div class="timeline-dot dot-future" data-section="result4"></div>
         <div class="timeline-dot dot-future" data-section="result5"></div>
         <div class="timeline-dot dot-future" data-section="discussion"></div>
+        <div class="timeline-dot dot-future" data-section="conclusion"></div>
         <div class="timeline-dot dot-future" data-section="future"></div>
         <div class="timeline-dot dot-future" data-section="references"></div>
         <div class="timeline-dot dot-future" data-section="code-data"></div>
     </div>
+
+    <section id="abstract">
+        <div class="content-column abstract-column">
+            <h2>Abstract</h2>
+            <p>
+                The format of spatial memory in the hippocampus varies systematically with a species' visual ecology,
+                but whether this reflects a general sensor–memory coupling is hard to test directly: an animal's sensor
+                ecology is fixed within its species, and AI systems rarely co-train an encoder and a memory across a
+                graded sensor design. We test this <em>in silico</em>, in a navigation agent where only the visual
+                sensor
+                varies—along a graded scale of encoder bandwidth—while architecture, task, and training are held
+                fixed. Across five conditions the agents reach near-identical task performance, yet their hidden-state
+                code for position differs in <em>form</em>: with a vision-limited encoder, position concentrates into a
+                scene-invariant direction that is linearly readable from memory; with a rich encoder, it distributes
+                into non-linear directions and partly offloads to the encoder. Linear readability shifts faster than
+                total position information—a <strong>format shift</strong>, not a collapse of information. We frame this
+                as an emergent <strong>capacity allocation</strong> between an encoder route and a memory-integration
+                route, measured along three concomitant views: <em>magnitude</em>, <em>format</em>, and
+                <em>consumption</em>. Memory transplants are asymmetric—rich-encoder policies fail on bottleneck states
+                while the reverse works—paralleling cross-modality remapping in hippocampal coding, and probe-readable
+                position dissociates from policy reliance. Together this positions sensor structure as a training-time
+                lever on cognitive-map format, yields a falsifiable architecture-agnostic prediction for transformer
+                navigators, and reframes bandwidth-restricting perception as potentially <em>cognition-enabling</em>
+                rather than only compute-saving.
+            </p>
+        </div>
+    </section>
 
     <section id="motivation">
         <div class="content-column">
@@ -103,6 +133,48 @@
                 visual
                 sensor structure while keeping the core agent architecture fixed, we expect the underlying format of the
                 resulting cognitive maps to diverge entirely.
+            </p>
+        </div>
+    </section>
+
+    <section id="related">
+        <div class="content-column">
+            <h2>Related Work</h2>
+            <p>
+                <strong>Spatial reasoning in modern vision systems.</strong> Vision–language models with strong visual
+                recognition still fail at fine-grained spatial reasoning<sup class="cite"><a
+                        href="#ref-17">[17]</a></sup>. Existing accounts locate the problem either in the training
+                distribution or in the geometric content of pretrained encoders—and, tellingly, linear probes show that
+                encoders often <em>contain</em> the relevant geometry while the downstream model fails to use it<sup
+                    class="cite"><a href="#ref-16">[16]</a></sup>. Rather than treat perception and memory as a
+                sequential pipeline in which a bigger encoder is always better, we ask how the <em>structure</em> of the
+                sensor constrains what spatial information is accessible from memory through a simple linear readout.
+            </p>
+            <p>
+                <strong>Sensor ecology and cognitive-map format in biology.</strong> Comparative neuroscience has long
+                recognized that distinct sensory ecologies drive distinct spatial codes: foveated primates rely on view
+                cells<sup class="cite"><a href="#ref-1">[1]</a>,<a href="#ref-2">[2]</a></sup> while near-panoramic
+                rodents rely on place cells, and echolocating bats and congenitally blind humans show striking
+                cross-modal remapping<sup class="cite"><a href="#ref-3">[3]</a>,<a href="#ref-4">[4]</a></sup>. A
+                unifying account frames such reorganization as remapping under hidden-state inference, where place
+                fields reconfigure when sensory evidence supports distinct latent states<sup class="cite"><a
+                        href="#ref-9">[9]</a></sup>. Isolating the causal role of sensor ecology is notoriously hard in
+                biology, however, because body plans and evolutionary histories cannot be held constant across species.
+            </p>
+            <p>
+                <strong>Emergent cognitive maps in artificial agents.</strong> Deep-RL navigators develop
+                cognitive-map-like representations even in the absence of vision<sup class="cite"><a
+                        href="#ref-11">[11]</a></sup>, echoing the emergence of grid- and place-like codes in artificial
+                agents trained for spatial localization<sup class="cite"><a href="#ref-20">[20]</a>,<a
+                        href="#ref-21">[21]</a></sup>, and such memories carry a predictive, successor-representation
+                structure<sup class="cite"><a href="#ref-10">[10]</a></sup>. We build directly on this line—using the
+                canonical Habitat / DD-PPO PointGoal pipeline<sup class="cite"><a href="#ref-5">[5]</a>,<a
+                        href="#ref-6">[6]</a></sup>—but add the missing ingredient: a single, systematically varied
+                degree of freedom (encoder spatial bandwidth) and a convergent systems-neuroscience probing toolkit
+                (linear and non-linear probes, mutual-information estimation<sup class="cite"><a
+                        href="#ref-14">[14]</a></sup>, leave-one-scene-out validation, subspace geometry, and causal
+                memory transplants) applied to a <em>controlled comparative population</em> of agents rather than a
+                single recording.
             </p>
         </div>
     </section>
@@ -530,6 +602,36 @@
         </div>
     </section>
 
+    <section id="conclusion">
+        <div class="content-column">
+            <h2>Conclusion</h2>
+            <p>
+                A five-condition visual-sensor ablation in a recurrent PointGoal agent establishes sensor structure as a
+                <em>representational-content</em> variable: holding architecture, task, optimization, and reward fixed
+                and varying only encoder bandwidth, all agents converge behaviorally yet diverge internally. The
+                effects cohere under a single <strong>capacity-allocation</strong> principle, read through three
+                concomitant views—<em>magnitude</em> (the linear position code shrinks as bandwidth grows),
+                <em>format</em> (the surviving code shifts from a linear, scene-invariant world map to a non-linear,
+                scene-conditional one, and from a slowly-anchored to a continuously-rebuilt temporal code), and
+                <em>consumption</em> (what the policy actually relies on dissociates from what memory stores).
+                Asymmetric
+                memory transplants ground the format shift causally, outside any probe, and the whole pattern reproduces
+                in a different environment and encoder family—evidence the principle acts at the encoder–memory
+                interface rather than being an artifact of one pipeline.
+            </p>
+            <p>
+                The cross-condition signatures are at a high level consistent with independent animal-navigation
+                findings—hippocampal compensation under sensory deprivation, cross-modality remapping, and the
+                no-/global-remapping axis under hidden-state inference<sup class="cite"><a
+                        href="#ref-9">[9]</a></sup>—which we frame as an open bio–AI hypothesis rather than a
+                demonstrated parallel. Beyond the specific result, we view the study as a step toward a
+                <strong>comparative cognitive neuroscience of artificial navigation agents</strong>: a programme in
+                which matched-condition populations of trained agents are analyzed with the very metrics used to map
+                biological cortex and hippocampus, in a setting where the relevant variables can be held fixed.
+            </p>
+        </div>
+    </section>
+
     <section id="future">
         <div class="content-column">
             <h2>Future Work</h2>
@@ -582,15 +684,14 @@
             <h2>References</h2>
             <ol class="ref-list">
                 <li id="ref-1">Wirth, S., et al. (2017). Gaze-informed, task-situated representation of space in primate
-                    hippocampus during virtual navigation. <em>PLoS Biology</em>, 15(2), e2001045. <a
+                    hippocampus during virtual navigation. <em>PLoS Biology</em>. <a
                         href="https://doi.org/10.1371/journal.pbio.2001045" target="_blank">↗</a></li>
                 <li id="ref-2">Rolls, E. T. (2024). Why do primates have view cells instead of place cells? <em>Trends
-                        in Cognitive Sciences</em>, 28(9), 862–874.</li>
+                        in Cognitive Sciences</em>.</li>
                 <li id="ref-3">Geva-Sagiv, M., Romani, S., Las, L., &amp; Ulanovsky, N. (2016). Hippocampal global
-                    remapping for different sensory modalities in flying bats. <em>Nature Neuroscience</em>, 19(7),
-                    952–958.</li>
+                    remapping for different sensory modalities in flying bats. <em>Nature Neuroscience</em>.</li>
                 <li id="ref-4">Fortin, M., et al. (2008). Wayfinding in the blind: larger hippocampal volume and
-                    supranormal spatial navigation. <em>Brain</em>, 131(11), 2995–3005.</li>
+                    supranormal spatial navigation. <em>Brain</em>.</li>
                 <li id="ref-5">Savva, M., Kadian, A., Maksymets, O., et al. (2019). Habitat: A Platform for Embodied AI
                     Research. <em>ICCV</em>.</li>
                 <li id="ref-6">Wijmans, E., Kadian, A., Morcos, A., et al. (2020). DD-PPO: Learning Near-Perfect
@@ -601,10 +702,10 @@
                     in Indoor Environments. <em>3DV</em>. <a href="https://arxiv.org/abs/1709.06158"
                         target="_blank">↗</a></li>
                 <li id="ref-9">Sanders, H., Wilson, M. A., &amp; Gershman, S. J. (2020). Hippocampal remapping as hidden
-                    state inference. <em>eLife</em>, 9, e68480. <a href="https://doi.org/10.7554/eLife.68480"
+                    state inference. <em>eLife</em>. <a href="https://elifesciences.org/articles/51140"
                         target="_blank">↗</a></li>
                 <li id="ref-10">Stachenfeld, K. L., Botvinick, M. M., &amp; Gershman, S. J. (2017). The hippocampus as a
-                    predictive map. <em>Nature Neuroscience</em>, 20(11), 1643–1653.</li>
+                    predictive map. <em>Nature Neuroscience</em>.</li>
                 <li id="ref-11">Wijmans, E., et al. (2023). Emergence of maps in the memories of blind navigation
                     agents. <em>ICLR</em>.</li>
                 <li id="ref-12">Pasukonis, J., Lillicrap, T., &amp; Hafner, D. (2023). Evaluating Long-Term Memory in 3D
@@ -614,19 +715,25 @@
                         target="_blank">↗</a></li>
                 <li id="ref-14">Belghazi, M. I., Baratin, A., Rajeswar, S., et al. (2018). Mutual Information Neural
                     Estimation. <em>ICML</em>.</li>
-                <li id="ref-15">Tolman, E. C. (1948). Cognitive maps in rats and men. <em>Psychological Review</em>,
-                    55(4), 189–208.</li>
+                <li id="ref-15">Tolman, E. C. (1948). Cognitive maps in rats and men. <em>Psychological Review</em>.</li>
                 <li id="ref-16">Rahmanzadehgervi, P., Bolton, L., Taesiri, M. R., &amp; Nguyen, A. T. (2024). Vision
                     language models are blind: Failing to translate detailed visual features into words. <em>ACCV</em>.
                     <a href="https://arxiv.org/abs/2407.06581" target="_blank">↗</a>
                 </li>
-                <li id="ref-17">Yang, J., Yang, S., Gupta, A. W., Han, R., Fei-Fei, L., &amp; Xie, S. (2024). Thinking
-                    in Space: How Multimodal Large Language Models See, Remember, and Recall Spaces (VSI-Bench). <a
-                        href="https://arxiv.org/abs/2412.14171" target="_blank">↗</a></li>
+                <li id="ref-17">Yang, J., Yang, S., Gupta, A. W., Han, R., Fei-Fei, L., &amp; Xie, S. (2025). Thinking
+                    in Space: How Multimodal Large Language Models See, Remember, and Recall Spaces (VSI-Bench).
+                    <em>CVPR</em>. <a href="https://arxiv.org/abs/2412.14171" target="_blank">↗</a>
+                </li>
                 <li id="ref-18">Wang, Q., Yin, B., Zhang, P., et al. (2025). MindCube: Spatial Mental Modeling from
                     Limited Views. <a href="https://arxiv.org/abs/2506.21458" target="_blank">↗</a></li>
                 <li id="ref-19">Zong, Y., &amp; Tan, C. (2026). TangramSR: Can Vision-Language Models Reason in
                     Continuous Geometric Space? <a href="https://arxiv.org/abs/2602.05570" target="_blank">↗</a></li>
+                <li id="ref-20">Banino, A., Barry, C., Uria, B., et al. (2018). Vector-based navigation using grid-like
+                    representations in artificial agents. <em>Nature</em>.</li>
+                <li id="ref-21">Cueva, C. J., &amp; Wei, X.-X. (2018). Emergence of grid-like representations by
+                    training
+                    recurrent neural networks to perform spatial localization. <em>ICLR</em>. <a
+                        href="https://arxiv.org/abs/1803.07770" target="_blank">↗</a></li>
             </ol>
         </div>
     </section>

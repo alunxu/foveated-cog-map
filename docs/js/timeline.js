@@ -2,15 +2,15 @@
   'use strict';
 
   var SECTION_IDS = [
-    'motivation', 'hypothesis', 'methods',
+    'abstract', 'motivation', 'hypothesis', 'related', 'methods',
     'result1', 'result2', 'result3', 'result4', 'result5',
-    'discussion', 'future', 'references', 'code-data'
+    'discussion', 'conclusion', 'future', 'references', 'code-data'
   ];
 
   var SECTION_LABELS = [
-    'Motivation', 'Hypothesis', 'Methods',
+    'Abstract', 'Motivation', 'Hypothesis', 'Related Work', 'Methods',
     'Result 1', 'Result 2', 'Result 3', 'Result 4', 'Result 5',
-    'Discussion', 'Future Work', 'References', 'Code & Data'
+    'Discussion', 'Conclusion', 'Future Work', 'References', 'Code & Data'
   ];
 
   var dots = [];
@@ -19,6 +19,26 @@
   var progressDot = null;
   var rafPending = false;
   var isVisible = false;
+  var idleTimer = null;
+  var idleHidden = false;
+
+  var IDLE_DELAY = 5000; // ms
+
+  function showRailIfVisible() {
+    if (!isVisible || !rail) return;
+    idleHidden = false;
+    rail.classList.remove('timeline-idle-hidden');
+  }
+
+  function startIdleTimer() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () {
+      if (isVisible && rail) {
+        idleHidden = true;
+        rail.classList.add('timeline-idle-hidden');
+      }
+    }, IDLE_DELAY);
+  }
 
   function positionRail() {
     var col = document.querySelector('.content-column');
@@ -175,7 +195,11 @@
     positionRail();
     setDotPositions();
 
-    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('scroll', function () {
+      showRailIfVisible();
+      startIdleTimer();
+      scheduleUpdate();
+    }, { passive: true });
     window.addEventListener('resize', function () {
       positionRail();
       setDotPositions();
@@ -191,6 +215,7 @@
             isVisible = true;
             rail.classList.remove('timeline-hidden');
             updateDots();
+            startIdleTimer();
           } else {
             isVisible = false;
             rail.classList.add('timeline-hidden');
