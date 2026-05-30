@@ -8,7 +8,7 @@ The 5 conditions mirror our paper's chassis:
   uniform           - native 56x56 (downsampled from 64 via bilinear)
   foveated_logpolar - 56x56 log-polar warp with central magnification
 
-Output: one .pt per trajectory per condition, shape (T, 768) float32.
+Output: one .pt per trajectory per condition, shape (T, D_enc) float32.
 Path layout: /tmp/wmprobe_features/<condition>/traj_<idx>.pt
 
 Throughput on Mac MPS (DINOv2-Base):
@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import sys
 import time
 from glob import glob
 
@@ -32,6 +33,38 @@ import torch.nn.functional as F
 import torchvision.transforms.functional as TF
 
 CONDITIONS = ["blind", "coarse", "foveated", "uniform", "foveated_logpolar"]
+
+
+def _patch_dinov2_future_annotations() -> int:
+    """Patch cached DINOv2 hub files for Python 3.9 union type annotations."""
+    patched = 0
+    hub_dir = torch.hub.get_dir()
+    repo_dirs = glob(os.path.join(hub_dir, "facebookresearch_dinov2*"))
+    for repo_dir in repo_dirs:
+        for path in glob(os.path.join(repo_dir, "dinov2", "**", "*.py"), recursive=True):
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+            if "from __future__ import annotations" in text[:500]:
+                continue
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("from __future__ import annotations\n")
+                f.write(text)
+            patched += 1
+    for name in list(sys.modules):
+        if name == "dinov2" or name.startswith("dinov2."):
+            del sys.modules[name]
+    return patched
+
+
+def load_dinov2_backbone(encoder: str):
+    try:
+        return torch.hub.load("facebookresearch/dinov2", encoder, verbose=False)
+    except TypeError as exc:
+        if "unsupported operand type(s) for |" not in str(exc):
+            raise
+        patched = _patch_dinov2_future_annotations()
+        print(f"  patched DINOv2 hub annotations for Python 3.9 ({patched} files)")
+        return torch.hub.load("facebookresearch/dinov2", encoder, verbose=False)
 
 
 def make_transform(condition: str, target_res: int = 56, blur_sigma: float = 4.0):
@@ -99,9 +132,10 @@ def make_transform(condition: str, target_res: int = 56, blur_sigma: float = 4.0
 @torch.no_grad()
 def cache_one_condition(model, transform, npz_files, out_dir, device, batch_size=64,
                          normalize=True):
-    """Cache DINOv2-B CLS features for all trajectories under one transform.
+    """Cache DINOv2 CLS features for all trajectories under one transform.
 
-    Output is one .pt per trajectory: shape (T, 768) float32.
+    Output is one .pt per trajectory: shape (T, D_enc) float32. D_enc depends
+    on the chosen DINOv2 backbone, e.g. 384 for ViT-S/14 and 768 for ViT-B/14.
     """
     os.makedirs(out_dir, exist_ok=True)
     # ImageNet normalisation (DINOv2 was trained on this stat)
@@ -119,13 +153,15 @@ def cache_one_condition(model, transform, npz_files, out_dir, device, batch_size
         T = imgs.shape[0]
         # to (T, 3, 64, 64) float [0, 1]
         x_all = torch.from_numpy(imgs).permute(0, 3, 1, 2).float() / 255.0
-        feats = torch.empty(T, 768, dtype=torch.float32)
+        feats = None
         for i in range(0, T, batch_size):
             x = x_all[i:i + batch_size].to(device, non_blocking=True)
             x = transform(x)
             if normalize:
                 x = (x - mean) / std
-            y = model(x)  # (B, 768)
+            y = model(x)  # (B, D_enc)
+            if feats is None:
+                feats = torch.empty(T, y.shape[-1], dtype=torch.float32)
             feats[i:i + batch_size] = y.float().cpu()
         torch.save(feats, out_path)
         n_frames_total += T
@@ -154,13 +190,13 @@ def main():
                      help="Only process first N trajectories (for debug).")
     args = ap.parse_args()
 
-    os.environ["TORCH_HOME"] = "/tmp/wmprobe_venv/torch_hub"
+    os.environ.setdefault("TORCH_HOME", "/tmp/wmprobe_venv/torch_hub")
 
     device = torch.device("mps" if torch.backends.mps.is_available()
                            else ("cuda" if torch.cuda.is_available() else "cpu"))
     print(f"device = {device}")
     print(f"loading {args.encoder} ...")
-    model = torch.hub.load("facebookresearch/dinov2", args.encoder, verbose=False)
+    model = load_dinov2_backbone(args.encoder)
     model = model.to(device).eval()
     n_params = sum(p.numel() for p in model.parameters())
     print(f"  loaded ({n_params/1e6:.1f}M params)")

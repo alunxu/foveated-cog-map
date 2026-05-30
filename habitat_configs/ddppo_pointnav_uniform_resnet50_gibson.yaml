@@ -1,0 +1,25 @@
+# @package _global_
+#
+# Large-encoder control for the downstream scale x sensor pilot.
+#
+# This is ddppo_pointnav_uniform_gibson with only the visual backbone changed:
+#   resnet18 -> resnet50
+#
+# Purpose:
+#   Compare existing small constrained policy
+#     resnet18 + foveated
+#   against this larger unconstrained policy
+#     resnet50 + uniform
+#   on downstream PointGoal success/SPL and robustness.
+
+defaults:
+  - ddppo_pointnav_uniform_gibson
+  - _self_
+
+habitat_baselines:
+  eval_ckpt_path_dir: "data/checkpoints/uniform_resnet50_gibson"
+  checkpoint_folder: "data/checkpoints/uniform_resnet50_gibson"
+
+  rl:
+    ddppo:
+      backbone: resnet50

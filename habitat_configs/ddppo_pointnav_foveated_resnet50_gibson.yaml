@@ -1,0 +1,21 @@
+# @package _global_
+#
+# Large-encoder foveated control for the full downstream 2x2.
+#
+# This is ddppo_pointnav_foveated_gibson with only the visual backbone changed:
+#   resnet18 -> resnet50
+#
+# It is not required for the first targeted comparison, but makes the full
+# 2x2 ready if the resnet50-uniform run looks promising.
+
+defaults:
+  - ddppo_pointnav_foveated_gibson
+  - _self_
+
+habitat_baselines:
+  eval_ckpt_path_dir: "data/checkpoints/foveated_resnet50_gibson"
+  checkpoint_folder: "data/checkpoints/foveated_resnet50_gibson"
+
+  rl:
+    ddppo:
+      backbone: resnet50

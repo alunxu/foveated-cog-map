@@ -1,242 +1,434 @@
-# Sensor Structure Shapes Cognitive Maps in Navigation Agents
+# Sensor Structure Shapes the Format of Cognitive Maps in Navigation Agents
 
-LSTM-based PointGoal navigation agents trained in [Habitat](https://aihabitat.org/) where
-**only the visual sensor varies** across conditions; everything else (task,
-reward, architecture, training algorithm, dataset) is held fixed. Used as a
-controlled in-silico testbed for studying how sensor structure shapes the
-format of learned spatial memory.
+Course project for CS503 Visual Intelligence, EPFL, Spring 2026.
 
-Conditions: `blind`, `coarse` (48×48), `foveated` (256×256 + Gaussian blur),
-`foveated_logpolar` (log-polar resampling), `uniform` (256×256). Two
-normaliser-ablation variants: `F2` (foveated + RunningMeanAndVar),
-`F-LP2` (log-polar + RunningMeanAndVar).
+We train PointGoal navigation agents in Habitat while holding the task,
+reward, optimizer, recurrent architecture, non-visual sensors, and training
+data fixed. The experimental manipulation is the visual sensor bandwidth:
 
-**This README only covers code structure and Izar setup.** The paper
-write-up (motivation, methods, results, biology background) is
-distributed separately.
+- `blind`: no camera input
+- `coarse`: low-bandwidth visual input
+- `foveated`: high-acuity center with blurred periphery
+- `foveated_logpolar`: log-polar/foveated sampling
+- `uniform`: full-resolution visual input
 
----
+The main question is whether sensor structure changes the format of the
+agent's learned spatial memory. The website and final presentation summarize
+the empirical findings; this repository contains the code needed to reproduce
+the training, evaluation, probing, figure-generation, and website artifacts.
 
-## Repository layout
+## What Is In This Code Submission
 
-```
-.
-├── habitat_configs/           # 23 .yaml — Hydra training configs (one per condition + sweeps)
-├── src/
-│   ├── habitat/               # Custom policies
-│   │   ├── wijmans_policy.py            # 3-layer LSTM + Wijmans sensor stack
-│   │   ├── foveated_policy.py           # Gaussian-blur foveation
-│   │   ├── foveated_normalised_policy.py # F2 (normaliser enabled)
-│   │   ├── foveated_logpolar_policy.py  # log-polar foveation
-│   │   ├── foveated_logpolar_normalised_policy.py  # F-LP2
-│   │   └── wijmans_sensors.py           # GPS / compass / goal-in-start-frame
-│   └── utils/                 # Probe helpers, env loader, common utilities
-├── scripts/
-│   ├── eval/                  # SPL/Success evaluators, shortcut, transplant
-│   │   ├── eval_paper_5cond.py          # Main eval: SPL, Success, mean steps
-│   │   ├── shortcut.py / shortcut_with_trajectories.py
-│   │   ├── transplant.py                # Memory-transplant 5×5 matrix
-│   │   ├── probe_agent.py               # h₂ collection + Ridge/MLP probes
-│   │   └── gps_ablation_analyze.py
-│   ├── probing/               # Per-condition representational analyses
-│   │   ├── collect.py                   # h₂ collection (PointNav rollout → NPZ)
-│   │   ├── analyze.py                   # Full probing battery (Ridge + MLP + control)
-│   │   ├── unaligned_cka.py             # Cross-condition CKA
-│   │   ├── temporal_probe.py / extended_lag_probe.py
-│   │   ├── analyze_subspace_divergence.py / population_coding_analysis.py
-│   │   └── ... (~30 probe-family scripts)
-│   ├── paper_figures/         # Figure generation (matplotlib); see paper_figures/STATUS.md for the script→figure index
-│   │   ├── make_magnitude_3panel.py     # Figure 2 (magnitude)
-│   │   ├── make_format_2panel.py        # Figure 3 (format)
-│   │   ├── make_temporal_maps_figure.py # Figure 4 (temporal)
-│   │   ├── make_consumption_2panel.py   # Figure 5 (consumption)
-│   │   ├── make_5x5_transplant_matrix.py # Appendix figa7a (5×5 transplant)
-│   │   └── render_5cond_appendix.py     # Appendix figa9a/9b/13 (population-coding battery)
-│   ├── cluster/               # Izar SLURM submit scripts + cross-cluster utilities (see scripts/cluster/README.md)
-│   └── data/                  # Dataset utilities (download, split)
-├── results/                   # Probe + eval JSONs (small text artifacts)
-│   ├── probing_results/
-│   ├── shortcut_results/
-│   └── transplant_results/
-├── docker/
-│   └── Dockerfile             # Reference container build (Habitat + DD-PPO)
-├── data/                      # Habitat-format datasets (gitignored; populated on cluster)
-├── requirements.txt           # Pip deps (for analysis-only setups; full env needs conda)
-└── pyproject.toml             # Editable-install metadata
+This repository is intended to be a code/reproducibility package, not a full
+data dump. It includes:
+
+```text
+README.md                  self-contained running instructions
+requirements.txt           pip dependencies for analysis + post-Habitat setup
+pyproject.toml             editable-install metadata
+docker/Dockerfile          reference Habitat/DD-PPO environment
+habitat_configs/           Hydra configs for all sensor conditions
+src/                       custom Habitat policies, sensors, transforms, utils
+scripts/eval/              evaluation, hidden-state collection, interventions
+scripts/probing/           probing and representation analyses
+scripts/probing/world_model_probe/
+                            lightweight encoder-scale x sensor pilot
+scripts/paper_figures/     figure-generation scripts
+scripts/cluster/           generic SLURM/cluster helpers
+scripts/cluster_rcp/       RunAI/RCP submission wrappers used for this project
+scripts/website/           RCP script for real rollout + h2-memory video
+docs/                      GitHub Pages website and pre-rendered visual assets
+presentation/              final presentation PDF
+tests/                     small CPU-oriented regression tests
+results/                   selected small JSON summaries used by figures/website
+data/                      small JSON summaries used by legacy figures
 ```
 
-**Where the heavy data lives** (not in git):
+The following are intentionally not included because they are large or
+license-restricted:
 
-| Path | Contents |
-|---|---|
-| `/scratch/izar/$USER/habitat_data/` | Canonical Habitat data (~36 GB): Gibson + MP3D scene meshes + PointNav episode JSONs |
-| `/scratch/izar/$USER/habitat_checkpoints/` | Trained checkpoints (one dir per condition) + probing NPZs |
+```text
+data/datasets/             Habitat datasets and scene meshes
+release_ckpts/             trained checkpoints, distributed separately
+outputs/                   generated slide/website scratch artifacts
+literature/                downloaded papers and reading notes
+large result NPZs          rollout dumps, video frames, huge ablation outputs
+.git/                      version-control metadata
+```
 
----
+## Website Story To Code Map
 
-## Setup (Izar, SLURM + conda)
+The website is the most compact reading order for the project. The code is
+organized to mirror that story:
+
+| Website section / claim | Main files to inspect | What they reproduce |
+|---|---|---|
+| Title and five-agent setup | `habitat_configs/`, `src/habitat/wijmans_policy.py`, `src/habitat/wijmans_sensors.py`, `src/habitat/torch_foveation.py` | The controlled Habitat PointGoal agents and the five visual sensor conditions. |
+| Real navigation + memory movie | `scripts/website/capture_rcp_navigation_memory.py` | RCP script for real MP3D-test rollouts with synchronized top-layer LSTM `h2` memory readouts. |
+| Navigation performance | `scripts/eval/eval_paper_5cond.py`, `scripts/cluster_rcp/submit_5cond_eval_mp3d_test.sh` | SPL/success/step evaluation on held-out MP3D test episodes. |
+| Spatial-memory readability | `scripts/eval/probe_agent.py`, `scripts/probing/analyze.py`, `scripts/probing/probe_cv_summary.py` | Hidden-state collection and linear/MLP position probes. |
+| Format shift / scene invariance | `scripts/probing/unaligned_cka.py`, `scripts/probing/analyze_subspace_divergence.py`, `scripts/probing/extra/leave_one_scene_out.py`, `scripts/paper_figures/make_format_2panel.py` | Cross-condition geometry, scene-invariance, and format visualizations. |
+| Temporal and policy-reliance results | `scripts/eval/transplant.py`, `scripts/eval/shortcut.py`, `scripts/probing/temporal_probe.py`, `scripts/paper_figures/make_temporal_maps_figure.py`, `scripts/paper_figures/make_consumption_2panel.py` | Memory-transplant, shortcut, and temporal-consumption analyses. |
+| Broader encoder/sensor pilot | `scripts/probing/world_model_probe/05_run_scale_sensor.sh`, `scripts/probing/world_model_probe/08_aggregate_scale_sensor.py`, `scripts/cluster_rcp/submit_wm_scale_sensor_pilot.sh` | The lightweight 2x2 encoder-scale x sensor-constraint pilot. |
+| Static webpage | `docs/index.html`, `docs/style.css`, `docs/assets/`, `docs/js/` | The final interactive summary page served by GitHub Pages. |
+| Final presentation | `presentation/final_presentation.pdf`, `docs/assets/presentation_assets/` | The submitted presentation and generated slide visuals. |
+
+## Tested Environment
+
+The full Habitat training/evaluation pipeline was run in a Linux container on
+RCP/RunAI. The tested core versions were:
+
+```text
+Python                    3.9
+habitat-sim               0.3.3, headless, withbullet
+habitat-lab/baselines     stable branch, installed from source
+PyTorch                   2.1.0
+torchvision               0.16.0
+CUDA                      12.1 on cluster GPUs
+numpy                     <2
+protobuf                  >=4.21,<5
+Pillow                    10.4.0
+opencv-python             <4.10
+scipy                     >=1.10
+scikit-learn              >=1.3
+hydra-core                >=1.3
+omegaconf                 >=2.3
+matplotlib                >=3.7
+imageio                   >=2.31
+```
+
+`requirements.txt` contains the pip-installable dependencies. Habitat itself is
+not pip-only: install `habitat-sim` through conda and install
+`habitat-lab`/`habitat-baselines` from source.
+
+## Quick Verification Without Habitat
+
+These commands check the analysis-only parts that do not require scene meshes,
+GPUs, checkpoints, or Habitat simulation.
 
 ```bash
-# 1. Load CUDA module
-module load gcc/12.2.0 cuda/12.1.1
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
 
-# 2. Create env (Python 3.9; matches Dockerfile)
+Run lightweight tests:
+
+```bash
+python -m pytest tests/test_torch_foveation.py -v
+```
+
+The NaN-sanitisation test imports `habitat-baselines`, so it is skipped unless
+the full Habitat stack is installed:
+
+```bash
+python -m pytest tests/test_nan_sanitisation.py -v
+```
+
+Open the website locally:
+
+```bash
+python3 -m http.server 8000 --bind 127.0.0.1 --directory docs
+```
+
+Then open `http://127.0.0.1:8000/`. The website uses pre-rendered assets in
+`docs/assets/`.
+
+## Full Habitat Setup
+
+Use Linux for the full reproduction path. macOS can run some plotting and tests
+but cannot reliably run the Habitat simulator.
+
+```bash
+# 1. Create the environment.
 conda create -n habitat python=3.9 cmake=3.22 -c conda-forge -y
 conda activate habitat
 
-# 3. Habitat-sim from aihabitat channel
-conda install habitat-sim=0.3.3 withbullet headless -c conda-forge -c aihabitat -y
+# 2. Install habitat-sim.
+conda install habitat-sim=0.3.3 withbullet headless \
+  -c conda-forge -c aihabitat -y
 
-# 4. Torch matching Izar CUDA
-pip install torch==2.1.0 torchvision==0.16.0 \
-    --index-url https://download.pytorch.org/whl/cu121
+# 3. Install PyTorch.
+python -m pip install torch==2.1.0 torchvision==0.16.0 \
+  --index-url https://download.pytorch.org/whl/cu121
 
-# 5. Habitat-lab + habitat-baselines from source (apply blind-policy patch first)
+# 4. Install Habitat-Lab and Habitat-Baselines from source.
 git clone --branch stable --depth 1 https://github.com/facebookresearch/habitat-lab.git
+
+# Required for the blind/no-camera policy path.
 sed -i 's|if normalize_visual_inputs:|if normalize_visual_inputs and self._n_input_channels > 0:|' \
-    habitat-lab/habitat-baselines/habitat_baselines/rl/ddppo/policy/resnet_policy.py
-pip install -e habitat-lab/habitat-lab
-pip install -e habitat-lab/habitat-baselines
+  habitat-lab/habitat-baselines/habitat_baselines/rl/ddppo/policy/resnet_policy.py
 
-# 6. Pin downgraded deps + the rest of requirements.txt
-pip install 'protobuf>=4.21,<5' 'pillow==10.4.0' 'opencv-python<4.10' 'numpy<2'
-pip install -r requirements.txt
+python -m pip install -e habitat-lab/habitat-lab
+python -m pip install -e habitat-lab/habitat-baselines
 
-# 7. This repo (editable)
-pip install -e .
+# 5. Install this project.
+python -m pip install 'protobuf>=4.21,<5' 'pillow==10.4.0' \
+  'opencv-python<4.10' 'numpy<2'
+python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
-### Habitat data setup
+The reference container is `docker/Dockerfile`. On RCP we used the built image:
 
-Configs reference paths relative to a fixed Habitat data root. On Izar:
+```text
+registry.rcp.epfl.ch/dhlab-wxu/habitat:v2
+```
+
+## Data Layout
+
+Set a data root:
 
 ```bash
-export HABITAT_DATA_DIR=/scratch/izar/$USER/habitat_data
+export HABITAT_DATA_DIR=/path/to/habitat_data
 ```
 
-Layout under `HABITAT_DATA_DIR/`:
+Expected layout:
 
+```text
+${HABITAT_DATA_DIR}/
+  scene_datasets/
+    gibson/              Gibson 0+ scene meshes and navmeshes
+    mp3d/                Matterport3D scene meshes and metadata
+  datasets/pointnav/
+    gibson/v1/train/
+    gibson/v1/val/
+    mp3d/v1/train/
+    mp3d/v1/val/
+    mp3d/v1/test/test.json.gz
 ```
-scene_datasets/
-  gibson/              # 411 .glb + .navmesh (Gibson 0+ split)
-  mp3d/                # 90 MP3D scenes (.glb + region metadata)
-datasets/pointnav/
-  gibson/v1/{train,val}/...
-  mp3d/v1/{train,val,test}/test.json.gz   # 1008 Wijmans eval episodes
+
+The main evaluation uses the Wijmans-style MP3D held-out test split:
+18 scenes and 1008 deterministic PointGoal episodes.
+
+## Checkpoints
+
+Training from scratch is possible but expensive. A full condition run is
+approximately 250M DD-PPO frames. If using existing checkpoints, arrange them as:
+
+```text
+${CHECKPOINT_ROOT}/
+  blind/ckpt.49.pth
+  coarse/ckpt.49.pth
+  foveated/ckpt.49.pth
+  foveated_logpolar/ckpt.49.pth
+  uniform/ckpt.49.pth
 ```
 
-For the Wijmans-protocol eval, you also need the MP3D test PointNav
-episodes (`mp3d/v1/test/test.json.gz`, ~43 KB) and the 18 MP3D test scene
-meshes (~6 GB) under `HABITAT_DATA_DIR/scene_datasets/mp3d/`.
+The RCP scripts use the project-specific scratch layout under
+`/scratch/wxu/habitat_checkpoints_rcp/`; adjust those paths if running on a
+different cluster.
 
----
+## Reproduce Main Navigation Experiments
 
-## Common workflows
-
-All scripts below assume `conda activate habitat` + the Habitat data root
-exported as in **Setup → Habitat data setup**. On Izar wrap each invocation in an
-`sbatch` job (1 GPU, `--time=24:00:00` for training, `--time=04:00:00`
-for eval / probing).
-
-### Train a single condition
+All commands below assume:
 
 ```bash
-# DD-PPO entry point — config selects the condition + the sensor stack
+conda activate habitat
+export HABITAT_DATA_DIR=/path/to/habitat_data
+export CHECKPOINT_ROOT=/path/to/checkpoints
+```
+
+### Train One Agent
+
+```bash
 python -m habitat_baselines.run \
-  --config-name=pointnav/ddppo_pointnav_blind_gibson \
+  --config-name=pointnav/ddppo_pointnav_foveated_gibson \
   habitat_baselines.total_num_steps=2.5e8 \
   habitat_baselines.num_environments=16 \
-  habitat_baselines.rl.ppo.num_steps=256
+  habitat_baselines.rl.ppo.num_steps=256 \
+  habitat_baselines.rl.ddppo.train_encoder=True
 ```
 
-Swap the config to switch condition: `*_coarse_*`, `*_foveated_*`,
-`*_uniform_*`, `*_foveated_logpolar_*` (see `habitat_configs/`).
+Swap the config name for other conditions:
 
-### Evaluate trained agents (SPL, Success, mean steps)
+```text
+pointnav/ddppo_pointnav_blind_gibson
+pointnav/ddppo_pointnav_coarse_gibson
+pointnav/ddppo_pointnav_foveated_gibson
+pointnav/ddppo_pointnav_foveated_logpolar_gibson
+pointnav/ddppo_pointnav_uniform_gibson
+```
+
+### Evaluate SPL / Success
 
 ```bash
-# Wijmans-protocol: 1008 episodes on 18 held-out MP3D test scenes (canonical)
 python scripts/eval/eval_paper_5cond.py \
   --config pointnav/ddppo_pointnav_foveated_gibson \
-  --ckpt   /path/to/checkpoints/foveated/ckpt.49.pth \
+  --ckpt ${CHECKPOINT_ROOT}/foveated/ckpt.49.pth \
   --data-path ${HABITAT_DATA_DIR}/datasets/pointnav/mp3d/v1/test/test.json.gz \
-  --split test --no-sample \
-  --out    results/eval/foveated_mp3d_test.json
+  --split test \
+  --no-sample \
+  --out results/eval/foveated_mp3d_test.json
 ```
 
-### Collect hidden states + run probing
+### Collect Hidden States And Run Probes
 
 ```bash
-# 1. Collect deterministic rollouts (writes <out>.npz)
 python scripts/eval/probe_agent.py \
   --config pointnav/ddppo_pointnav_foveated_gibson \
-  --ckpt   /path/to/checkpoints/foveated/ckpt.49.pth \
-  --episodes 500 --out probing_data/foveated_det.npz
+  --ckpt ${CHECKPOINT_ROOT}/foveated/ckpt.49.pth \
+  --episodes 500 \
+  --out probing_data/foveated_det.npz
 
-# 2. Run probe battery
 python scripts/probing/analyze.py \
   --data probing_data/foveated_det.npz \
-  --out  results/probing/foveated_probe.json
+  --out results/probing_results/foveated_det_analysis.json
 ```
 
-### Memory transplant + shortcut paradigm
+The probe target is the top recurrent layer, referred to as `h2` in the paper.
+The main probes use episode-level cross-validation to avoid leakage across
+steps from the same rollout.
+
+### Memory Consumption Experiments
 
 ```bash
 python scripts/eval/transplant.py --out results/transplant_results/
-python scripts/eval/shortcut.py   --out results/shortcut_results/
+python scripts/eval/shortcut.py --out results/shortcut_results/
 ```
 
-### Regenerate paper figures
+These scripts expect trained policies and Habitat data. They are easier to run
+through the cluster wrappers in `scripts/cluster/` or `scripts/cluster_rcp/`.
+
+## Encoder-Scale x Sensor-Constraint Pilot
+
+This is the lightweight broader-impact pilot used to test whether perceptual
+constraints can match or beat encoder scale in a small Memory-Maze setting. It
+does not replace the main Habitat experiments.
+
+Local/cluster command:
 
 ```bash
-python scripts/paper_figures/make_magnitude_3panel.py      # Figure 2 (magnitude)
-# Default output is fig_magnitude.pdf; rename to fig2_magnitude.pdf for paper:
-mv docs/manuscript/fig/fig_magnitude.pdf docs/manuscript/fig/fig2_magnitude.pdf
-python scripts/paper_figures/make_format_2panel.py         # Figure 3 (format)
-python scripts/paper_figures/make_temporal_maps_figure.py  # Figure 4 (temporal)
-python scripts/paper_figures/make_consumption_2panel.py    # Figure 5 (consumption)
-python scripts/paper_figures/render_5cond_appendix.py      # Appendix figures
+ROOT=/tmp/wmprobe_scale_sensor \
+ENCODERS="dinov2_vits14 dinov2_vitb14" \
+CONDITIONS="foveated uniform" \
+TRAIN_TRAJ=200 EVAL_TRAJ=50 LSTM_STEPS=3000 PROBE_STEPS=5000 \
+bash scripts/probing/world_model_probe/05_run_scale_sensor.sh
 ```
 
-Each figure reads from `/tmp/rcp_analysis/<cond>_det_analysis.json` (probe
-summaries) and `results/shortcut_results/<cond>_traj.{json,npz}` (shortcut
-trajectories). See `scripts/paper_figures/STATUS.md` for the full
-script→figure mapping, including legacy/stale scripts kept for git history.
+RCP wrapper:
 
----
+```bash
+bash scripts/cluster_rcp/submit_wm_scale_sensor_pilot.sh pilot
+```
 
-## SLURM cheatsheet (Izar)
+The final table is written to:
 
-| Task | Command |
-|---|---|
-| Submit training | `sbatch --gres=gpu:1 --time=24:00:00 -p gpu run_training.sh` |
-| Watch logs | `tail -f slurm_logs/<jobid>.out` |
-| Cancel | `scancel <jobid>` |
-| GPU resources | V100 / A100 (`-p gpu`) |
-| Storage | `/scratch/izar/$USER/...` (Lustre, persistent) |
+```text
+${ROOT}/results/summary_scale_sensor.md
+${ROOT}/results/summary_scale_sensor.json
+```
 
-Training is GPU-bound — a single A100 reaches 250M frames in ~36h with
-`num_environments=16, ppo.num_steps=256`. Eval (1008 episodes) is
-single-env and runs ~2.5-4h depending on condition.
+## Regenerate Figures
 
----
+The website includes pre-rendered figures in `docs/assets/`. To regenerate
+manuscript-style figures from summary JSONs:
 
-## Reproducibility notes
+```bash
+python scripts/paper_figures/make_magnitude_3panel.py
+python scripts/paper_figures/make_format_2panel.py
+python scripts/paper_figures/make_temporal_maps_figure.py
+python scripts/paper_figures/make_consumption_2panel.py
+python scripts/paper_figures/render_5cond_appendix.py
+```
 
-- **Unified hyperparams** across the 5 canonical conditions + F2 + F-LP2:
-  `seed=0`, `total_num_steps=2.5e8`, `num_environments=16`,
-  `ppo.num_steps=256`, `use_linear_lr_decay=False`.
-- **Single training seed** per condition (a comparative-cognition
-  modelling convention; the paper's findings come from cross-condition
-  multi-method convergence rather than seed-replicate variance).
-- **Eval protocol**: Wijmans 2023 Appx A.1 — 1008 episodes across 18
-  held-out MP3D test scenes (`mp3d/v1/test/`), deterministic policy.
-- **Probe protocol**: 500-episode deterministic rollouts; Ridge α=10
-  with 5-fold episode-level CV; Hewitt–Liang permutation control.
+Some figure scripts read analysis files from historical RCP/local paths such as
+`/tmp/rcp_analysis` and `/tmp/rcp_analysis_v3`. If rerunning from a fresh
+machine, first run the evaluation/probing commands above or edit the path
+constants in the figure scripts to point to your regenerated JSONs.
 
----
+## Recreate Website Rollout Video
 
-## Pointers
+The website video was generated on RCP to avoid copying raw rollout frames:
 
-- Hydra training configs: `habitat_configs/ddppo_pointnav_*_gibson.yaml`
-- Reference container env: `docker/Dockerfile` (apt + conda pin list — also useful as a setup checklist when conda step ordering is unclear)
+```bash
+python scripts/website/capture_rcp_navigation_memory.py \
+  --episode-index 0 \
+  --dataset-split test \
+  --data-path data/datasets/pointnav/mp3d/v1/test/test.json.gz \
+  --excursion-dir /scratch/wxu/habitat_checkpoints_rcp/excursion_results \
+  --out /scratch/wxu/habitat_checkpoints_rcp/website_media/real_navigation_memory.mp4
+```
+
+It renders real simulator rollouts and synchronizes them with a linear readout
+from the real top-layer LSTM `h2` state to episode-relative x/z position.
+
+## File Hierarchy
+
+```text
+habitat_configs/
+  ddppo_pointnav_*_gibson.yaml
+    Hydra configs for training/evaluating each visual sensor condition.
+
+src/habitat/
+  wijmans_policy.py
+    3-layer LSTM PointGoal policy and custom visual encoder wiring.
+  wijmans_sensors.py
+    Non-visual sensor definitions: GPS, compass, goal vector, action history.
+  torch_foveation.py
+    Differentiable Gaussian and log-polar foveation transforms.
+  foveated_*_policy.py
+    Condition-specific policy registrations.
+
+src/utils/
+  habitat_env.py
+    Shared Habitat config loading, policy loading, rollout helpers.
+  probing.py
+    Common probing utilities.
+
+scripts/eval/
+  eval_paper_5cond.py
+    SPL/success evaluation for the five canonical agents.
+  probe_agent.py
+    Deterministic rollout collection for hidden-state probes.
+  transplant.py
+    Memory-transplant intervention.
+  shortcut.py
+    Shortcut/trajectory intervention for policy reliance.
+
+scripts/probing/
+  analyze.py
+    Main Ridge/MLP probing battery.
+  temporal_probe.py, population_coding_analysis.py, unaligned_cka.py
+    Additional representational analyses.
+  world_model_probe/
+    Lightweight Memory-Maze scale x sensor pilot.
+
+scripts/paper_figures/
+  make_*figure*.py
+    Matplotlib scripts for paper/presentation figures.
+
+scripts/cluster/
+  Generic SLURM-style helpers for cluster execution.
+
+scripts/cluster_rcp/
+  RCP/RunAI wrappers used in the actual project. These include hard-coded
+  project paths and are included for verification; adapt paths before reuse.
+
+docs/
+  index.html, figures.html, style.css, js/, assets/
+    Static GitHub Pages website, interactive figures, and pre-rendered assets.
+
+presentation/
+  final_presentation.pdf
+    Final submitted presentation.
+
+tests/
+  test_torch_foveation.py
+    CPU test for foveation geometry.
+  test_nan_sanitisation.py
+    Habitat-baselines-dependent regression test for NaN protection.
+```
+
+## Notes On Reproducibility Scope
+
+- The code is designed for verification and reproduction, but full training is
+  compute-intensive and requires Habitat datasets/checkpoints.
+- The submitted zip includes code and small summary artifacts only.
+- To exactly reproduce all final figures, use the same checkpoint set and
+  MP3D/Gibson data layout described above.
+- The RCP-specific scripts document the actual commands used for the final
+  cluster runs, but they require EPFL RCP access and path edits outside the
+  original project account.

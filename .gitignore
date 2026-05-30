@@ -71,7 +71,14 @@ literature/audit/
 literature/_research_output.md
 literature/*/*.pdf
 docs/An active foveated gaze prediction*.pdf
+docs/How_Foveated_Vision_Shapes_Cognitive_Maps_in_Navigation_Agents_5.pdf
 docs/MERGENCE OF MAPS*.pdf
+docs/Occupancy_Decoding_from_Recurrent_Memory.pdf
+docs/upstream_pr/
+docs/visual intelligence.pptx
+docs/visual_intelligence_revised.key
+docs/manuscript/
+SUBMISSION_PACKAGE_README.md
 
 # Large release checkpoints (790 MB — distributed via Hugging Face, not git)
 release_ckpts/
@@ -86,15 +93,8 @@ results/tsne_subsamples/
 # keep summary JSONs which are smaller and human-readable)
 results/shortcut_results/*_traj.npz
 
-# --- Private cluster (RCP) artefacts ----------------------------------------
-# Public submission scripts (Izar SLURM, generic utilities) live in
-# scripts/cluster/. RCP-specific submission scripts (runai-rcp-prod calls,
-# hard-coded /scratch/wxu/ paths, kubectl namespaces) are kept private
-# under scripts/cluster_rcp/ because they depend on a private K8s/RunAI
-# cluster the teammate + course infrastructure don't have access to.
-
+# --- Cluster-only artefacts --------------------------------------------------
 docker/build_with_kaniko.sh
-scripts/cluster_rcp/
 scripts/probing/lagk_rcp.sh
 scripts/probing/mlp_rcp.sh
 habitat_configs/ddppo_pointnav_foveated_normaliser_gibson.yaml

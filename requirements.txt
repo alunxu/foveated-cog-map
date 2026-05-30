@@ -58,6 +58,7 @@ plotly>=5.18                  # interactive t-SNE viewers
 # --- Notebooks & jobs --------------------------------------------------------
 ipykernel>=6.27
 jupyter
+pytest>=8
 tqdm>=4.66
 loguru>=0.7
 wandb>=0.16                   # optional; only needed if training logs to W&B

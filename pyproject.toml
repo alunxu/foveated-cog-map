@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentic-cognitive-map"
+name = "sensor-cogmap-coupling"
 version = "0.1.0"
 description = "Sensor structure shapes cognitive maps in navigation agents"
 # Habitat-sim 0.3.3 requires Python 3.9-3.11; Dockerfile pins 3.9.
@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/alunxu/agentic-cognitive-map"
+"Homepage" = "https://github.com/alunxu/sensor-cogmap-coupling"
 
 [tool.setuptools.packages.find]
 where = ["."]
